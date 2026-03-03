@@ -1,0 +1,25 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OcrScanOutput",
+  "type": "object",
+  "required": ["uid", "region", "agents"],
+  "properties": {
+    "uid": { "type": "string", "pattern": "^[0-9]{6,12}$" },
+    "region": { "type": "string", "enum": ["NA", "EU", "ASIA", "SEA", "OTHER"] },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["agentId"],
+        "properties": {
+          "agentId": { "type": "string" },
+          "level": { "type": "number" },
+          "mindscape": { "type": "number" },
+          "weapon": { "type": "object" },
+          "discs": { "type": "array" },
+          "confidence": { "type": "object" }
+        }
+      }
+    }
+  }
+}
