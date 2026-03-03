@@ -1,0 +1,29 @@
+{
+  "name": "ika_ocr_private_dataset",
+  "version": "1.0.0",
+  "storagePolicy": {
+    "rawDataInGit": false,
+    "notes": "Raw data stays in private local storage only."
+  },
+  "privateStorageRoot": "",
+  "directoryLayout": {
+    "raw": "",
+    "frames": "",
+    "labels_uid": "",
+    "labels_agents": "",
+    "labels_equipment": ""
+  },
+  "sources": [],
+  "records": [],
+  "splits": {
+    "train": [],
+    "val": [],
+    "test": []
+  },
+  "splitSeed": 42,
+  "splitRatio": {
+    "train": 0.8,
+    "val": 0.1,
+    "test": 0.1
+  }
+}

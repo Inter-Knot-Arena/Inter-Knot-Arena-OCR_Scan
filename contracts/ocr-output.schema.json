@@ -1,13 +1,20 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OcrScanOutput",
   "type": "object",
-  "required": ["uid", "region", "agents"],
+  "required": ["uid", "region", "agents", "modelVersion", "scanMeta"],
   "properties": {
     "uid": { "type": "string", "pattern": "^[0-9]{6,12}$" },
     "region": { "type": "string", "enum": ["NA", "EU", "ASIA", "SEA", "OTHER"] },
     "modelVersion": { "type": "string" },
     "scanMeta": { "type": "string" },
+    "resolution": { "type": "string", "enum": ["1080p", "1440p"] },
+    "locale": { "type": "string", "enum": ["RU", "EN"] },
+    "timingMs": { "type": "number", "minimum": 0 },
+    "lowConfReasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
     "confidenceByField": {
       "type": "object",
       "additionalProperties": { "type": "number" }
@@ -22,13 +29,18 @@
           "level": { "type": "number" },
           "mindscape": { "type": "number" },
           "weapon": { "type": "object" },
-          "discs": { "type": "array" },
+          "discs": {
+            "type": "array",
+            "items": { "type": "object" }
+          },
           "confidenceByField": {
             "type": "object",
             "additionalProperties": { "type": "number" }
           }
-        }
+        },
+        "additionalProperties": true
       }
     }
-  }
+  },
+  "additionalProperties": true
 }

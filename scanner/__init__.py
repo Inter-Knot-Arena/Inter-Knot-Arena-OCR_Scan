@@ -1,3 +1,8 @@
-from .pipeline import run_scan
+from .pipeline import ScanFailure, ScanFailureCode, run_scan, scan_roster
 
-__all__ = ["run_scan"]
+__all__ = [
+    "ScanFailure",
+    "ScanFailureCode",
+    "run_scan",
+    "scan_roster",
+]

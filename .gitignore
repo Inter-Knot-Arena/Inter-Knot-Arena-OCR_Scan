@@ -1,3 +1,9 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
 .venv/
+dataset_private/
+raw/
+frames/
+labels_uid/
+labels_agents/
+labels_equipment/
