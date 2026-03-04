@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import random
 import time
 from dataclasses import dataclass
@@ -120,7 +119,7 @@ def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None,
     return digits_only, confidence, reasons
 
 
-def _select_uid_from_candidates(candidates: Iterable[str], session_id: str) -> tuple[str, float]:
+def _select_uid_from_candidates(candidates: Iterable[str]) -> tuple[str, float]:
     cleaned: list[str] = []
     for raw in candidates:
         value = _digits_only(str(raw))
@@ -132,9 +131,7 @@ def _select_uid_from_candidates(candidates: Iterable[str], session_id: str) -> t
         confidence = min(0.998, 0.9 + (len(best) / 120))
         return best, round(confidence, 4)
 
-    digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
-    fallback = str(int(digest[:12], 16) % 900000000 + 100000000)
-    return fallback, 0.55
+    return "", 0.0
 
 
 def _normalized_fraction(value: float, min_v: float, max_v: float) -> float:
@@ -296,8 +293,6 @@ def scan_roster(
         )
 
     low_conf_reasons: list[str] = []
-    session_id = str(session_context.get("sessionId", "session"))
-
     uid_from_image, uid_conf_from_image, uid_reasons = _select_uid_from_image(session_context)
     low_conf_reasons.extend(uid_reasons)
     if uid_from_image and uid_conf_from_image is not None:
@@ -307,7 +302,10 @@ def scan_roster(
         uid_candidates = session_context.get("uidCandidates")
         if not isinstance(uid_candidates, list):
             uid_candidates = []
-        uid, uid_confidence = _select_uid_from_candidates((str(value) for value in uid_candidates), session_id)
+        uid, uid_confidence = _select_uid_from_candidates((str(value) for value in uid_candidates))
+
+    if not uid:
+        low_conf_reasons.append("uid_missing")
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)

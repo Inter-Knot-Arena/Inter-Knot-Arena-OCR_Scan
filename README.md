@@ -24,6 +24,7 @@ See `contracts/ocr-output.schema.json`.
     - `INPUT_LOCK_NOT_ACTIVE`
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
 - `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`) with DirectML -> CPU fallback.
+- No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 
 ## Quick run
 
