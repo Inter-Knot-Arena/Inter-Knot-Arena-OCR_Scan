@@ -23,6 +23,7 @@ See `contracts/ocr-output.schema.json`.
     - `LOW_CONFIDENCE`
     - `INPUT_LOCK_NOT_ACTIVE`
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
+- `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`) with DirectML -> CPU fallback.
 
 ## Quick run
 
@@ -35,6 +36,19 @@ Strict mode with explicit lock + anchors:
 
 ```powershell
 python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1440p
+```
+
+Train synthetic baseline models:
+
+```powershell
+pip install -r requirements.txt
+python scripts/train_synthetic_models.py --output-dir models --metrics-file docs/model_metrics.json
+```
+
+Benchmark runtime:
+
+```powershell
+python scripts/benchmark_runtime.py --iterations 100
 ```
 
 ## Dataset workflow (private raw data)

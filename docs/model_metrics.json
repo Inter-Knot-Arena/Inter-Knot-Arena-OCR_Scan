@@ -1,0 +1,8 @@
+{
+  "uid_digit_model": {
+    "accuracy": 0.9716666666666667
+  },
+  "agent_icon_model": {
+    "accuracy": 1.0
+  }
+}

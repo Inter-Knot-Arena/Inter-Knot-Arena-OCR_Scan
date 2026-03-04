@@ -21,8 +21,8 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
 
 ## Model tracks
 
-1. UID OCR head (lightweight ONNX + int8 PTQ)
-2. Agent icon classifier (MobileNetV3-small class)
+1. UID OCR head (lightweight ONNX baseline, synthetic-trained logistic classifier in v1 repo state)
+2. Agent icon classifier (synthetic-trained ONNX baseline in v1 repo state)
 3. Equipment heads:
    - amplifier id
    - disc set id
@@ -44,3 +44,8 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
 
 - Single pass per screen <= 500 ms on GTX 970 class hardware.
 - CPU fallback must remain functional.
+
+## Training scripts in repo
+
+- `scripts/train_synthetic_models.py`: trains + exports ONNX (`models/uid_digit.onnx`, `models/agent_icon.onnx`).
+- `scripts/benchmark_runtime.py`: latency benchmark of `run_scan`.

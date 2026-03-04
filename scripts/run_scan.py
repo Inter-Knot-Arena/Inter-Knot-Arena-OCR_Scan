@@ -20,6 +20,13 @@ def main() -> int:
     parser.add_argument("--anchor-profile", action="store_true", default=False)
     parser.add_argument("--anchor-agents", action="store_true", default=False)
     parser.add_argument("--anchor-equipment", action="store_true", default=False)
+    parser.add_argument("--uid-image", default="", help="Path to UID screenshot crop")
+    parser.add_argument(
+        "--agent-icon",
+        action="append",
+        default=[],
+        help="Path to agent icon crop (repeatable)",
+    )
     args = parser.parse_args()
 
     if args.input_lock:
@@ -33,6 +40,8 @@ def main() -> int:
                 "equipment": args.anchor_equipment,
             },
             "uidCandidates": ["uid=123456789"],
+            "uidImagePath": args.uid_image or None,
+            "agentIconPaths": [{"path": path} for path in args.agent_icon],
             "agents": [
                 {
                     "agentId": "agent_anby",

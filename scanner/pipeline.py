@@ -5,12 +5,18 @@ import random
 import time
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Any, Dict, Iterable, List
+
+import cv2
+import numpy as np
+
+from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits
 
 SUPPORTED_LOCALES = {"RU", "EN"}
 SUPPORTED_RESOLUTIONS = {"1080p", "1440p"}
 SUPPORTED_REGIONS = {"NA", "EU", "ASIA", "SEA", "OTHER"}
-DEFAULT_MODEL_VERSION = "ocr-hybrid-v1.1"
+DEFAULT_MODEL_VERSION = "ocr-hybrid-v1.2"
 
 
 class ScanFailureCode(StrEnum):
@@ -49,7 +55,72 @@ def _digits_only(value: str) -> str:
     return "".join(ch for ch in value if ch.isdigit())
 
 
-def _select_uid(candidates: Iterable[str], session_id: str) -> tuple[str, float]:
+def _split_uid_digits(image: np.ndarray) -> list[np.ndarray]:
+    gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    threshold = cv2.adaptiveThreshold(
+        blur,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        31,
+        3,
+    )
+    contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    boxes: list[tuple[int, int, int, int]] = []
+    h, w = threshold.shape[:2]
+    for contour in contours:
+        x, y, cw, ch = cv2.boundingRect(contour)
+        area = cw * ch
+        if area < 18:
+            continue
+        if ch < int(h * 0.35):
+            continue
+        if cw > int(w * 0.4):
+            continue
+        boxes.append((x, y, cw, ch))
+
+    boxes.sort(key=lambda item: item[0])
+    digits: list[np.ndarray] = []
+    for x, y, cw, ch in boxes:
+        crop = threshold[y : y + ch, x : x + cw]
+        digits.append(crop)
+    return digits
+
+
+def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
+    reasons: list[str] = []
+    uid_path_raw = session_context.get("uidImagePath")
+    if not isinstance(uid_path_raw, str) or not uid_path_raw.strip():
+        return None, None, reasons
+    uid_path = Path(uid_path_raw)
+    if not uid_path.exists():
+        reasons.append("uid_image_not_found")
+        return None, None, reasons
+
+    if not ModelRegistry.has_uid_model():
+        reasons.append("uid_model_missing")
+        return None, None, reasons
+
+    image = cv2.imread(str(uid_path), cv2.IMREAD_COLOR)
+    if image is None:
+        reasons.append("uid_image_decode_failed")
+        return None, None, reasons
+
+    digit_images = _split_uid_digits(image)
+    if len(digit_images) < 6:
+        reasons.append("uid_digit_segmentation_failed")
+        return None, None, reasons
+
+    uid, confidence = classify_uid_digits(digit_images)
+    digits_only = _digits_only(uid)
+    if not (6 <= len(digits_only) <= 12):
+        reasons.append("uid_digit_length_invalid")
+        return None, None, reasons
+    return digits_only, confidence, reasons
+
+
+def _select_uid_from_candidates(candidates: Iterable[str], session_id: str) -> tuple[str, float]:
     cleaned: list[str] = []
     for raw in candidates:
         value = _digits_only(str(raw))
@@ -58,7 +129,7 @@ def _select_uid(candidates: Iterable[str], session_id: str) -> tuple[str, float]
 
     if cleaned:
         best = max(cleaned, key=len)
-        confidence = min(0.999, 0.89 + (len(best) / 100))
+        confidence = min(0.998, 0.9 + (len(best) / 120))
         return best, round(confidence, 4)
 
     digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
@@ -74,6 +145,55 @@ def _normalized_fraction(value: float, min_v: float, max_v: float) -> float:
     return (value - min_v) / (max_v - min_v)
 
 
+def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
+    return {
+        "agentId": agent_id,
+        "level": None,
+        "mindscape": None,
+        "weapon": {},
+        "discs": [],
+        "confidenceByField": {
+            "agentId": round(confidence, 4),
+            "level": 0.62,
+            "mindscape": 0.62,
+            "weapon": 0.58,
+            "discs": 0.58,
+        },
+    }
+
+
+def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    reasons: list[str] = []
+    icon_payload = session_context.get("agentIconPaths")
+    if not isinstance(icon_payload, list) or not icon_payload:
+        return [], reasons
+
+    if not ModelRegistry.has_agent_model():
+        reasons.append("agent_model_missing")
+        return [], reasons
+
+    agents: list[dict[str, Any]] = []
+    for index, entry in enumerate(icon_payload):
+        path_value = entry.get("path") if isinstance(entry, dict) else entry
+        if not isinstance(path_value, str):
+            reasons.append(f"agent_icon_invalid:{index}")
+            continue
+        path = Path(path_value)
+        if not path.exists():
+            reasons.append(f"agent_icon_not_found:{index}")
+            continue
+        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        if image is None:
+            reasons.append(f"agent_icon_decode_failed:{index}")
+            continue
+        prediction = classify_agent_icon(image)
+        agents.append(_default_agent_payload(prediction.label, prediction.confidence))
+        if prediction.confidence < 0.72:
+            reasons.append(f"agent_icon_low_conf:{prediction.label}")
+
+    return agents, reasons
+
+
 def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
     results: list[dict[str, Any]] = []
     low_conf_reasons: list[str] = []
@@ -86,20 +206,20 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
 
         level_raw = raw.get("level")
         level = float(level_raw) if isinstance(level_raw, (int, float)) else None
-        level_conf = 0.86 if level is None else (0.88 + 0.12 * _normalized_fraction(level, 1.0, 60.0))
+        level_conf = 0.84 if level is None else (0.88 + 0.12 * _normalized_fraction(level, 1.0, 60.0))
         if level is None:
             low_conf_reasons.append(f"{agent_id}.level_missing")
 
         mindscape_raw = raw.get("mindscape")
         mindscape = float(mindscape_raw) if isinstance(mindscape_raw, (int, float)) else None
-        mindscape_conf = 0.84 if mindscape is None else (0.88 + 0.1 * _normalized_fraction(mindscape, 0.0, 6.0))
+        mindscape_conf = 0.82 if mindscape is None else (0.88 + 0.1 * _normalized_fraction(mindscape, 0.0, 6.0))
         if mindscape is None:
             low_conf_reasons.append(f"{agent_id}.mindscape_missing")
 
         weapon = raw.get("weapon")
         discs = raw.get("discs")
-        weapon_conf = 0.9 if isinstance(weapon, dict) else 0.8
-        disc_conf = 0.9 if isinstance(discs, list) else 0.78
+        weapon_conf = 0.9 if isinstance(weapon, dict) else 0.78
+        disc_conf = 0.9 if isinstance(discs, list) else 0.76
         if not isinstance(weapon, dict):
             low_conf_reasons.append(f"{agent_id}.weapon_missing")
             weapon = {}
@@ -108,7 +228,7 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
             discs = []
 
         confidence_by_field = {
-            "agentId": 0.99,
+            "agentId": float(raw.get("agentConfidence", 0.99)),
             "level": round(level_conf, 4),
             "mindscape": round(mindscape_conf, 4),
             "weapon": round(weapon_conf, 4),
@@ -175,23 +295,39 @@ def scan_roster(
             [f"anchor_missing:{value}" for value in missing],
         )
 
+    low_conf_reasons: list[str] = []
     session_id = str(session_context.get("sessionId", "session"))
-    uid_candidates = session_context.get("uidCandidates")
-    if not isinstance(uid_candidates, list):
-        uid_candidates = []
-    uid, uid_confidence = _select_uid((str(value) for value in uid_candidates), session_id)
+
+    uid_from_image, uid_conf_from_image, uid_reasons = _select_uid_from_image(session_context)
+    low_conf_reasons.extend(uid_reasons)
+    if uid_from_image and uid_conf_from_image is not None:
+        uid = uid_from_image
+        uid_confidence = uid_conf_from_image
+    else:
+        uid_candidates = session_context.get("uidCandidates")
+        if not isinstance(uid_candidates, list):
+            uid_candidates = []
+        uid, uid_confidence = _select_uid_from_candidates((str(value) for value in uid_candidates), session_id)
+
+    icon_agents, icon_reasons = _agents_from_icons(session_context)
+    low_conf_reasons.extend(icon_reasons)
 
     raw_agents = session_context.get("agents")
     if not isinstance(raw_agents, list):
         raw_agents = []
-    agents, low_conf_reasons = _extract_agents(raw_agents)
+    parsed_agents, parsed_reasons = _extract_agents(raw_agents)
+    low_conf_reasons.extend(parsed_reasons)
+
+    agents = icon_agents if icon_agents else parsed_agents
+    if not agents:
+        low_conf_reasons.append("agents_missing")
 
     region = _normalize_region(
         str(session_context.get("region") or session_context.get("regionHint") or "OTHER")
     )
 
     top_confidence = {
-        "uid": uid_confidence,
+        "uid": round(uid_confidence, 4),
         "region": 0.97 if region != "OTHER" else 0.83,
         "agents": round(
             sum(agent["confidenceByField"]["agentId"] for agent in agents) / max(len(agents), 1), 4
@@ -219,7 +355,7 @@ def scan_roster(
         "uid": uid,
         "region": region,
         "modelVersion": DEFAULT_MODEL_VERSION,
-        "scanMeta": "hybrid_deterministic_pipeline",
+        "scanMeta": "hybrid_onnx_plus_rules",
         "confidenceByField": top_confidence,
         "agents": agents,
         "lowConfReasons": sorted(set(low_conf_reasons)),
