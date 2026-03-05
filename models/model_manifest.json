@@ -1,9 +1,9 @@
 {
-  "version": "ocr-heads-v1.4-noisy",
-  "trainedAt": "2026-03-05T02:26:12Z",
+  "version": "ocr-heads-v1.5-live",
+  "trainedAt": "2026-03-05T02:36:31Z",
   "dataVersion": "1.1.0",
   "artifacts": {
-    "uid_digit.onnx": "d134460fc6a0ecfa867345a1aab90c7fcb750418276bec9b65e0b89757933fbb",
-    "agent_icon.onnx": "9cf9a1b5f79907949fbdff51079ec02f31c5be8a88f92b064587d44ae9de636e"
+    "uid_digit.onnx": "d5de73b0f933374d787ac4a6d46fd7841b1d1958add60cae9c8845823cca461f",
+    "agent_icon.onnx": "950952b129558a524a45e448d652fecb9f8e8c9bc12a2c269fbbb1676a69bfee"
   }
 }
