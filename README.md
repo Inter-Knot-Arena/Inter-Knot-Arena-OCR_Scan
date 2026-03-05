@@ -46,6 +46,12 @@ pip install -r requirements.txt
 python scripts/train_synthetic_models.py --output-dir models --metrics-file docs/model_metrics.json
 ```
 
+Domain-adaptive training with private live backgrounds:
+
+```powershell
+python scripts/train_synthetic_models.py --output-dir models --metrics-file docs/model_metrics.json --uid-background-dir D:\IKA_DATA\ika_live_backgrounds\ocr_uid --icon-background-dir D:\IKA_DATA\ika_live_backgrounds\ocr_icon --uid-samples-per-class 1800 --icon-samples-per-class 1800 --uid-background-probability 0.3 --icon-background-probability 0.8
+```
+
 Benchmark runtime:
 
 ```powershell

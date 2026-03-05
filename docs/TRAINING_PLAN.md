@@ -48,4 +48,8 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
 ## Training scripts in repo
 
 - `scripts/train_synthetic_models.py`: trains + exports ONNX (`models/uid_digit.onnx`, `models/agent_icon.onnx`).
+- `scripts/train_synthetic_models.py` supports private live-frame backgrounds:
+  - `--uid-background-dir`
+  - `--icon-background-dir`
+  - plus sample-size and background-probability controls per head for faster iteration.
 - `scripts/benchmark_runtime.py`: latency benchmark of `run_scan`.
