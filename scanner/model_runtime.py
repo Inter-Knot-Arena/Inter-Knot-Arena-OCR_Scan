@@ -4,13 +4,14 @@ import json
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 import cv2
 import numpy as np
 import onnxruntime as ort
 
 MODEL_DIR = Path(__file__).resolve().parents[1] / "models"
+MODEL_MANIFEST_PATH = MODEL_DIR / "model_manifest.json"
 
 
 def _provider_priority() -> list[str]:
@@ -25,6 +26,18 @@ def _read_json(path: Path) -> dict:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected object in {path}")
     return payload
+
+
+def get_model_metadata(default_version: str) -> Dict[str, str]:
+    if not MODEL_MANIFEST_PATH.exists():
+        return {"modelVersion": default_version, "dataVersion": "unknown"}
+    try:
+        payload = _read_json(MODEL_MANIFEST_PATH)
+        model_version = str(payload.get("version") or default_version)
+        data_version = str(payload.get("dataVersion") or "unknown")
+        return {"modelVersion": model_version, "dataVersion": data_version}
+    except Exception:
+        return {"modelVersion": default_version, "dataVersion": "unknown"}
 
 
 def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[str, float]:

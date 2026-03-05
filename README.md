@@ -46,6 +46,12 @@ pip install -r requirements.txt
 python scripts/train_synthetic_models.py --output-dir models --metrics-file docs/model_metrics.json
 ```
 
+Train production OCR heads from manifest data (with fallback to synthetic baseline):
+
+```powershell
+python scripts/train_ocr_models.py --manifest dataset_manifest.json --output-dir models --metrics-file docs/model_metrics.json --model-version ocr-heads-v1.3
+```
+
 Domain-adaptive training with private live backgrounds:
 
 ```powershell
@@ -64,6 +70,13 @@ Raw frames/crops are intentionally excluded from git. Use scripts to keep only m
 
 ```powershell
 python scripts/bootstrap_dataset.py --storage-root D:\IKA_DATA\ocr
+python scripts/ingest_public_sources.py --manifest dataset_manifest.json --sources-file D:\IKA_DATA\ocr_sources.json
+python scripts/extract_frames.py --manifest dataset_manifest.json --head uid_digit --fps 1.0 --scene-aware
+python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_icon --fps 1.0
+python scripts/extract_frames.py --manifest dataset_manifest.json --head equipment --fps 0.5
+python scripts/deduplicate_frames.py --manifest dataset_manifest.json --input-dir D:\IKA_DATA\ocr\frames
+python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --duration-sec 180 --fps 1.0 --locale RU --resolution 1080p
+python scripts/build_sampling_plan.py --manifest dataset_manifest.json --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
 python scripts/split_dataset.py --manifest dataset_manifest.json --seed 42
 ```
 

@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OcrScanOutput",
   "type": "object",
-  "required": ["uid", "region", "agents", "modelVersion", "scanMeta"],
+  "required": ["uid", "region", "agents", "modelVersion", "dataVersion", "scanMeta"],
   "properties": {
     "uid": { "type": "string", "pattern": "^[0-9]{6,12}$" },
     "region": { "type": "string", "enum": ["NA", "EU", "ASIA", "SEA", "OTHER"] },
     "modelVersion": { "type": "string" },
+    "dataVersion": { "type": "string" },
     "scanMeta": { "type": "string" },
     "resolution": { "type": "string", "enum": ["1080p", "1440p"] },
     "locale": { "type": "string", "enum": ["RU", "EN"] },

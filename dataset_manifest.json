@@ -1,17 +1,19 @@
 {
   "name": "ika_ocr_private_dataset",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "schemaVersion": "dataset-manifest-v1",
+  "updatedAt": "2026-03-05T00:00:00Z",
   "storagePolicy": {
     "rawDataInGit": false,
     "notes": "Raw data stays in private local storage only."
   },
-  "privateStorageRoot": "",
+  "privateStorageRoot": "D:\\IKA_DATA\\ocr",
   "directoryLayout": {
-    "raw": "",
-    "frames": "",
-    "labels_uid": "",
-    "labels_agents": "",
-    "labels_equipment": ""
+    "raw": "D:\\IKA_DATA\\ocr\\raw",
+    "frames": "D:\\IKA_DATA\\ocr\\frames",
+    "labels_uid": "D:\\IKA_DATA\\ocr\\labels_uid",
+    "labels_agents": "D:\\IKA_DATA\\ocr\\labels_agents",
+    "labels_equipment": "D:\\IKA_DATA\\ocr\\labels_equipment"
   },
   "sources": [],
   "records": [],
@@ -25,5 +27,13 @@
     "train": 0.8,
     "val": 0.1,
     "test": 0.1
-  }
+  },
+  "qaStatus": {
+    "prelabel": "pending",
+    "humanReview": "pending",
+    "qaPass2": "pending",
+    "doubleReviewRate": 0.1,
+    "interAnnotatorAgreement": null
+  },
+  "hardSamplesRef": ""
 }

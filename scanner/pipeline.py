@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List
 import cv2
 import numpy as np
 
-from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits
+from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata
 
 SUPPORTED_LOCALES = {"RU", "EN"}
 SUPPORTED_RESOLUTIONS = {"1080p", "1440p"}
@@ -256,6 +256,7 @@ def scan_roster(
     resolution: str,
 ) -> Dict[str, Any]:
     started = time.perf_counter()
+    metadata = get_model_metadata(DEFAULT_MODEL_VERSION)
 
     if not bool(session_context.get("inputLockActive", False)):
         raise ScanFailure(
@@ -352,7 +353,8 @@ def scan_roster(
     result = {
         "uid": uid,
         "region": region,
-        "modelVersion": DEFAULT_MODEL_VERSION,
+        "modelVersion": metadata["modelVersion"],
+        "dataVersion": metadata["dataVersion"],
         "scanMeta": "hybrid_onnx_plus_rules",
         "confidenceByField": top_confidence,
         "agents": agents,

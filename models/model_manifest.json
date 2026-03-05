@@ -1,0 +1,9 @@
+{
+  "version": "ocr-heads-v1.3",
+  "trainedAt": "2026-03-05T01:50:28Z",
+  "dataVersion": "1.1.0",
+  "artifacts": {
+    "uid_digit.onnx": "4e4f7a618e104a8733dcc13995ad99d4f36c769d470cff1665965564fe824374",
+    "agent_icon.onnx": "eb1276682676441ddfed5acb040bab364132bf032a94a9cc6b8013525142e605"
+  }
+}

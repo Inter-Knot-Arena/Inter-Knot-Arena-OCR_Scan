@@ -47,9 +47,16 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
 
 ## Training scripts in repo
 
+- `scripts/train_ocr_models.py`: trains from manifest-backed real data, falls back to synthetic baseline when data volume is insufficient, exports ONNX and `models/model_manifest.json`.
 - `scripts/train_synthetic_models.py`: trains + exports ONNX (`models/uid_digit.onnx`, `models/agent_icon.onnx`).
 - `scripts/train_synthetic_models.py` supports private live-frame backgrounds:
   - `--uid-background-dir`
   - `--icon-background-dir`
   - plus sample-size and background-probability controls per head for faster iteration.
 - `scripts/benchmark_runtime.py`: latency benchmark of `run_scan`.
+- Dataset ingestion pipeline scripts:
+  - `scripts/ingest_public_sources.py`
+  - `scripts/extract_frames.py`
+  - `scripts/deduplicate_frames.py`
+  - `scripts/session_capture.py`
+  - `scripts/build_sampling_plan.py`
