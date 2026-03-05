@@ -76,6 +76,7 @@ python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_i
 python scripts/extract_frames.py --manifest dataset_manifest.json --head equipment --fps 0.5
 python scripts/deduplicate_frames.py --manifest dataset_manifest.json --input-dir D:\IKA_DATA\ocr\frames
 python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --duration-sec 180 --fps 1.0 --locale RU --resolution 1080p
+python scripts/prune_manifest.py --manifest dataset_manifest.json --drop-source live_session_1772675708 --drop-source live_session_1772675729
 python scripts/prelabel_dataset.py --manifest dataset_manifest.json --confidence-threshold 0.6
 python scripts/qa_audit.py --manifest dataset_manifest.json --output-file docs/qa_report.json --double-review-file docs/double_review_samples.json
 python scripts/export_review_pack.py --manifest dataset_manifest.json --status needs_review --output-csv docs/review_queue.csv

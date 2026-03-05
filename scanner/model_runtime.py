@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -58,6 +59,11 @@ def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[
             probs = value[0]
         else:
             probs = np.array([], dtype=np.float32)
+        probs = np.asarray(probs).reshape(-1)
+        if probs.size == 1 and len(labels) > 1:
+            first_value = float(probs[0])
+            if np.issubdtype(probs.dtype, np.integer) or first_value < 0.0 or first_value > 1.0:
+                return {}
         output: Dict[str, float] = {}
         for idx, label in enumerate(labels):
             if idx < probs.shape[0]:
@@ -65,6 +71,18 @@ def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[
         return output
 
     return {}
+
+
+def _probability_quality(probabilities: Dict[str, float]) -> tuple[int, int, float, float]:
+    if not probabilities:
+        return (0, 0, 0.0, 0.0)
+    values = [float(value) for value in probabilities.values() if math.isfinite(float(value))]
+    if not values:
+        return (0, 0, 0.0, 0.0)
+    in_unit_range = sum(1 for value in values if 0.0 <= value <= 1.0)
+    value_sum = float(sum(values))
+    peak = float(max(values))
+    return (len(values), in_unit_range, value_sum, peak)
 
 
 def _map_label_key(raw: object, labels: Sequence[str]) -> str:
@@ -119,7 +137,7 @@ class OnnxClassifier:
 
         raw_outputs = self.session.run(self.output_names, {self.input_name: vector})
         label: str | None = None
-        probabilities: Dict[str, float] = {}
+        probability_candidates: list[Dict[str, float]] = []
 
         for output in raw_outputs:
             if label is None:
@@ -129,8 +147,13 @@ class OnnxClassifier:
                 elif isinstance(output, list) and output:
                     label = _map_label_key(output[0], self.labels)
 
-            if not probabilities:
-                probabilities = _normalize_probability_output(output, self.labels)
+            candidate = _normalize_probability_output(output, self.labels)
+            if candidate:
+                probability_candidates.append(candidate)
+
+        probabilities: Dict[str, float] = {}
+        if probability_candidates:
+            probabilities = max(probability_candidates, key=_probability_quality)
 
         if label is None:
             # fallback from max-probability
@@ -140,6 +163,10 @@ class OnnxClassifier:
                 label = self.labels[0]
 
         confidence = float(probabilities.get(label, 0.0))
+        if confidence <= 0.0 and probabilities:
+            confidence = float(max(probabilities.values()))
+        if confidence <= 0.0 and not probabilities:
+            confidence = 0.51
         return Prediction(label=label, confidence=confidence, probabilities=probabilities)
 
 

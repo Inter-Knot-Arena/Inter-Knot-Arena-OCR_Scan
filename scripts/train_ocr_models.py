@@ -151,6 +151,17 @@ def _latency_stats(clf: LogisticRegression, sample: np.ndarray, iterations: int 
     return round(p50, 3), round(p95, 3)
 
 
+def _stratify_target(y: np.ndarray) -> np.ndarray | None:
+    if y.size <= 1:
+        return None
+    values, counts = np.unique(y, return_counts=True)
+    if values.size <= 1:
+        return None
+    if int(np.min(counts)) < 2:
+        return None
+    return y
+
+
 def _train_real_classifier(
     x: np.ndarray,
     y: np.ndarray,
@@ -158,19 +169,25 @@ def _train_real_classifier(
     output_model_path: Path,
     output_labels_path: Path,
 ) -> Dict[str, float]:
+    if x.shape[0] < 10:
+        raise ValueError("Not enough samples for real training.")
+    values, counts = np.unique(y, return_counts=True)
+    if values.size < 2:
+        raise ValueError("Need at least two classes for real training.")
+
     x_train, x_temp, y_train, y_temp = train_test_split(
         x,
         y,
         test_size=0.2,
         random_state=42,
-        stratify=y,
+        stratify=_stratify_target(y),
     )
     x_val, x_test, y_val, y_test = train_test_split(
         x_temp,
         y_temp,
         test_size=0.5,
         random_state=42,
-        stratify=y_temp,
+        stratify=_stratify_target(y_temp),
     )
     clf = LogisticRegression(max_iter=1000, solver="lbfgs")
     clf.fit(x_train, y_train)
@@ -189,8 +206,9 @@ def _train_real_classifier(
     output_model_path.parent.mkdir(parents=True, exist_ok=True)
     with output_model_path.open("wb") as fh:
         fh.write(onnx_model.SerializeToString())
+    model_label_names = [labels[int(class_index)] for class_index in clf.classes_]
     with output_labels_path.open("w", encoding="utf-8") as fh:
-        json.dump({"labels": labels}, fh, ensure_ascii=True, indent=2)
+        json.dump({"labels": model_label_names}, fh, ensure_ascii=True, indent=2)
         fh.write("\n")
 
     return {
