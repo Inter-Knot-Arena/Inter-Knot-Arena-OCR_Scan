@@ -32,7 +32,11 @@ def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[
         # Many sklearn ONNX exports return List[Dict[label, score]]
         if value and isinstance(value[0], dict):
             first = value[0]
-            return {str(key): float(score) for key, score in first.items()}
+            probabilities: Dict[str, float] = {}
+            for key, score in first.items():
+                label = _map_label_key(key, labels)
+                probabilities[label] = float(score)
+            return probabilities
 
     if isinstance(value, np.ndarray):
         if value.ndim == 1:
@@ -48,6 +52,24 @@ def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[
         return output
 
     return {}
+
+
+def _map_label_key(raw: object, labels: Sequence[str]) -> str:
+    if isinstance(raw, (np.integer, int)):
+        idx = int(raw)
+        if 0 <= idx < len(labels):
+            return labels[idx]
+        return str(idx)
+
+    if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode("utf-8", errors="ignore")
+
+    text = str(raw).strip()
+    if text.isdigit():
+        idx = int(text)
+        if 0 <= idx < len(labels):
+            return labels[idx]
+    return text
 
 
 @dataclass(slots=True)
@@ -90,9 +112,9 @@ class OnnxClassifier:
             if label is None:
                 if isinstance(output, np.ndarray) and output.size > 0:
                     raw_label = output[0]
-                    label = str(raw_label)
+                    label = _map_label_key(raw_label, self.labels)
                 elif isinstance(output, list) and output:
-                    label = str(output[0])
+                    label = _map_label_key(output[0], self.labels)
 
             if not probabilities:
                 probabilities = _normalize_probability_output(output, self.labels)
