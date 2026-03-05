@@ -226,8 +226,8 @@ def main() -> int:
     uid_x, uid_y, uid_labels, uid_skipped = _load_dataset(manifest_path=manifest_path, head="uid_digit")
     icon_x, icon_y, icon_labels, icon_skipped = _load_dataset(manifest_path=manifest_path, head="agent_icon")
 
-    uid_real = uid_x.shape[0] >= max(200, args.min_real_samples) and len(uid_labels) >= 2
-    icon_real = icon_x.shape[0] >= max(200, args.min_real_samples) and len(icon_labels) >= 2
+    uid_real = uid_x.shape[0] >= max(20, args.min_real_samples) and len(uid_labels) >= 2
+    icon_real = icon_x.shape[0] >= max(20, args.min_real_samples) and len(icon_labels) >= 2
 
     if uid_real:
         uid_metrics = _train_real_classifier(
@@ -333,4 +333,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
