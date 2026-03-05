@@ -1,22 +1,28 @@
 {
-  "recordCount": 676,
-  "labeledCount": 668,
-  "needsReviewCount": 323,
-  "lowConfidenceCount": 433,
+  "recordCount": 9100,
+  "labeledCount": 9088,
+  "needsReviewCount": 2696,
+  "lowConfidenceCount": 3037,
   "headCounts": {
-    "uid_digit": 12,
-    "agent_icon": 533,
-    "unknown": 8,
-    "equipment": 123
+    "uid_digit": 2671,
+    "agent_icon": 3815,
+    "unknown": 12,
+    "equipment": 2602
   },
   "labelCounts": {
-    "1": 12,
-    "agent_vivian": 424,
-    "agent_anby": 3,
+    "1": 16,
+    "agent_vivian": 3554,
     "agent_nicole": 10,
-    "agent_lycaon": 89,
-    "agent_koleda": 7,
-    "unknown": 123
+    "3": 1689,
+    "2": 784,
+    "7": 79,
+    "9": 17,
+    "0": 33,
+    "5": 36,
+    "8": 15,
+    "4": 2,
+    "agent_lycaon": 251,
+    "unknown": 2602
   },
-  "generatedAt": "2026-03-05T03:34:25Z"
+  "generatedAt": "2026-03-05T04:16:24Z"
 }
