@@ -208,7 +208,12 @@ def _train_real_classifier(
         fh.write(onnx_model.SerializeToString())
     model_label_names = [labels[int(class_index)] for class_index in clf.classes_]
     with output_labels_path.open("w", encoding="utf-8") as fh:
-        json.dump({"labels": model_label_names}, fh, ensure_ascii=True, indent=2)
+        json.dump(
+            {"labels": model_label_names, "classIds": [int(class_index) for class_index in clf.classes_]},
+            fh,
+            ensure_ascii=True,
+            indent=2,
+        )
         fh.write("\n")
 
     return {

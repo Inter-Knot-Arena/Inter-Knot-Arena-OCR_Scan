@@ -41,14 +41,14 @@ def get_model_metadata(default_version: str) -> Dict[str, str]:
         return {"modelVersion": default_version, "dataVersion": "unknown"}
 
 
-def _normalize_probability_output(value: object, labels: Sequence[str]) -> Dict[str, float]:
+def _normalize_probability_output(value: object, labels: Sequence[str], class_id_map: Dict[int, str]) -> Dict[str, float]:
     if isinstance(value, list):
         # Many sklearn ONNX exports return List[Dict[label, score]]
         if value and isinstance(value[0], dict):
             first = value[0]
             probabilities: Dict[str, float] = {}
             for key, score in first.items():
-                label = _map_label_key(key, labels)
+                label = _map_label_key(key, labels, class_id_map)
                 probabilities[label] = float(score)
             return probabilities
 
@@ -85,9 +85,12 @@ def _probability_quality(probabilities: Dict[str, float]) -> tuple[int, int, flo
     return (len(values), in_unit_range, value_sum, peak)
 
 
-def _map_label_key(raw: object, labels: Sequence[str]) -> str:
+def _map_label_key(raw: object, labels: Sequence[str], class_id_map: Dict[int, str]) -> str:
     if isinstance(raw, (np.integer, int)):
         idx = int(raw)
+        mapped = class_id_map.get(idx)
+        if mapped:
+            return mapped
         if 0 <= idx < len(labels):
             return labels[idx]
         return str(idx)
@@ -98,6 +101,9 @@ def _map_label_key(raw: object, labels: Sequence[str]) -> str:
     text = str(raw).strip()
     if text.isdigit():
         idx = int(text)
+        mapped = class_id_map.get(idx)
+        if mapped:
+            return mapped
         if 0 <= idx < len(labels):
             return labels[idx]
     return text
@@ -122,6 +128,12 @@ class OnnxClassifier:
         if not isinstance(labels, list) or not labels:
             raise ValueError(f"labels must be non-empty array in {labels_path}")
         self.labels = [str(item) for item in labels]
+        class_ids_raw = labels_payload.get("classIds")
+        self.class_id_map: Dict[int, str] = {}
+        if isinstance(class_ids_raw, list) and len(class_ids_raw) == len(self.labels):
+            for class_id_value, label in zip(class_ids_raw, self.labels):
+                if isinstance(class_id_value, (int, np.integer)):
+                    self.class_id_map[int(class_id_value)] = label
 
         providers = _provider_priority()
         self.session = ort.InferenceSession(str(model_path), providers=providers)
@@ -143,11 +155,11 @@ class OnnxClassifier:
             if label is None:
                 if isinstance(output, np.ndarray) and output.size > 0:
                     raw_label = output[0]
-                    label = _map_label_key(raw_label, self.labels)
+                    label = _map_label_key(raw_label, self.labels, self.class_id_map)
                 elif isinstance(output, list) and output:
-                    label = _map_label_key(output[0], self.labels)
+                    label = _map_label_key(output[0], self.labels, self.class_id_map)
 
-            candidate = _normalize_probability_output(output, self.labels)
+            candidate = _normalize_probability_output(output, self.labels, self.class_id_map)
             if candidate:
                 probability_candidates.append(candidate)
 
