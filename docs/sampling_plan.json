@@ -1,34 +1,51 @@
 {
-  "recordCount": 66,
+  "recordCount": 676,
   "headCounts": {
-    "uid_digit": 24,
-    "agent_icon": 42
+    "uid_digit": 12,
+    "agent_icon": 533,
+    "unknown": 8,
+    "equipment": 123
   },
   "labelCounts": {
-    "2": 12,
-    "agent_anby": 12,
-    "unknown": 42
+    "1": 12,
+    "agent_vivian": 424,
+    "agent_anby": 3,
+    "agent_nicole": 10,
+    "unknown": 131,
+    "agent_lycaon": 89,
+    "agent_koleda": 7
   },
   "localeCounts": {
-    "RU": 66
+    "RU": 262,
+    "EN": 414
   },
   "resolutionCounts": {
-    "1080p": 66
+    "1080p": 556,
+    "1440p": 120
   },
   "sourceCounts": {
-    "live_session_1772675708": 12,
-    "live_session_1772675729": 12,
     "live_session_1772677479": 12,
     "live_session_1772677498": 10,
     "live_session_1772677518": 10,
-    "live_session_1772677537": 10
+    "live_session_1772677537": 10,
+    "ocr_pub_001": 12,
+    "ocr_pub_002": 64,
+    "ocr_pub_003": 130,
+    "ocr_pub_004": 196,
+    "ocr_pub_005": 82,
+    "ocr_pub_006": 54,
+    "ocr_pub_007": 48,
+    "ocr_pub_008": 48
   },
   "localeResolutionCounts": {
-    "RU:1080p": 66
+    "RU:1080p": 232,
+    "EN:1080p": 324,
+    "EN:1440p": 90,
+    "RU:1440p": 30
   },
   "deficits": {
-    "uid_digit": 19976,
-    "agent_icon": 14958,
-    "equipment": 15000
+    "uid_digit": 19988,
+    "agent_icon": 14467,
+    "equipment": 14877
   }
 }
