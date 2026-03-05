@@ -12,12 +12,19 @@ import numpy as np
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest, utc_now
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from roster_taxonomy import canonicalize_agent_label
 from scanner.model_runtime import ModelRegistry, preprocess_digit, preprocess_icon
 
 
 def _has_labels(record: Dict[str, Any]) -> bool:
     labels = record.get("labels")
-    return isinstance(labels, dict) and any(isinstance(value, str) and value for value in labels.values())
+    if isinstance(labels, dict):
+        if isinstance(labels.get("reviewFinal"), dict):
+            return True
+        if any(isinstance(value, str) and value for value in labels.values()):
+            return True
+    suggested = record.get("suggestedLabels")
+    return isinstance(suggested, dict) and any(isinstance(value, str) and value for value in suggested.values())
 
 
 def _detect_head(record: Dict[str, Any]) -> str:
@@ -86,8 +93,9 @@ def _prelabel_record(record: Dict[str, Any], threshold: float) -> Tuple[bool, st
         if not ModelRegistry.has_agent_model():
             return False, "agent_model_missing"
         agent_id, confidence = _predict_agent_icon(image)
-        labels["agent_icon_id"] = agent_id
-        labels["label"] = agent_id
+        canonical = canonicalize_agent_label(agent_id)
+        labels["agent_icon_id"] = canonical or "unknown"
+        labels["label"] = canonical or "unknown"
     else:
         labels["label"] = "unknown"
         labels["amplifier_id"] = "unknown"
@@ -96,8 +104,8 @@ def _prelabel_record(record: Dict[str, Any], threshold: float) -> Tuple[bool, st
         confidence = 0.0
 
     labels["confidence"] = round(confidence, 4)
-    record["labels"] = labels
-    record["qaStatus"] = "prelabeled" if confidence >= threshold else "needs_review"
+    record["suggestedLabels"] = labels
+    record["qaStatus"] = "needs_review"
     return True, "ok"
 
 

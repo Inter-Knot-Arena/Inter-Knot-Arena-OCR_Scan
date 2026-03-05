@@ -9,21 +9,29 @@ from typing import Any, Dict, List
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest, utc_now
 
 
-def _detect_head(record: Dict[str, Any]) -> str:
+def _label_payload(record: Dict[str, Any], suggested: bool) -> Dict[str, Any]:
+    key = "suggestedLabels" if suggested else "labels"
+    labels = record.get(key)
+    if not isinstance(labels, dict):
+        return {}
+    return labels
+
+
+def _detect_head(record: Dict[str, Any], *, suggested: bool) -> str:
     value = record.get("head")
     if isinstance(value, str) and value.strip():
         return value.strip()
-    labels = record.get("labels")
-    if isinstance(labels, dict):
+    labels = _label_payload(record, suggested=suggested)
+    if labels:
         maybe = labels.get("head")
         if isinstance(maybe, str) and maybe.strip():
             return maybe.strip()
     return "unknown"
 
 
-def _extract_label(record: Dict[str, Any]) -> str:
-    labels = record.get("labels")
-    if not isinstance(labels, dict):
+def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
+    labels = _label_payload(record, suggested=suggested)
+    if not labels:
         return ""
     for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id", "label"):
         value = labels.get(key)
@@ -59,40 +67,60 @@ def main() -> int:
         raise ValueError("manifest.records must be an array")
 
     valid_records: List[Dict[str, Any]] = []
-    labeled = 0
+    reviewed = 0
+    suggested = 0
     needs_review = 0
     head_counts: Dict[str, int] = {}
+    suggested_head_counts: Dict[str, int] = {}
     label_counts: Dict[str, int] = {}
+    suggested_label_counts: Dict[str, int] = {}
     low_conf_count = 0
+    suggested_low_conf_count = 0
 
     for record in records:
         if not isinstance(record, dict):
             continue
         valid_records.append(record)
-        head = _detect_head(record)
+        head = _detect_head(record, suggested=False)
         head_counts[head] = head_counts.get(head, 0) + 1
+        suggested_head = _detect_head(record, suggested=True)
+        suggested_head_counts[suggested_head] = suggested_head_counts.get(suggested_head, 0) + 1
 
-        label = _extract_label(record)
+        label = _extract_label(record, suggested=False)
         if label:
-            labeled += 1
+            reviewed += 1
             label_counts[label] = label_counts.get(label, 0) + 1
+        suggested_label = _extract_label(record, suggested=True)
+        if suggested_label:
+            suggested += 1
+            suggested_label_counts[suggested_label] = suggested_label_counts.get(suggested_label, 0) + 1
 
         if str(record.get("qaStatus") or "").lower() == "needs_review":
             needs_review += 1
 
-        labels = record.get("labels")
-        if isinstance(labels, dict):
+        labels = _label_payload(record, suggested=False)
+        if labels:
             confidence_raw = labels.get("confidence")
             if isinstance(confidence_raw, (int, float)) and float(confidence_raw) < 0.6:
                 low_conf_count += 1
+        suggested_labels = _label_payload(record, suggested=True)
+        if suggested_labels:
+            confidence_raw = suggested_labels.get("confidence")
+            if isinstance(confidence_raw, (int, float)) and float(confidence_raw) < 0.6:
+                suggested_low_conf_count += 1
 
     report = {
         "recordCount": len(valid_records),
-        "labeledCount": labeled,
+        "labeledCount": reviewed,
+        "reviewedCount": reviewed,
+        "suggestedCount": suggested,
         "needsReviewCount": needs_review,
         "lowConfidenceCount": low_conf_count,
+        "suggestedLowConfidenceCount": suggested_low_conf_count,
         "headCounts": head_counts,
+        "suggestedHeadCounts": suggested_head_counts,
         "labelCounts": label_counts,
+        "suggestedLabelCounts": suggested_label_counts,
         "generatedAt": utc_now(),
     }
 
@@ -134,4 +162,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
