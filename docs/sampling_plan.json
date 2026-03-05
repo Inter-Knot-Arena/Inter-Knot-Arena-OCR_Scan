@@ -1,0 +1,28 @@
+{
+  "recordCount": 24,
+  "headCounts": {
+    "uid_digit": 12,
+    "agent_icon": 12
+  },
+  "labelCounts": {
+    "unknown": 24
+  },
+  "localeCounts": {
+    "RU": 24
+  },
+  "resolutionCounts": {
+    "1080p": 24
+  },
+  "sourceCounts": {
+    "live_session_1772675708": 12,
+    "live_session_1772675729": 12
+  },
+  "localeResolutionCounts": {
+    "RU:1080p": 24
+  },
+  "deficits": {
+    "uid_digit": 19988,
+    "agent_icon": 14988,
+    "equipment": 15000
+  }
+}
