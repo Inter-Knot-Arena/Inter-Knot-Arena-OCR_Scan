@@ -1,5 +1,5 @@
 {
-  "recordCount": 34973,
+  "recordCount": 38162,
   "labeledCount": 0,
   "reviewedCount": 0,
   "suggestedCount": 6452,
@@ -8,14 +8,14 @@
   "suggestedLowConfidenceCount": 2602,
   "headCounts": {
     "uid_digit": 11218,
-    "agent_icon": 17912,
-    "unknown": 65,
+    "agent_icon": 21081,
+    "unknown": 85,
     "equipment": 5778
   },
   "suggestedHeadCounts": {
     "uid_digit": 11218,
-    "agent_icon": 17912,
-    "unknown": 65,
+    "agent_icon": 21081,
+    "unknown": 85,
     "equipment": 5778
   },
   "labelCounts": {},
@@ -29,5 +29,5 @@
     "agent_lycaon": 251,
     "unknown": 2524
   },
-  "generatedAt": "2026-03-05T19:08:18Z"
+  "generatedAt": "2026-03-06T04:31:02Z"
 }

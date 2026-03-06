@@ -1,21 +1,21 @@
 {
-  "recordCount": 34973,
+  "recordCount": 38162,
   "headCounts": {
     "uid_digit": 11218,
-    "agent_icon": 17912,
-    "unknown": 65,
+    "agent_icon": 21081,
+    "unknown": 85,
     "equipment": 5778
   },
   "reviewedHeadCounts": {
     "uid_digit": 11218,
-    "agent_icon": 17912,
-    "unknown": 65,
+    "agent_icon": 21081,
+    "unknown": 85,
     "equipment": 5778
   },
   "suggestedHeadCounts": {
     "uid_digit": 11218,
-    "agent_icon": 17912,
-    "unknown": 65,
+    "agent_icon": 21081,
+    "unknown": 85,
     "equipment": 5778
   },
   "labelCounts": {},
@@ -238,12 +238,12 @@
     "RU": 42,
     "EN": 4270,
     "JP": 6522,
-    "unknown": 24139
+    "unknown": 27328
   },
   "resolutionCounts": {
     "1080p": 9379,
     "1440p": 1455,
-    "unknown": 24139
+    "unknown": 27328
   },
   "sourceCounts": {
     "live_session_1772677479": 12,
@@ -315,14 +315,34 @@
     "ocr_pool_050": 440,
     "ocr_pool_051": 455,
     "ocr_pool_052": 425,
-    "ocr_pool_053": 441
+    "ocr_pool_053": 441,
+    "auto_agent_nekomiya_mana_001": 181,
+    "auto_agent_lucy_002": 101,
+    "auto_agent_astra_yao_003": 181,
+    "auto_agent_evelyn_004": 39,
+    "auto_agent_soldier_0_anby_005": 181,
+    "auto_agent_pulchra_006": 181,
+    "auto_agent_trigger_007": 135,
+    "auto_agent_yixuan_008": 181,
+    "auto_agent_pan_yinhu_009": 181,
+    "auto_agent_ju_fufu_010": 181,
+    "auto_agent_yuzuha_011": 181,
+    "auto_agent_seed_012": 181,
+    "auto_agent_orphie_magus_013": 181,
+    "auto_agent_lucia_014": 181,
+    "auto_agent_komano_manato_015": 181,
+    "auto_agent_yidhari_016": 181,
+    "auto_agent_dialyn_017": 18,
+    "auto_agent_banyue_018": 181,
+    "auto_agent_zhao_019": 181,
+    "auto_agent_ye_shunguang_020": 181
   },
   "localeResolutionCounts": {
     "RU:1080p": 42,
     "EN:1080p": 2815,
     "JP:1080p": 6522,
     "EN:1440p": 1455,
-    "unknown:unknown": 24139
+    "unknown:unknown": 27328
   },
   "deficits": {
     "uid_digit": 8782,
