@@ -12,6 +12,7 @@ from manifest_lib import ensure_manifest_defaults, load_manifest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, record_screen_role, record_workflow, source_index_from_manifest
 from roster_taxonomy import source_focus_agent_ids
 
 
@@ -20,6 +21,8 @@ FIELDS = [
     "qa_status",
     "source_id",
     "focus_agent_id",
+    "workflow",
+    "screen_role",
     "head",
     "locale",
     "resolution",
@@ -89,6 +92,8 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "qa_status": str(record.get("qaStatus") or ""),
         "source_id": source_id,
         "focus_agent_id": _source_focus(source_index, source_id),
+        "workflow": record_workflow(record, source_index),
+        "screen_role": record_screen_role(record, source_index),
         "head": head,
         "locale": str(record.get("locale") or ""),
         "resolution": str(record.get("resolution") or ""),
@@ -158,6 +163,8 @@ def main() -> int:
     parser.add_argument("--output-html", default="docs/dataset_preview.html")
     parser.add_argument("--status", default="any")
     parser.add_argument("--max-records", type=int, default=450)
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest = ensure_manifest_defaults(load_manifest(Path(args.manifest).resolve()))
@@ -165,12 +172,14 @@ def main() -> int:
     sources = manifest.get("sources", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
-    source_index = {
-        str(source.get("sourceId") or ""): source
-        for source in sources
-        if isinstance(source, dict) and str(source.get("sourceId") or "")
-    }
-    selected = _select_records(records, status_filter=args.status, max_records=max(0, int(args.max_records)))
+    source_index = source_index_from_manifest(sources)
+    scoped_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
+    selected = _select_records(scoped_records, status_filter=args.status, max_records=max(0, int(args.max_records)))
     rows = [_row(record, source_index) for record in selected]
 
     output_csv = Path(args.output_csv).resolve()

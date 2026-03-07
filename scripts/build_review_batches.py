@@ -12,6 +12,7 @@ from manifest_lib import ensure_manifest_defaults, load_manifest, utc_now
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, record_screen_role, record_workflow, source_index_from_manifest
 from roster_taxonomy import current_agent_ids, source_focus_agent_ids
 
 
@@ -23,6 +24,8 @@ FIELDS = [
     "qa_status",
     "source_id",
     "focus_agent_id",
+    "workflow",
+    "screen_role",
     "head",
     "locale",
     "resolution",
@@ -170,6 +173,8 @@ def _row(item: Dict[str, Any], source_index: Dict[str, Dict[str, Any]], batch_id
         "qa_status": str(record.get("qaStatus") or ""),
         "source_id": source_id,
         "focus_agent_id": _focus_agent(source_index, source_id),
+        "workflow": record_workflow(record, source_index),
+        "screen_role": record_screen_role(record, source_index),
         "head": _detect_head(record),
         "locale": str(record.get("locale") or ""),
         "resolution": str(record.get("resolution") or ""),
@@ -196,6 +201,8 @@ def main() -> int:
     parser.add_argument("--status", default="needs_review")
     parser.add_argument("--batch-size", type=int, default=150)
     parser.add_argument("--max-batches", type=int, default=10)
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest = ensure_manifest_defaults(load_manifest(Path(args.manifest).resolve()))
@@ -203,18 +210,20 @@ def main() -> int:
     sources = manifest.get("sources", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
-    source_index = {
-        str(source.get("sourceId") or ""): source
-        for source in sources
-        if isinstance(source, dict) and str(source.get("sourceId") or "")
-    }
+    source_index = source_index_from_manifest(sources)
+    scoped_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
 
-    reviewed_counts = _reviewed_agent_counts(records)
+    reviewed_counts = _reviewed_agent_counts(scoped_records)
     missing_reviewed = {agent for agent in current_agent_ids() if reviewed_counts.get(agent, 0) <= 0}
     status_filter = {item.strip().lower() for item in str(args.status).split(",") if item.strip()}
 
     scored: List[Dict[str, Any]] = []
-    for record in records:
+    for record in scoped_records:
         if not isinstance(record, dict):
             continue
         status = str(record.get("qaStatus") or "").strip().lower()
@@ -272,6 +281,8 @@ def main() -> int:
     output_json.parent.mkdir(parents=True, exist_ok=True)
     summary = {
         "generatedAt": utc_now(),
+        "workflow": str(args.workflow),
+        "importEligibleOnly": bool(args.import_eligible_only),
         "statusFilter": sorted(status_filter),
         "batchSize": max(1, int(args.batch_size)),
         "batchCount": len(batches),

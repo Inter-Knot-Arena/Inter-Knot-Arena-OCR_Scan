@@ -8,6 +8,7 @@ OCR and parsing package for VerifierApp full roster scan.
 - Detect owned agents and progression values.
 - Parse amplifiers and discs from inventory/equipment UI.
 - Emit normalized payload consumed by VerifierApp.
+- OCR dataset scope is `account import` only. Match gameplay footage is not treated as roster-import ground truth.
 
 ## Output contract
 
@@ -71,20 +72,26 @@ Raw frames/crops are intentionally excluded from git. Use scripts to keep only m
 ```powershell
 python scripts/bootstrap_dataset.py --storage-root D:\IKA_DATA\ocr
 python scripts/ingest_public_sources.py --manifest dataset_manifest.json --sources-file D:\IKA_DATA\ocr_sources.json
-python scripts/extract_frames.py --manifest dataset_manifest.json --head uid_digit --fps 1.0 --scene-aware
-python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_icon --fps 1.0
-python scripts/extract_frames.py --manifest dataset_manifest.json --head equipment --fps 0.5
+python scripts/extract_frames.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --fps 1.0 --scene-aware
+python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role roster --fps 1.0
+python scripts/extract_frames.py --manifest dataset_manifest.json --head equipment --workflow account_import --screen-role equipment --fps 0.5
 python scripts/deduplicate_frames.py --manifest dataset_manifest.json --input-dir D:\IKA_DATA\ocr\frames
-python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --duration-sec 180 --fps 1.0 --locale RU --resolution 1080p
+python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --duration-sec 180 --fps 1.0 --locale RU --resolution 1080p
 python scripts/prune_manifest.py --manifest dataset_manifest.json --drop-source live_session_1772675708 --drop-source live_session_1772675729
-python scripts/prelabel_dataset.py --manifest dataset_manifest.json --confidence-threshold 0.6
-python scripts/qa_audit.py --manifest dataset_manifest.json --output-file docs/qa_report.json --double-review-file docs/double_review_samples.json
+python scripts/prelabel_dataset.py --manifest dataset_manifest.json --workflow account_import --confidence-threshold 0.6
+python scripts/qa_audit.py --manifest dataset_manifest.json --workflow account_import --output-file docs/qa_report.json --double-review-file docs/double_review_samples.json
 python scripts/export_review_pack.py --manifest dataset_manifest.json --status needs_review --output-csv docs/review_queue.csv
 # after manual edit of docs/review_queue.csv:
 python scripts/apply_review_labels.py --manifest dataset_manifest.json --input-csv docs/review_queue.csv --review-round final --reviewer-id qa_operator_1
-python scripts/build_sampling_plan.py --manifest dataset_manifest.json --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
+python scripts/build_sampling_plan.py --manifest dataset_manifest.json --workflow account_import --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
 python scripts/split_dataset.py --manifest dataset_manifest.json --seed 42
 ```
+
+## Dataset policy
+
+- `workflow=account_import` is the only default scope for OCR training/review artifacts.
+- `workflow=combat_reference` may exist in the manifest for provenance, but those records are excluded from OCR review, QA, and sampling by default.
+- Use `scripts/realign_import_workflow.py` if an older manifest mixed account-import and gameplay sources.
 
 ## Non-goals
 

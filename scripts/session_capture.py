@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -11,7 +12,16 @@ import cv2
 import numpy as np
 from PIL import ImageGrab
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest, source_exists, utc_now
+from ocr_dataset_policy import (
+    ACCOUNT_IMPORT_WORKFLOW,
+    apply_record_policy_defaults,
+    apply_source_policy_defaults,
+    default_role_for_head,
+    source_index_from_manifest,
+)
 
 try:
     import dxcam  # type: ignore
@@ -86,25 +96,25 @@ def _append_record(
     session_id: str,
 ) -> None:
     records = manifest.setdefault("records", [])
+    source_index = source_index_from_manifest(manifest.get("sources", []))
     for record in records:
         if str(record.get("id")) == record_id:
             return
-    records.append(
-        {
-            "id": record_id,
-            "sourceId": source_id,
-            "sessionId": session_id,
-            "matchId": "",
-            "kind": "frame_capture",
-            "head": head,
-            "state": "other",
-            "locale": locale,
-            "resolution": resolution,
-            "path": str(output_path.resolve()),
-            "labelsPath": "",
-            "qaStatus": "unlabeled",
-        }
-    )
+    record = {
+        "id": record_id,
+        "sourceId": source_id,
+        "sessionId": session_id,
+        "matchId": "",
+        "kind": "frame_capture",
+        "head": head,
+        "state": "other",
+        "locale": locale,
+        "resolution": resolution,
+        "path": str(output_path.resolve()),
+        "labelsPath": "",
+        "qaStatus": "unlabeled",
+    }
+    records.append(apply_record_policy_defaults(record, source_index))
 
 
 def main() -> int:
@@ -118,6 +128,8 @@ def main() -> int:
     parser.add_argument("--locale", default="unknown")
     parser.add_argument("--resolution", default="unknown")
     parser.add_argument("--collector", default=os.getenv("USERNAME", "unknown"))
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW, help="account_import or combat_reference")
+    parser.add_argument("--screen-role", default="", help="uid_panel, roster, agent_detail, equipment, account_unknown, combat")
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest).resolve()
@@ -135,19 +147,21 @@ def main() -> int:
 
     source_id = f"live_{session_id}"
     if not source_exists(manifest.get("sources", []), source_id):
-        manifest.setdefault("sources", []).append(
-            {
-                "sourceId": source_id,
-                "url": "",
-                "captureDate": utc_now(),
-                "licenseNote": "self-captured gameplay",
-                "locale": args.locale,
-                "resolution": args.resolution,
-                "gamePatch": "unknown",
-                "collector": args.collector,
-                "sourceType": "live-capture",
-            }
-        )
+        source = {
+            "sourceId": source_id,
+            "url": "",
+            "captureDate": utc_now(),
+            "licenseNote": "self-captured account import" if str(args.workflow).strip() == ACCOUNT_IMPORT_WORKFLOW else "self-captured gameplay",
+            "locale": args.locale,
+            "resolution": args.resolution,
+            "gamePatch": "unknown",
+            "collector": args.collector,
+            "sourceType": "live-capture",
+            "workflow": str(args.workflow).strip() or ACCOUNT_IMPORT_WORKFLOW,
+            "screenRole": str(args.screen_role).strip() or default_role_for_head(args.head),
+            "eligibleHeads": [args.head],
+        }
+        manifest.setdefault("sources", []).append(apply_source_policy_defaults(source))
 
     interval_sec = 1.0 / max(0.1, args.fps)
     region = _parse_region(args.region)
@@ -204,4 +218,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

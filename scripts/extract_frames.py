@@ -2,13 +2,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Sequence, Set, Tuple
 
 import cv2
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest
+from ocr_dataset_policy import (
+    ACCOUNT_IMPORT_WORKFLOW,
+    apply_record_policy_defaults,
+    default_role_for_head,
+    infer_source_eligible_heads,
+    infer_source_screen_role,
+    infer_source_workflow,
+    source_index_from_manifest,
+)
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
 
@@ -108,26 +120,26 @@ def _append_record(
     session_id: str,
 ) -> None:
     records = manifest.setdefault("records", [])
+    source_index = source_index_from_manifest(manifest.get("sources", []))
     for record in records:
         if str(record.get("id")) == record_id:
             return
-    records.append(
-        {
-            "id": record_id,
-            "sourceId": source_id,
-            "sessionId": session_id,
-            "matchId": "",
-            "kind": "frame_crop",
-            "head": head,
-            "state": "other",
-            "locale": locale,
-            "resolution": resolution,
-            "path": str(output_path),
-            "frameTsMs": round(frame_ts_ms, 2),
-            "labelsPath": "",
-            "qaStatus": "unlabeled",
-        }
-    )
+    record = {
+        "id": record_id,
+        "sourceId": source_id,
+        "sessionId": session_id,
+        "matchId": "",
+        "kind": "frame_crop",
+        "head": head,
+        "state": "other",
+        "locale": locale,
+        "resolution": resolution,
+        "path": str(output_path),
+        "frameTsMs": round(frame_ts_ms, 2),
+        "labelsPath": "",
+        "qaStatus": "unlabeled",
+    }
+    records.append(apply_record_policy_defaults(record, source_index))
 
 
 def _source_index(manifest: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -157,6 +169,8 @@ def main() -> int:
     parser.add_argument("--scene-aware", action="store_true", default=False)
     parser.add_argument("--scene-threshold", type=float, default=0.16)
     parser.add_argument("--session-id", default="")
+    parser.add_argument("--workflow", default="", help="Override workflow for extracted records.")
+    parser.add_argument("--screen-role", default="", help="Override screenRole for extracted records.")
     parser.add_argument(
         "--source-id-prefix",
         action="append",
@@ -201,6 +215,11 @@ def main() -> int:
         prefixes=source_id_prefixes,
     ):
         source_meta = source_index.get(source_id, {})
+        source_workflow = str(args.workflow).strip() or infer_source_workflow(source_meta)
+        source_screen_role = str(args.screen_role).strip() or infer_source_screen_role(source_meta) or default_role_for_head(args.head)
+        allowed_heads = set(infer_source_eligible_heads(source_meta))
+        if allowed_heads and args.head not in allowed_heads:
+            continue
         locale = str(args.locale).strip()
         resolution = str(args.resolution).strip()
         if not locale or locale.lower() == "auto":
@@ -249,6 +268,14 @@ def main() -> int:
                     frame_ts_ms=frame_ts_ms,
                     session_id=args.session_id,
                 )
+                saved_record = records[-1] if records else None
+                if isinstance(saved_record, dict) and str(saved_record.get("id") or "") == record_id:
+                    saved_record["workflow"] = source_workflow or ACCOUNT_IMPORT_WORKFLOW
+                    saved_record["screenRole"] = source_screen_role
+                    saved_record["eligibleHeads"] = sorted(allowed_heads or {args.head})
+                    saved_record["ocrImportEligible"] = bool(
+                        saved_record["workflow"] == ACCOUNT_IMPORT_WORKFLOW and args.head in set(saved_record["eligibleHeads"])
+                    )
                 frame_total += 1
                 saved_count += 1
                 previous_saved = frame

@@ -1,33 +1,26 @@
 {
-  "recordCount": 38162,
+  "recordCount": 42,
+  "workflow": "account_import",
+  "importEligibleOnly": true,
   "labeledCount": 0,
   "reviewedCount": 0,
-  "suggestedCount": 6452,
-  "needsReviewCount": 6452,
+  "suggestedCount": 42,
+  "needsReviewCount": 42,
   "lowConfidenceCount": 0,
-  "suggestedLowConfidenceCount": 2602,
+  "suggestedLowConfidenceCount": 12,
   "headCounts": {
-    "uid_digit": 11218,
-    "agent_icon": 21081,
-    "unknown": 85,
-    "equipment": 5778
+    "uid_digit": 12,
+    "agent_icon": 30
   },
   "suggestedHeadCounts": {
-    "uid_digit": 11218,
-    "agent_icon": 21081,
-    "unknown": 85,
-    "equipment": 5778
+    "uid_digit": 12,
+    "agent_icon": 30
   },
   "labelCounts": {},
   "suggestedLabelCounts": {
-    "1": 13,
-    "agent_vivian": 3546,
-    "agent_nicole": 10,
-    "3": 79,
-    "2": 28,
-    "7": 1,
-    "agent_lycaon": 251,
-    "unknown": 2524
+    "1": 12,
+    "agent_vivian": 20,
+    "agent_nicole": 10
   },
-  "generatedAt": "2026-03-06T04:31:02Z"
+  "generatedAt": "2026-03-07T09:59:26Z"
 }

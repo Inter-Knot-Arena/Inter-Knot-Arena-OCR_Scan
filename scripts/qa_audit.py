@@ -3,10 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest, utc_now
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, source_index_from_manifest
 
 
 def _label_payload(record: Dict[str, Any], suggested: bool) -> Dict[str, Any]:
@@ -58,6 +62,8 @@ def main() -> int:
     parser.add_argument("--double-review-file", default="docs/double_review_samples.json")
     parser.add_argument("--double-review-ratio", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest).resolve()
@@ -65,6 +71,13 @@ def main() -> int:
     records = manifest.get("records", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
+    source_index = source_index_from_manifest(manifest.get("sources", []))
+    scoped_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
 
     valid_records: List[Dict[str, Any]] = []
     reviewed = 0
@@ -77,7 +90,7 @@ def main() -> int:
     low_conf_count = 0
     suggested_low_conf_count = 0
 
-    for record in records:
+    for record in scoped_records:
         if not isinstance(record, dict):
             continue
         valid_records.append(record)
@@ -111,6 +124,8 @@ def main() -> int:
 
     report = {
         "recordCount": len(valid_records),
+        "workflow": str(args.workflow),
+        "importEligibleOnly": bool(args.import_eligible_only),
         "labeledCount": reviewed,
         "reviewedCount": reviewed,
         "suggestedCount": suggested,

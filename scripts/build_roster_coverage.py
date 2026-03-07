@@ -11,6 +11,7 @@ from manifest_lib import ensure_manifest_defaults, load_manifest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, apply_source_policy_defaults, filter_records, source_index_from_manifest
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids, focus_agents_from_sources
 
 
@@ -40,6 +41,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build roster coverage report for OCR manifest.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
     parser.add_argument("--output-file", default="docs/roster_coverage.json")
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest = ensure_manifest_defaults(load_manifest(Path(args.manifest).resolve()))
@@ -49,13 +52,23 @@ def main() -> int:
         raise ValueError("manifest.records must be an array")
     if not isinstance(sources, list):
         raise ValueError("manifest.sources must be an array")
+    source_index = source_index_from_manifest(sources)
+    for source in source_index.values():
+        apply_source_policy_defaults(source)
+    scoped_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
 
     roster_agents = current_agent_ids()
-    focused_counts = focus_agents_from_sources(sources)
+    scoped_sources = [source for source in source_index.values() if str(source.get("workflow") or "").strip().lower() == str(args.workflow).strip().lower()]
+    focused_counts = focus_agents_from_sources(scoped_sources)
     reviewed_counts: Counter[str] = Counter()
     suggested_counts: Counter[str] = Counter()
 
-    for record in records:
+    for record in scoped_records:
         if not isinstance(record, dict):
             continue
         head = str(record.get("head") or (record.get("labels") or {}).get("head") or "")
@@ -70,6 +83,8 @@ def main() -> int:
 
     report = {
         "rosterAgentCount": len(roster_agents),
+        "workflow": str(args.workflow),
+        "importEligibleOnly": bool(args.import_eligible_only),
         "sourceFocusedAgentCount": sum(1 for agent in roster_agents if focused_counts.get(agent, 0) > 0),
         "labeledAgentCount": sum(1 for agent in roster_agents if reviewed_counts.get(agent, 0) > 0),
         "reviewedAgentCount": sum(1 for agent in roster_agents if reviewed_counts.get(agent, 0) > 0),

@@ -12,6 +12,7 @@ from typing import Any, Dict, List
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from manifest_lib import ensure_manifest_defaults, hash_file_sha256, load_manifest, save_manifest, utc_now
+from ocr_dataset_policy import apply_source_policy_defaults, infer_source_eligible_heads, infer_source_screen_role, infer_source_workflow
 from roster_taxonomy import source_focus_agent_ids
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v"}
@@ -155,6 +156,11 @@ def _normalize_with_ffmpeg(input_path: Path, overwrite: bool) -> Path:
 
 def _append_record(manifest: Dict[str, Any], source_id: str, path: Path, resolution: str, locale: str) -> None:
     records = manifest.setdefault("records", [])
+    source_index = {str(source.get("sourceId") or ""): source for source in manifest.get("sources", []) if isinstance(source, dict)}
+    source = source_index.get(source_id, {})
+    workflow = infer_source_workflow(source) if isinstance(source, dict) else ""
+    screen_role = infer_source_screen_role(source) if isinstance(source, dict) else ""
+    eligible_heads = infer_source_eligible_heads(source) if isinstance(source, dict) else []
     record_id = f"raw-{source_id}-{path.stem}"
     for record in records:
         if str(record.get("id")) == record_id:
@@ -174,6 +180,10 @@ def _append_record(manifest: Dict[str, Any], source_id: str, path: Path, resolut
             "captureDate": utc_now(),
             "labelsPath": "",
             "qaStatus": "unlabeled",
+            "workflow": workflow,
+            "screenRole": screen_role,
+            "eligibleHeads": eligible_heads,
+            "ocrImportEligible": False,
         }
     )
 
@@ -198,7 +208,7 @@ def _build_source_payload(source: Dict[str, Any], source_id: str, url: str) -> D
     tags = source.get("sourceTags")
     if isinstance(tags, list):
         payload["sourceTags"] = [str(item).strip() for item in tags if str(item).strip()]
-    return payload
+    return apply_source_policy_defaults(payload)
 
 
 def _upsert_source(manifest: Dict[str, Any], source_payload: Dict[str, Any]) -> None:

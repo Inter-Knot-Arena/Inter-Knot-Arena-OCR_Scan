@@ -12,6 +12,7 @@ import numpy as np
 from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest, utc_now
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, source_index_from_manifest
 from roster_taxonomy import canonicalize_agent_label
 from scanner.model_runtime import ModelRegistry, preprocess_digit, preprocess_icon
 
@@ -115,6 +116,8 @@ def main() -> int:
     parser.add_argument("--overwrite", action="store_true", default=False)
     parser.add_argument("--max-records", type=int, default=0)
     parser.add_argument("--confidence-threshold", type=float, default=0.6)
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest).resolve()
@@ -122,6 +125,13 @@ def main() -> int:
     records = manifest.get("records", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
+    source_index = source_index_from_manifest(manifest.get("sources", []))
+    candidate_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
 
     processed = 0
     updated = 0
@@ -130,7 +140,7 @@ def main() -> int:
     limit = max(0, int(args.max_records))
     threshold = max(0.0, min(1.0, args.confidence_threshold))
 
-    for record in records:
+    for record in candidate_records:
         if not isinstance(record, dict):
             continue
         if not args.overwrite and _has_labels(record):

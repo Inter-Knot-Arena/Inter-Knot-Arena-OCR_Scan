@@ -11,6 +11,7 @@ from manifest_lib import ensure_manifest_defaults, load_manifest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, source_index_from_manifest
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 
 
@@ -61,12 +62,21 @@ def main() -> int:
     parser.add_argument("--target-agent-icon", type=int, default=15000)
     parser.add_argument("--target-equipment", type=int, default=15000)
     parser.add_argument("--output-file", default="")
+    parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)
+    parser.add_argument("--import-eligible-only", action="store_true", default=True)
     args = parser.parse_args()
 
     manifest = ensure_manifest_defaults(load_manifest(Path(args.manifest).resolve()))
     records = manifest.get("records", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
+    source_index = source_index_from_manifest(manifest.get("sources", []))
+    scoped_records = filter_records(
+        records,
+        source_index=source_index,
+        workflow=args.workflow,
+        import_eligible_only=bool(args.import_eligible_only),
+    )
 
     reviewed_head_counts: Counter[str] = Counter()
     suggested_head_counts: Counter[str] = Counter()
@@ -76,7 +86,7 @@ def main() -> int:
     resolution_counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()
 
-    for record in records:
+    for record in scoped_records:
         if not isinstance(record, dict):
             continue
         reviewed_head = _extract_head(record, suggested=False)
@@ -111,14 +121,16 @@ def main() -> int:
     missing_agent_icons = [agent for agent, count in agent_icon_counts.items() if count <= 0]
 
     per_locale_resolution = defaultdict(int)
-    for record in records:
+    for record in scoped_records:
         if not isinstance(record, dict):
             continue
         key = f"{str(record.get('locale') or 'unknown')}:{str(record.get('resolution') or 'unknown')}"
         per_locale_resolution[key] += 1
 
     plan = {
-        "recordCount": len(records),
+        "recordCount": len(scoped_records),
+        "workflow": str(args.workflow),
+        "importEligibleOnly": bool(args.import_eligible_only),
         "headCounts": dict(reviewed_head_counts),
         "reviewedHeadCounts": dict(reviewed_head_counts),
         "suggestedHeadCounts": dict(suggested_head_counts),
