@@ -49,4 +49,5 @@ python scripts/qa_audit.py --manifest dataset_manifest.json --workflow account_i
 - Review records for agents missing in `reviewed` counts.
 - Review low-confidence and `unknown_flag` rows first.
 - Review `uid_digit` rows early because UID OCR is currently the weakest head.
-- Prioritize `uid_panel`, `roster`, `agent_detail`, and `equipment` screen roles only.
+- Prioritize `uid_panel`, `roster`, `agent_detail`, `equipment`, `disk_detail`, and `amplifier_detail` screen roles first.
+- `mindscape` rows can stay in the manifest for now; they are preserved for future parser expansion and are not part of the current import-eligible slice.

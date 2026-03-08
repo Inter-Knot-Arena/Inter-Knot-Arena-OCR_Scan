@@ -71,6 +71,7 @@ Raw frames/crops are intentionally excluded from git. Use scripts to keep only m
 
 ```powershell
 python scripts/bootstrap_dataset.py --storage-root D:\IKA_DATA\ocr
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
 python scripts/ingest_public_sources.py --manifest dataset_manifest.json --sources-file D:\IKA_DATA\ocr_sources.json
 python scripts/extract_frames.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --fps 1.0 --scene-aware
 python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role roster --fps 1.0
@@ -88,11 +89,24 @@ python scripts/build_account_capture_backlog.py --manifest dataset_manifest.json
 python scripts/split_dataset.py --manifest dataset_manifest.json --seed 42
 ```
 
+Drop-folder screenshot import is the preferred route for manual account captures. The importer understands these screen buckets from file names or parent folders:
+
+- `uid`
+- `roster`
+- `agent_detail`
+- `equipment`
+- `disk1` ... `disk6`
+- `amplificator` or `amplifier`
+- `mindscape`
+
+Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual_screens\...` and appended to `dataset_manifest.json`.
+
 ## Dataset policy
 
 - `workflow=account_import` is the only default scope for OCR training/review artifacts.
 - `workflow=combat_reference` may exist in the manifest for provenance, but those records are excluded from OCR review, QA, and sampling by default.
 - Use `scripts/realign_import_workflow.py` if an older manifest mixed account-import and gameplay sources.
+- `mindscape` screenshots are preserved in the manifest for future parser coverage, but are not yet included in the current import-eligible training slice.
 
 ## Non-goals
 

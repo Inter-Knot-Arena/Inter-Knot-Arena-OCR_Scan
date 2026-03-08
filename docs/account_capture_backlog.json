@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-08T00:19:27Z",
+  "generatedAt": "2026-03-08T15:41:09Z",
   "workflow": "account_import",
   "eligibleRecordCount": 42,
   "roleHeadCounts": {
@@ -16,7 +16,10 @@
     "uidPanelFrames": 12,
     "rosterCoveredAgents": 0,
     "agentDetailCoveredAgents": 2,
-    "equipmentFrames": 0
+    "equipmentFrames": 0,
+    "diskDetailFrames": 0,
+    "amplifierDetailFrames": 0,
+    "mindscapeFrames": 0
   },
   "uidPanelMissingFrames": 68,
   "missingRosterAgents": [
@@ -226,12 +229,16 @@
     "uid_panel",
     "roster",
     "agent_detail",
-    "equipment"
+    "equipment",
+    "disk_detail",
+    "amplifier_detail",
+    "mindscape"
   ],
   "recommendedCommands": [
     "python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --duration-sec 60 --fps 1.0 --locale RU --resolution 1080p",
     "python scripts/session_capture.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role roster --duration-sec 120 --fps 1.0 --locale RU --resolution 1080p",
     "python scripts/session_capture.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role agent_detail --duration-sec 120 --fps 1.0 --locale RU --resolution 1080p",
-    "python scripts/session_capture.py --manifest dataset_manifest.json --head equipment --workflow account_import --screen-role equipment --duration-sec 180 --fps 0.5 --locale RU --resolution 1080p"
+    "python scripts/session_capture.py --manifest dataset_manifest.json --head equipment --workflow account_import --screen-role equipment --duration-sec 180 --fps 0.5 --locale RU --resolution 1080p",
+    "python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\\IKA_DATA\\ocr\\drops\\batch_001 --locale RU"
   ]
 }

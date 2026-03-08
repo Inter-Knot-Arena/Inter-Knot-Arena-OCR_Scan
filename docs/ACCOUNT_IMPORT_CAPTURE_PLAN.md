@@ -8,6 +8,9 @@ Build OCR data only for Verifier account import:
 - `roster` -> owned agent icons
 - `agent_detail` -> agent identity and progression context
 - `equipment` -> amplifiers, discs, levels, stats
+- `disk_detail` -> one screenshot per slot when detailed disc stats are visible
+- `amplifier_detail` -> dedicated amplifier detail screen
+- `mindscape` -> progression screen kept for future parser coverage
 
 ## Do not use
 
@@ -33,6 +36,24 @@ python scripts/session_capture.py --manifest dataset_manifest.json --head agent_
 python scripts/session_capture.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role agent_detail --duration-sec 120 --fps 1.0 --locale RU --resolution 1080p
 python scripts/session_capture.py --manifest dataset_manifest.json --head equipment --workflow account_import --screen-role equipment --duration-sec 180 --fps 0.5 --locale RU --resolution 1080p
 ```
+
+## Screenshot drop-folder path
+
+If the account screens already exist as PNG/JPG files, use the screenshot importer instead of recapturing them:
+
+```powershell
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
+```
+
+Supported buckets:
+
+- `uid`
+- `roster`
+- `agent_detail`
+- `equipment`
+- `disk1` ... `disk6`
+- `amplificator` or `amplifier`
+- `mindscape`
 
 ## Acceptance baseline
 
