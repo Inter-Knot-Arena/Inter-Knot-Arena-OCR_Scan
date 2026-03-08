@@ -75,7 +75,7 @@ def _detect_screen_role(path: Path, root: Path) -> tuple[str, Dict[str, Any]] | 
 
     if re.search(r"\buid\b", normalized) or "profile" in normalized:
         return UID_PANEL_ROLE, {"screenAlias": "uid"}
-    if re.search(r"\broster\b", normalized) or "agent_menu" in normalized or "agents_menu" in normalized:
+    if "roster" in normalized or "agent_menu" in normalized or "agents_menu" in normalized:
         return ROSTER_ROLE, {"screenAlias": "roster"}
     if "mindscape" in normalized or "cinema" in normalized or re.search(r"\bmind\b", normalized):
         return MINDSCAPE_ROLE, {"screenAlias": "mindscape"}
