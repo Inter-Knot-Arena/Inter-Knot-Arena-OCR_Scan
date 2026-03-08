@@ -1,5 +1,5 @@
 {
-  "recordCount": 42,
+  "recordCount": 57,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "labeledCount": 0,
@@ -9,12 +9,14 @@
   "lowConfidenceCount": 0,
   "suggestedLowConfidenceCount": 12,
   "headCounts": {
-    "uid_digit": 12,
-    "agent_icon": 30
+    "uid_digit": 13,
+    "agent_icon": 36,
+    "equipment": 8
   },
   "suggestedHeadCounts": {
-    "uid_digit": 12,
-    "agent_icon": 30
+    "uid_digit": 13,
+    "agent_icon": 36,
+    "equipment": 8
   },
   "labelCounts": {},
   "suggestedLabelCounts": {
@@ -22,5 +24,5 @@
     "agent_vivian": 20,
     "agent_nicole": 10
   },
-  "generatedAt": "2026-03-07T09:59:26Z"
+  "generatedAt": "2026-03-08T20:08:44Z"
 }

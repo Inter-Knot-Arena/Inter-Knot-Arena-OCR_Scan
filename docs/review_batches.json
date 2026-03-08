@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-07T09:59:28Z",
+  "generatedAt": "2026-03-08T20:08:46Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "statusFilter": [
     "needs_review",
     "unlabeled"
   ],
-  "batchSize": 80,
+  "batchSize": 150,
   "batchCount": 1,
-  "queuedRecords": 42,
+  "queuedRecords": 57,
   "missingReviewedAgentIcons": [
     "agent_alice",
     "agent_anby",
@@ -63,11 +63,12 @@
   "batches": [
     {
       "batchId": "ocr-review-001",
-      "size": 42,
+      "size": 57,
       "maxPriority": 94,
       "headCounts": {
-        "agent_icon": 30,
-        "uid_digit": 12
+        "agent_icon": 36,
+        "uid_digit": 13,
+        "equipment": 8
       },
       "focusAgentCounts": {}
     }
