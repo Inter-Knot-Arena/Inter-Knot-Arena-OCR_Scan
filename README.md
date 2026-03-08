@@ -84,6 +84,7 @@ python scripts/export_review_pack.py --manifest dataset_manifest.json --status n
 # after manual edit of docs/review_queue.csv:
 python scripts/apply_review_labels.py --manifest dataset_manifest.json --input-csv docs/review_queue.csv --review-round final --reviewer-id qa_operator_1
 python scripts/build_sampling_plan.py --manifest dataset_manifest.json --workflow account_import --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
+python scripts/build_account_capture_backlog.py --manifest dataset_manifest.json --output-file docs/account_capture_backlog.json
 python scripts/split_dataset.py --manifest dataset_manifest.json --seed 42
 ```
 
