@@ -26,7 +26,7 @@ python scripts/qa_audit.py --manifest dataset_manifest.json --output-file docs/q
 ## OCR
 1. Build prioritized batches:
 ```powershell
-python scripts/build_review_batches.py --manifest dataset_manifest.json --workflow account_import --output-csv docs/review_queue.priority.csv --output-json docs/review_batches.json
+python scripts/build_review_batches.py --manifest dataset_manifest.json --workflow account_import --status needs_review,unlabeled --output-csv docs/review_queue.priority.csv --output-json docs/review_batches.json
 ```
 2. Review rows in `docs/review_queue.priority.csv`.
 3. Apply round A/B or final labels:

@@ -198,7 +198,7 @@ def main() -> int:
     parser.add_argument("--manifest", default="dataset_manifest.json")
     parser.add_argument("--output-csv", default="docs/review_queue.priority.csv")
     parser.add_argument("--output-json", default="docs/review_batches.json")
-    parser.add_argument("--status", default="needs_review")
+    parser.add_argument("--status", default="needs_review,unlabeled")
     parser.add_argument("--batch-size", type=int, default=150)
     parser.add_argument("--max-batches", type=int, default=10)
     parser.add_argument("--workflow", default=ACCOUNT_IMPORT_WORKFLOW)

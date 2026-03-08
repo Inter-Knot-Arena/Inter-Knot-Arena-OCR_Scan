@@ -63,7 +63,7 @@ Rebuild the OCR artifacts:
 ```powershell
 python scripts/build_account_capture_backlog.py --manifest dataset_manifest.json --output-file docs/account_capture_backlog.json
 python scripts/qa_audit.py --manifest dataset_manifest.json --workflow account_import --output-file docs/qa_report.json --double-review-file docs/double_review_samples.json
-python scripts/build_review_batches.py --manifest dataset_manifest.json --workflow account_import --output-csv docs/review_queue.priority.csv --output-json docs/review_batches.json
+python scripts/build_review_batches.py --manifest dataset_manifest.json --workflow account_import --status needs_review,unlabeled --output-csv docs/review_queue.priority.csv --output-json docs/review_batches.json
 python scripts/export_dataset_preview.py --manifest dataset_manifest.json --workflow account_import --output-csv docs/dataset_preview.csv --output-html docs/dataset_preview.html
 python scripts/build_sampling_plan.py --manifest dataset_manifest.json --workflow account_import --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
 python scripts/build_roster_coverage.py --manifest dataset_manifest.json --workflow account_import --output-file docs/roster_coverage.json
