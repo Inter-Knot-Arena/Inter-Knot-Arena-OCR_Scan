@@ -10,6 +10,9 @@ UID_PANEL_ROLE = "uid_panel"
 ROSTER_ROLE = "roster"
 AGENT_DETAIL_ROLE = "agent_detail"
 EQUIPMENT_ROLE = "equipment"
+DISK_DETAIL_ROLE = "disk_detail"
+AMPLIFIER_DETAIL_ROLE = "amplifier_detail"
+MINDSCAPE_ROLE = "mindscape"
 ACCOUNT_UNKNOWN_ROLE = "account_unknown"
 COMBAT_ROLE = "combat"
 OTHER_ROLE = "other"
@@ -25,6 +28,9 @@ ROLE_TO_ELIGIBLE_HEADS = {
     ROSTER_ROLE: {"agent_icon"},
     AGENT_DETAIL_ROLE: {"agent_icon"},
     EQUIPMENT_ROLE: {"equipment", "agent_icon"},
+    DISK_DETAIL_ROLE: {"equipment"},
+    AMPLIFIER_DETAIL_ROLE: {"equipment"},
+    MINDSCAPE_ROLE: set(),
     ACCOUNT_UNKNOWN_ROLE: {"uid_digit", "agent_icon", "equipment"},
     COMBAT_ROLE: set(),
     OTHER_ROLE: set(),
@@ -58,7 +64,25 @@ def infer_source_workflow(source: Dict[str, Any]) -> str:
 
     if source_id.startswith("live_session_"):
         return ACCOUNT_IMPORT_WORKFLOW
-    if {"profile", "roster", "account", "inventory", "equipment", "uid"} & tags:
+    if {
+        "profile",
+        "roster",
+        "account",
+        "inventory",
+        "equipment",
+        "uid",
+        "agent_detail",
+        "stats",
+        "disc",
+        "disk",
+        "disc_detail",
+        "disk_detail",
+        "amplifier",
+        "amplificator",
+        "w_engine",
+        "mindscape",
+        "cinema",
+    } & tags:
         return ACCOUNT_IMPORT_WORKFLOW
     if source_type == "live-capture":
         return ACCOUNT_IMPORT_WORKFLOW
@@ -75,9 +99,15 @@ def infer_source_screen_role(source: Dict[str, Any]) -> str:
         return UID_PANEL_ROLE
     if "roster" in tags:
         return ROSTER_ROLE
+    if "mindscape" in tags or "cinema" in tags:
+        return MINDSCAPE_ROLE
+    if "amplifier" in tags or "amplificator" in tags or "w_engine" in tags:
+        return AMPLIFIER_DETAIL_ROLE
+    if "disc_detail" in tags or "disk_detail" in tags or "disc" in tags or "disk" in tags:
+        return DISK_DETAIL_ROLE
     if "equipment" in tags or "inventory" in tags:
         return EQUIPMENT_ROLE
-    if "agent_detail" in tags or "agent" in tags:
+    if "agent_detail" in tags or "agent" in tags or "stats" in tags:
         return AGENT_DETAIL_ROLE
     if infer_source_workflow(source) == ACCOUNT_IMPORT_WORKFLOW:
         return ACCOUNT_UNKNOWN_ROLE

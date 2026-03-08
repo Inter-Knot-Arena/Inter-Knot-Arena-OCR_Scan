@@ -24,6 +24,8 @@ FIELDS = [
     "workflow",
     "screen_role",
     "head",
+    "capture_alias",
+    "capture_slot_index",
     "locale",
     "resolution",
     "path",
@@ -57,6 +59,18 @@ def _confidence(labels: Dict[str, Any]) -> str:
     value = labels.get("confidence")
     if isinstance(value, (int, float)):
         return f"{float(value):.4f}"
+    return ""
+
+
+def _capture_hint(record: Dict[str, Any], key: str) -> str:
+    payload = record.get("captureHints")
+    if not isinstance(payload, dict):
+        return ""
+    value = payload.get(key)
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        return value
     return ""
 
 
@@ -95,6 +109,8 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "workflow": record_workflow(record, source_index),
         "screen_role": record_screen_role(record, source_index),
         "head": head,
+        "capture_alias": _capture_hint(record, "screenAlias"),
+        "capture_slot_index": _capture_hint(record, "slotIndex"),
         "locale": str(record.get("locale") or ""),
         "resolution": str(record.get("resolution") or ""),
         "path": str(record.get("path") or ""),

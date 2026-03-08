@@ -11,7 +11,17 @@ from manifest_lib import ensure_manifest_defaults, load_manifest, utc_now
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, record_head, record_screen_role, source_index_from_manifest
+from ocr_dataset_policy import (
+    ACCOUNT_IMPORT_WORKFLOW,
+    AMPLIFIER_DETAIL_ROLE,
+    DISK_DETAIL_ROLE,
+    EQUIPMENT_ROLE,
+    MINDSCAPE_ROLE,
+    filter_records,
+    record_head,
+    record_screen_role,
+    source_index_from_manifest,
+)
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 
 
@@ -32,16 +42,6 @@ def _agent_icon_label(record: Dict[str, Any]) -> str:
             canonical = canonicalize_agent_label(value.strip())
             if canonical and canonical != "unknown":
                 return canonical
-    return ""
-
-
-def _equipment_label(record: Dict[str, Any]) -> str:
-    for payload_key in ("labels", "suggestedLabels"):
-        payload = _labels(record, payload_key)
-        for key in ("amplifier_id", "disc_set_id", "label"):
-            value = payload.get(key)
-            if isinstance(value, str) and value.strip() and value.strip() != "unknown":
-                return value.strip()
     return ""
 
 
@@ -66,6 +66,9 @@ def main() -> int:
     roster_counts: Counter[str] = Counter()
     detail_counts: Counter[str] = Counter()
     equipment_frames = 0
+    disk_detail_frames = 0
+    amplifier_detail_frames = 0
+    mindscape_frames = 0
 
     for record in scoped_records:
         if not isinstance(record, dict):
@@ -81,8 +84,15 @@ def main() -> int:
                 roster_counts[agent_id] += 1
             elif role == "agent_detail":
                 detail_counts[agent_id] += 1
-        elif head == "equipment" and _equipment_label(record):
-            equipment_frames += 1
+        elif head == "equipment":
+            if role == EQUIPMENT_ROLE:
+                equipment_frames += 1
+            elif role == DISK_DETAIL_ROLE:
+                disk_detail_frames += 1
+            elif role == AMPLIFIER_DETAIL_ROLE:
+                amplifier_detail_frames += 1
+            elif role == MINDSCAPE_ROLE:
+                mindscape_frames += 1
 
     roster_agents = current_agent_ids()
     roster_deficits = {agent: max(0, int(args.target_roster_per_agent) - roster_counts.get(agent, 0)) for agent in roster_agents}
@@ -104,6 +114,9 @@ def main() -> int:
             "rosterCoveredAgents": sum(1 for agent in roster_agents if roster_counts.get(agent, 0) > 0),
             "agentDetailCoveredAgents": sum(1 for agent in roster_agents if detail_counts.get(agent, 0) > 0),
             "equipmentFrames": int(equipment_frames),
+            "diskDetailFrames": int(disk_detail_frames),
+            "amplifierDetailFrames": int(amplifier_detail_frames),
+            "mindscapeFrames": int(mindscape_frames),
         },
         "uidPanelMissingFrames": max(0, int(args.target_uid_panel) - int(role_head_counts.get("uid_panel:uid_digit", 0))),
         "missingRosterAgents": [agent for agent, deficit in roster_deficits.items() if deficit > 0],
@@ -116,12 +129,16 @@ def main() -> int:
             "roster",
             "agent_detail",
             "equipment",
+            "disk_detail",
+            "amplifier_detail",
+            "mindscape",
         ],
         "recommendedCommands": [
             "python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --duration-sec 60 --fps 1.0 --locale RU --resolution 1080p",
             "python scripts/session_capture.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role roster --duration-sec 120 --fps 1.0 --locale RU --resolution 1080p",
             "python scripts/session_capture.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role agent_detail --duration-sec 120 --fps 1.0 --locale RU --resolution 1080p",
             "python scripts/session_capture.py --manifest dataset_manifest.json --head equipment --workflow account_import --screen-role equipment --duration-sec 180 --fps 0.5 --locale RU --resolution 1080p",
+            "python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\\IKA_DATA\\ocr\\drops\\batch_001 --locale RU",
         ],
     }
 
