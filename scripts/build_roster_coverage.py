@@ -37,6 +37,18 @@ def _extract_agent_icon_label(record: Dict[str, Any], *, suggested: bool) -> str
     return ""
 
 
+def _extract_owned_agent_ids(record: Dict[str, Any], *, suggested: bool) -> list[str]:
+    labels = _label_payload(record, suggested=suggested)
+    values = labels.get("owned_agent_ids")
+    if not isinstance(values, list):
+        return []
+    output: list[str] = []
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            output.append(value.strip())
+    return output
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build roster coverage report for OCR manifest.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
@@ -67,6 +79,8 @@ def main() -> int:
     focused_counts = focus_agents_from_sources(scoped_sources)
     reviewed_counts: Counter[str] = Counter()
     suggested_counts: Counter[str] = Counter()
+    owned_reviewed: set[str] = set()
+    not_owned_reviewed: set[str] = set()
 
     for record in scoped_records:
         if not isinstance(record, dict):
@@ -80,6 +94,12 @@ def main() -> int:
         suggested_agent_id = _extract_agent_icon_label(record, suggested=True)
         if suggested_agent_id:
             suggested_counts[suggested_agent_id] += 1
+        if str(record.get("screenRole") or "").strip().lower() == "roster":
+            owned_reviewed.update(_extract_owned_agent_ids(record, suggested=False))
+            labels = _label_payload(record, suggested=False)
+            not_owned_values = labels.get("not_owned_agent_ids")
+            if isinstance(not_owned_values, list):
+                not_owned_reviewed.update(str(item).strip() for item in not_owned_values if isinstance(item, str) and str(item).strip())
 
     report = {
         "rosterAgentCount": len(roster_agents),
@@ -93,6 +113,10 @@ def main() -> int:
         "labeledCounts": {agent: int(reviewed_counts.get(agent, 0)) for agent in roster_agents},
         "reviewedCounts": {agent: int(reviewed_counts.get(agent, 0)) for agent in roster_agents},
         "suggestedCounts": {agent: int(suggested_counts.get(agent, 0)) for agent in roster_agents},
+        "ownedAgentCount": len(owned_reviewed),
+        "notOwnedAgentCount": len(not_owned_reviewed),
+        "ownedAgentIds": [agent for agent in roster_agents if agent in owned_reviewed],
+        "notOwnedAgentIds": [agent for agent in roster_agents if agent in not_owned_reviewed],
         "missingSourceFocusAgents": [agent for agent in roster_agents if focused_counts.get(agent, 0) <= 0],
         "missingLabeledAgents": [agent for agent in roster_agents if reviewed_counts.get(agent, 0) <= 0],
         "missingReviewedAgents": [agent for agent in roster_agents if reviewed_counts.get(agent, 0) <= 0],

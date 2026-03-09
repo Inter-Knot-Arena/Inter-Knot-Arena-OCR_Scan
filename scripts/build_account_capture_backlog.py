@@ -45,6 +45,18 @@ def _agent_icon_label(record: Dict[str, Any]) -> str:
     return ""
 
 
+def _owned_agent_ids(record: Dict[str, Any]) -> List[str]:
+    labels = _labels(record, "labels")
+    values = labels.get("owned_agent_ids")
+    if not isinstance(values, list):
+        return []
+    output: List[str] = []
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            output.append(value.strip())
+    return output
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build account-import capture backlog for OCR.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
@@ -69,6 +81,8 @@ def main() -> int:
     disk_detail_frames = 0
     amplifier_detail_frames = 0
     mindscape_frames = 0
+    roster_owned_agents: set[str] = set()
+    roster_not_owned_agents: set[str] = set()
 
     for record in scoped_records:
         if not isinstance(record, dict):
@@ -78,6 +92,15 @@ def main() -> int:
         role_head_counts[f"{role}:{head}"] += 1
         if head == "agent_icon":
             agent_id = _agent_icon_label(record)
+            if role == "roster":
+                owned = _owned_agent_ids(record)
+                if owned:
+                    roster_owned_agents.update(owned)
+                    not_owned_values = _labels(record, "labels").get("not_owned_agent_ids")
+                    if isinstance(not_owned_values, list):
+                        roster_not_owned_agents.update(
+                            str(item).strip() for item in not_owned_values if isinstance(item, str) and str(item).strip()
+                        )
             if not agent_id:
                 continue
             if role == "roster":
@@ -112,6 +135,9 @@ def main() -> int:
         "current": {
             "uidPanelFrames": int(role_head_counts.get("uid_panel:uid_digit", 0)),
             "rosterCoveredAgents": sum(1 for agent in roster_agents if roster_counts.get(agent, 0) > 0),
+            "rosterOwnershipCoveredAgents": len(roster_owned_agents | roster_not_owned_agents),
+            "rosterOwnedAgents": len(roster_owned_agents),
+            "rosterNotOwnedAgents": len(roster_not_owned_agents),
             "agentDetailCoveredAgents": sum(1 for agent in roster_agents if detail_counts.get(agent, 0) > 0),
             "equipmentFrames": int(equipment_frames),
             "diskDetailFrames": int(disk_detail_frames),
@@ -121,6 +147,8 @@ def main() -> int:
         "uidPanelMissingFrames": max(0, int(args.target_uid_panel) - int(role_head_counts.get("uid_panel:uid_digit", 0))),
         "missingRosterAgents": [agent for agent, deficit in roster_deficits.items() if deficit > 0],
         "missingAgentDetailAgents": [agent for agent, deficit in detail_deficits.items() if deficit > 0],
+        "ownedAgentIds": [agent for agent in roster_agents if agent in roster_owned_agents],
+        "notOwnedAgentIds": [agent for agent in roster_agents if agent in roster_not_owned_agents],
         "equipmentMissingFrames": max(0, int(args.target_equipment_frames) - equipment_frames),
         "rosterDeficits": roster_deficits,
         "agentDetailDeficits": detail_deficits,

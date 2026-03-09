@@ -7,6 +7,31 @@ from typing import Dict, Iterable, List
 
 ROSTER_PATH = Path(__file__).resolve().parent / "contracts" / "agent-roster.json"
 
+EXTRA_ALIASES: Dict[str, str] = {
+    "эллен джо": "agent_ellen",
+    "е шуньгуан": "agent_ye_shunguang",
+    "джейн доу": "agent_jane_doe",
+    "сокаку": "agent_soukaku",
+    "солдат 11": "agent_soldier_11",
+    "пайпер уил": "agent_piper",
+    "фон ликаон": "agent_lycaon",
+    "энби демара": "agent_anby",
+    "асаба харумаса": "agent_harumasa",
+    "билли кид": "agent_billy",
+    "люсиан де монтефио": "agent_lucy",
+    "люси де монтефио": "agent_lucy",
+    "люси": "agent_lucy",
+    "сет лоуэлл": "agent_seth",
+    "николь демара": "agent_nicole",
+    "грейс ховард": "agent_grace",
+    "бен биггер": "agent_ben",
+    "антон иванов": "agent_anton",
+    "чжао": "agent_zhao",
+    "пульхра феллини": "agent_pulchra",
+    "александрина себастиан": "agent_rina",
+    "корин уикс": "agent_corin",
+}
+
 
 @lru_cache(maxsize=1)
 def _load_roster() -> List[dict]:
@@ -66,13 +91,48 @@ def canonical_alias_map(include_upcoming: bool = False) -> Dict[str, str]:
     return output
 
 
+def _normalize_alias(value: str) -> str:
+    token = str(value or "").strip().lower().replace("ё", "е")
+    token = " ".join(token.split())
+    return token
+
+
+@lru_cache(maxsize=2)
+def normalized_alias_map(include_upcoming: bool = False) -> Dict[str, str]:
+    valid_status = {"current", "upcoming"} if include_upcoming else {"current"}
+    output: Dict[str, str] = {}
+    for agent in _load_roster():
+        status = str(agent.get("status") or "")
+        if status not in valid_status:
+            continue
+        canonical = str(agent.get("agentId") or "").strip()
+        if not canonical:
+            continue
+        raw_values = [canonical, str(agent.get("displayName") or "").strip()]
+        aliases = agent.get("aliases")
+        if isinstance(aliases, list):
+            raw_values.extend(str(alias).strip() for alias in aliases if isinstance(alias, str))
+        for raw in raw_values:
+            normalized = _normalize_alias(raw)
+            if normalized:
+                output[normalized] = canonical
+    for raw, canonical in EXTRA_ALIASES.items():
+        normalized = _normalize_alias(raw)
+        if normalized:
+            output[normalized] = canonical
+    return output
+
+
 def canonicalize_agent_label(label: str, include_upcoming: bool = False) -> str:
     value = str(label or "").strip()
     if not value:
         return ""
     if value == "unknown":
         return "unknown"
-    return canonical_alias_map(include_upcoming=include_upcoming).get(value, "")
+    raw = canonical_alias_map(include_upcoming=include_upcoming).get(value, "")
+    if raw:
+        return raw
+    return normalized_alias_map(include_upcoming=include_upcoming).get(_normalize_alias(value), "")
 
 
 def valid_agent_labels(include_upcoming: bool = False) -> List[str]:

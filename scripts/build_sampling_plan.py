@@ -37,19 +37,24 @@ def _extract_head(record: Dict[str, Any], *, suggested: bool) -> str:
 
 def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
     labels = _label_payload(record, suggested=suggested)
+    head = _extract_head(record, suggested=suggested)
     if labels:
-        for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id", "label"):
+        for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id"):
             value = labels.get(key)
             if isinstance(value, str) and value.strip():
                 raw = value.strip()
-                if _extract_head(record, suggested=suggested) == "agent_icon":
+                if head == "agent_icon":
                     return canonicalize_agent_label(raw) or "unknown"
                 return raw
+        if head != "agent_icon":
+            value = labels.get("label")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
     for key in ("label", "agentId"):
         value = record.get(key)
         if isinstance(value, str) and value.strip():
             raw = value.strip()
-            if _extract_head(record, suggested=suggested) == "agent_icon":
+            if head == "agent_icon":
                 return canonicalize_agent_label(raw) or "unknown"
             return raw
     return ""

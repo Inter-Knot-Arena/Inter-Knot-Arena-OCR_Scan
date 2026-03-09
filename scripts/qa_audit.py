@@ -35,13 +35,30 @@ def _detect_head(record: Dict[str, Any], *, suggested: bool) -> str:
 
 def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
     labels = _label_payload(record, suggested=suggested)
+    head = _detect_head(record, suggested=suggested)
     if not labels:
         return ""
-    for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id", "label"):
+    for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id"):
         value = labels.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
+    if head != "agent_icon":
+        value = labels.get("label")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
     return ""
+
+
+def _extract_owned_agent_ids(record: Dict[str, Any], *, suggested: bool) -> List[str]:
+    labels = _label_payload(record, suggested=suggested)
+    values = labels.get("owned_agent_ids")
+    if not isinstance(values, list):
+        return []
+    output: List[str] = []
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            output.append(value.strip())
+    return output
 
 
 def _sample_for_double_review(records: List[Dict[str, Any]], ratio: float, seed: int) -> List[str]:
@@ -81,12 +98,16 @@ def main() -> int:
 
     valid_records: List[Dict[str, Any]] = []
     reviewed = 0
+    reviewed_records = 0
     suggested = 0
     needs_review = 0
     head_counts: Dict[str, int] = {}
     suggested_head_counts: Dict[str, int] = {}
     label_counts: Dict[str, int] = {}
     suggested_label_counts: Dict[str, int] = {}
+    roster_reviewed_count = 0
+    roster_owned_agents: set[str] = set()
+    roster_not_owned_agents: set[str] = set()
     low_conf_count = 0
     suggested_low_conf_count = 0
 
@@ -100,9 +121,18 @@ def main() -> int:
         suggested_head_counts[suggested_head] = suggested_head_counts.get(suggested_head, 0) + 1
 
         label = _extract_label(record, suggested=False)
+        reviewed_owned = _extract_owned_agent_ids(record, suggested=False)
         if label:
             reviewed += 1
             label_counts[label] = label_counts.get(label, 0) + 1
+        if label or reviewed_owned or str(record.get("qaStatus") or "").lower() == "reviewed":
+            reviewed_records += 1
+        if str(record.get("screenRole") or "").strip().lower() == "roster" and reviewed_owned:
+            roster_reviewed_count += 1
+            roster_owned_agents.update(reviewed_owned)
+            not_owned_values = _label_payload(record, suggested=False).get("not_owned_agent_ids")
+            if isinstance(not_owned_values, list):
+                roster_not_owned_agents.update(str(item).strip() for item in not_owned_values if isinstance(item, str) and str(item).strip())
         suggested_label = _extract_label(record, suggested=True)
         if suggested_label:
             suggested += 1
@@ -127,9 +157,15 @@ def main() -> int:
         "workflow": str(args.workflow),
         "importEligibleOnly": bool(args.import_eligible_only),
         "labeledCount": reviewed,
-        "reviewedCount": reviewed,
+        "reviewedCount": reviewed_records,
+        "reviewedScalarLabelCount": reviewed,
         "suggestedCount": suggested,
         "needsReviewCount": needs_review,
+        "reviewedRosterRecordCount": roster_reviewed_count,
+        "reviewedRosterOwnedAgentCount": len(roster_owned_agents),
+        "reviewedRosterNotOwnedAgentCount": len(roster_not_owned_agents),
+        "reviewedRosterOwnedAgentIds": sorted(roster_owned_agents),
+        "reviewedRosterNotOwnedAgentIds": sorted(roster_not_owned_agents),
         "lowConfidenceCount": low_conf_count,
         "suggestedLowConfidenceCount": suggested_low_conf_count,
         "headCounts": head_counts,

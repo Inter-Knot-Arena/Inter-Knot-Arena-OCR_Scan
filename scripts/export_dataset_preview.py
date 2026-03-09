@@ -33,6 +33,8 @@ FIELDS = [
     "suggested_uid_digit",
     "reviewed_agent_icon_id",
     "suggested_agent_icon_id",
+    "reviewed_owned_agent_count",
+    "reviewed_owned_agent_ids",
     "reviewed_amplifier_id",
     "suggested_amplifier_id",
     "reviewed_disc_set_id",
@@ -72,6 +74,13 @@ def _capture_hint(record: Dict[str, Any], key: str) -> str:
     if isinstance(value, str):
         return value
     return ""
+
+
+def _joined_list(labels: Dict[str, Any], key: str) -> str:
+    values = labels.get(key)
+    if not isinstance(values, list):
+        return ""
+    return "|".join(str(value).strip() for value in values if isinstance(value, str) and str(value).strip())
 
 
 def _source_focus(source_index: Dict[str, Dict[str, Any]], source_id: str) -> str:
@@ -118,6 +127,8 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "suggested_uid_digit": _value(suggested, "uid_digit"),
         "reviewed_agent_icon_id": _value(reviewed, "agent_icon_id"),
         "suggested_agent_icon_id": _value(suggested, "agent_icon_id"),
+        "reviewed_owned_agent_count": str(len([item for item in reviewed.get("owned_agent_ids", []) if isinstance(item, str) and item.strip()])) if isinstance(reviewed.get("owned_agent_ids"), list) else "",
+        "reviewed_owned_agent_ids": _joined_list(reviewed, "owned_agent_ids"),
         "reviewed_amplifier_id": _value(reviewed, "amplifier_id"),
         "suggested_amplifier_id": _value(suggested, "amplifier_id"),
         "reviewed_disc_set_id": _value(reviewed, "disc_set_id"),
