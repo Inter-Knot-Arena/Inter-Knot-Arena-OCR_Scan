@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T08:01:25Z",
+  "generatedAt": "2026-03-09T12:36:47Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "statusFilter": [
@@ -8,7 +8,7 @@
   ],
   "batchSize": 150,
   "batchCount": 1,
-  "queuedRecords": 106,
+  "queuedRecords": 119,
   "missingReviewedAgentIcons": [
     "agent_alice",
     "agent_anby",
@@ -62,16 +62,18 @@
   "batches": [
     {
       "batchId": "ocr-review-001",
-      "size": 106,
+      "size": 119,
       "maxPriority": 141,
       "headCounts": {
-        "agent_icon": 14,
-        "equipment": 92
+        "agent_icon": 19,
+        "equipment": 100
       },
       "focusAgentCounts": {
         "agent_anby": 9,
+        "agent_anton": 3,
         "agent_ben": 3,
         "agent_billy": 6,
+        "agent_corin": 3,
         "agent_grace": 7,
         "agent_harumasa": 9,
         "agent_jane_doe": 9,
@@ -79,10 +81,13 @@
         "agent_lycaon": 9,
         "agent_nicole": 3,
         "agent_piper": 9,
+        "agent_pulchra": 2,
+        "agent_rina": 3,
         "agent_seth": 9,
         "agent_soldier_11": 9,
         "agent_soukaku": 9,
-        "agent_ye_shunguang": 9
+        "agent_ye_shunguang": 9,
+        "agent_zhao": 2
       }
     }
   ]

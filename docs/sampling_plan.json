@@ -1,20 +1,20 @@
 {
-  "recordCount": 121,
+  "recordCount": 134,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "headCounts": {
-    "agent_icon": 20,
-    "equipment": 100,
+    "agent_icon": 25,
+    "equipment": 108,
     "uid_digit": 1
   },
   "reviewedHeadCounts": {
-    "agent_icon": 20,
-    "equipment": 100,
+    "agent_icon": 25,
+    "equipment": 108,
     "uid_digit": 1
   },
   "suggestedHeadCounts": {
-    "agent_icon": 20,
-    "equipment": 100,
+    "agent_icon": 25,
+    "equipment": 108,
     "uid_digit": 1
   },
   "labelCounts": {
@@ -239,10 +239,10 @@
     "agent_aria"
   ],
   "localeCounts": {
-    "RU": 121
+    "RU": 134
   },
   "resolutionCounts": {
-    "1440p": 121
+    "1440p": 134
   },
   "sourceCounts": {
     "onedrive_account_20260308_agent_detail_30c32a48ceae": 1,
@@ -365,14 +365,27 @@
     "onedrive_dataset_20260309_agents_129_255_disk_detail_970e43ae9b70": 1,
     "onedrive_dataset_20260309_agents_129_255_disk_detail_54f310f99a38": 1,
     "onedrive_dataset_20260309_agents_129_255_disk_detail_1b33f8aa009e": 1,
-    "onedrive_dataset_20260309_agents_129_255_equipment_651752dc769e": 1
+    "onedrive_dataset_20260309_agents_129_255_equipment_651752dc769e": 1,
+    "onedrive_account_20260309_agents_256_268_agent_detail_c7ccd7cb0e27": 1,
+    "onedrive_account_20260309_agents_256_268_amplifier_detail_37fc47b3c1e5": 1,
+    "onedrive_account_20260309_agents_256_268_equipment_d1b52168b2a5": 1,
+    "onedrive_account_20260309_agents_256_268_agent_detail_7c5d80a3f337": 1,
+    "onedrive_account_20260309_agents_256_268_amplifier_detail_3eb50546ea0c": 1,
+    "onedrive_account_20260309_agents_256_268_equipment_918105f2fdf3": 1,
+    "onedrive_account_20260309_agents_256_268_agent_detail_eb85a57710e2": 1,
+    "onedrive_account_20260309_agents_256_268_equipment_9dd284023445": 1,
+    "onedrive_account_20260309_agents_256_268_agent_detail_6eb42eb38ded": 1,
+    "onedrive_account_20260309_agents_256_268_amplifier_detail_5036a6261318": 1,
+    "onedrive_account_20260309_agents_256_268_equipment_5d11a8a2da39": 1,
+    "onedrive_account_20260309_agents_256_268_agent_detail_7ec42b559283": 1,
+    "onedrive_account_20260309_agents_256_268_equipment_fb2d77fc8166": 1
   },
   "localeResolutionCounts": {
-    "RU:1440p": 121
+    "RU:1440p": 134
   },
   "deficits": {
     "uid_digit": 19999,
-    "agent_icon": 14980,
-    "equipment": 14900
+    "agent_icon": 14975,
+    "equipment": 14892
   }
 }
