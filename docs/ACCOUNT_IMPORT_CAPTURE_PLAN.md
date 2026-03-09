@@ -69,6 +69,7 @@ Treat `equipment` as the authoritative equipped-state screen.
 - If a slot is empty on `equipment`, do not capture `diskN` for that slot.
 - If no amplifier is equipped, do not capture `amplificator`.
 - Ignore recommendation screens that appear after clicking an empty slot. They do not describe the equipped build and must stay out of the OCR dataset.
+- If a screenshot series has mixed lengths per agent, materialize it with `scripts/materialize_ordered_account_batch.py --agent-pack ...` instead of forcing a global role order.
 
 Practical examples:
 

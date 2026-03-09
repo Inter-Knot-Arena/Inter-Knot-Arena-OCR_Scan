@@ -61,6 +61,25 @@ def _parse_roles(raw: str) -> List[str]:
     return output or list(DEFAULT_ROLE_ORDER)
 
 
+def _parse_agent_packs(values: Sequence[str]) -> List[dict]:
+    output: List[dict] = []
+    for raw in values:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        if ":" not in text:
+            raise ValueError(f"agent pack must be agent_label:role1,role2 -> {text!r}")
+        agent_token, roles_text = text.split(":", 1)
+        canonical = canonicalize_agent_label(agent_token.strip(), include_upcoming=True)
+        if not canonical:
+            raise ValueError(f"invalid agent in agent pack: {agent_token!r}")
+        roles = _parse_roles(roles_text)
+        if not roles:
+            raise ValueError(f"agent pack has no roles: {text!r}")
+        output.append({"agentId": canonical, "roles": roles})
+    return output
+
+
 def _parse_skips(values: Sequence[str]) -> Dict[str, Set[str]]:
     output: Dict[str, Set[str]] = {}
     for raw in values:
@@ -98,7 +117,8 @@ def main() -> int:
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--start-index", required=True, type=int)
     parser.add_argument("--end-index", required=True, type=int)
-    parser.add_argument("--agent", dest="agents", action="append", required=True)
+    parser.add_argument("--agent", dest="agents", action="append", default=[])
+    parser.add_argument("--agent-pack", action="append", default=[])
     parser.add_argument("--role-order", default=",".join(DEFAULT_ROLE_ORDER))
     parser.add_argument("--skip", action="append", default=[])
     parser.add_argument("--copy-mode", choices=["copy", "move"], default="copy")
@@ -110,32 +130,48 @@ def main() -> int:
     output_root.mkdir(parents=True, exist_ok=True)
 
     files = _collect_files(input_root, int(args.start_index), int(args.end_index))
-    agents = _canonical_agents(args.agents)
-    role_order = _parse_roles(args.role_order)
+    agent_packs = _parse_agent_packs(args.agent_pack)
     skip_map = _parse_skips(args.skip)
+    if agent_packs:
+        plan = agent_packs
+        role_order = []
+        agents = [entry["agentId"] for entry in plan]
+        expected_count = sum(len(entry["roles"]) for entry in plan)
+        if args.agents:
+            raise ValueError("--agent and --agent-pack cannot be combined")
+    else:
+        if not args.agents:
+            raise ValueError("at least one --agent or --agent-pack value is required")
+        agents = _canonical_agents(args.agents)
+        role_order = _parse_roles(args.role_order)
+        plan = [{"agentId": agent_id, "roles": role_order} for agent_id in agents]
+        expected_count = len(agents) * len(role_order)
 
-    expected_count = len(agents) * len(role_order)
     if len(files) != expected_count:
         raise ValueError(
-            f"ordered batch size mismatch: found {len(files)} files for {len(agents)} agents x {len(role_order)} roles = {expected_count}"
+            f"ordered batch size mismatch: found {len(files)} files for planned role count {expected_count}"
         )
 
     mapping: List[dict] = []
     write_op = shutil.move if args.copy_mode == "move" else shutil.copy2
 
-    for agent_index, agent_id in enumerate(agents):
+    cursor = 0
+    for pack in plan:
+        agent_id = str(pack["agentId"])
+        pack_roles = list(pack["roles"])
         agent_dir = output_root / agent_id
         agent_dir.mkdir(parents=True, exist_ok=True)
-        start = agent_index * len(role_order)
-        group_files = files[start : start + len(role_order)]
+        group_files = files[cursor : cursor + len(pack_roles)]
+        cursor += len(pack_roles)
         skipped_roles = skip_map.get(agent_id, set())
         record = {
             "agentId": agent_id,
             "sourceFiles": [str(path) for path in group_files],
+            "roleOrder": pack_roles,
             "assignedRoles": [],
             "skippedRoles": sorted(skipped_roles),
         }
-        for role, source_path in zip(role_order, group_files):
+        for role, source_path in zip(pack_roles, group_files):
             if role in skipped_roles:
                 continue
             target_path = agent_dir / f"{role}{source_path.suffix.lower()}"
@@ -156,6 +192,7 @@ def main() -> int:
         "endIndex": int(args.end_index),
         "roleOrder": role_order,
         "agents": agents,
+        "agentPacks": plan if agent_packs else [],
         "skipRules": {key: sorted(value) for key, value in sorted(skip_map.items())},
         "materializedAgents": mapping,
     }

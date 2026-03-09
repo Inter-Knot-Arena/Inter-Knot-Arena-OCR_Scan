@@ -91,6 +91,18 @@ Use `--skip canonical_agent_id:role1,role2` for empty slots. Example:
 --skip "agent_grace:disk2,amplificator"
 ```
 
+If a series is shorter for some agents, use `--agent-pack` instead of a single global role order:
+
+```powershell
+python scripts/materialize_ordered_account_batch.py `
+  --input-root C:\Users\loval\OneDrive\Pictures\Screenshots `
+  --output-root D:\IKA_DATA\ocr\drops\batch_20260309_agents_256_268 `
+  --start-index 256 `
+  --end-index 268 `
+  --agent-pack "Антон Иванов:agent_detail,equipment,amplificator" `
+  --agent-pack "Чжао:agent_detail,equipment"
+```
+
 Optional flags:
 
 - `--batch-id ellen_ru_20260308`
