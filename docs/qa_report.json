@@ -2,9 +2,9 @@
   "recordCount": 57,
   "workflow": "account_import",
   "importEligibleOnly": true,
-  "labeledCount": 8,
-  "reviewedCount": 13,
-  "reviewedScalarLabelCount": 8,
+  "labeledCount": 10,
+  "reviewedCount": 15,
+  "reviewedScalarLabelCount": 10,
   "suggestedCount": 42,
   "needsReviewCount": 42,
   "reviewedRosterRecordCount": 5,
@@ -77,14 +77,15 @@
   },
   "labelCounts": {
     "agent_ellen": 1,
-    "????? ?? ??????": 1,
-    "????????-???????": 4,
-    "????? ? ????? ? ??????": 2
+    "amp_deep_sea_visitor": 2,
+    "set_woodpecker_electro": 4,
+    "set_branch_and_blade_song": 2,
+    "1503067100": 1
   },
   "suggestedLabelCounts": {
     "1": 12,
     "agent_vivian": 20,
     "agent_nicole": 10
   },
-  "generatedAt": "2026-03-09T03:49:31Z"
+  "generatedAt": "2026-03-09T04:53:19Z"
 }

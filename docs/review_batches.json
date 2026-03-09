@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T03:49:33Z",
+  "generatedAt": "2026-03-09T04:53:19Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "statusFilter": [
@@ -8,7 +8,7 @@
   ],
   "batchSize": 150,
   "batchCount": 1,
-  "queuedRecords": 44,
+  "queuedRecords": 42,
   "missingReviewedAgentIcons": [
     "agent_alice",
     "agent_anby",
@@ -62,12 +62,11 @@
   "batches": [
     {
       "batchId": "ocr-review-001",
-      "size": 44,
+      "size": 42,
       "maxPriority": 94,
       "headCounts": {
         "agent_icon": 30,
-        "uid_digit": 13,
-        "equipment": 1
+        "uid_digit": 12
       },
       "focusAgentCounts": {}
     }

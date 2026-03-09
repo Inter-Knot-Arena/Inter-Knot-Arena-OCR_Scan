@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T03:49:31Z",
+  "generatedAt": "2026-03-09T04:55:03Z",
   "workflow": "account_import",
   "eligibleRecordCount": 57,
   "roleHeadCounts": {
@@ -12,24 +12,27 @@
   },
   "targets": {
     "uidPanelFrames": 80,
+    "rosterOwnershipAgents": 49,
     "rosterPerAgent": 8,
     "agentDetailPerAgent": 10,
     "equipmentFrames": 300
   },
   "current": {
     "uidPanelFrames": 13,
-    "rosterCoveredAgents": 0,
-    "rosterOwnershipCoveredAgents": 49,
+    "rosterCoveredAgents": 49,
+    "rosterIconLabeledAgents": 0,
     "rosterOwnedAgents": 20,
     "rosterNotOwnedAgents": 29,
     "agentDetailCoveredAgents": 3,
     "equipmentFrames": 1,
     "diskDetailFrames": 6,
     "amplifierDetailFrames": 1,
-    "mindscapeFrames": 0
+    "agentDetailMindscapeFrames": 1,
+    "optionalMindscapeFrames": 0
   },
   "uidPanelMissingFrames": 67,
-  "missingRosterAgents": [
+  "missingRosterAgents": [],
+  "missingRosterIconAgents": [
     "agent_anby",
     "agent_nicole",
     "agent_billy",
@@ -291,8 +294,7 @@
     "agent_detail",
     "equipment",
     "disk_detail",
-    "amplifier_detail",
-    "mindscape"
+    "amplifier_detail"
   ],
   "recommendedCommands": [
     "python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --duration-sec 60 --fps 1.0 --locale RU --resolution 1080p",
