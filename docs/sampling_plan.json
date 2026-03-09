@@ -1,18 +1,21 @@
 {
-  "recordCount": 42,
+  "recordCount": 57,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "headCounts": {
-    "uid_digit": 12,
-    "agent_icon": 30
+    "uid_digit": 13,
+    "agent_icon": 36,
+    "equipment": 8
   },
   "reviewedHeadCounts": {
-    "uid_digit": 12,
-    "agent_icon": 30
+    "uid_digit": 13,
+    "agent_icon": 36,
+    "equipment": 8
   },
   "suggestedHeadCounts": {
-    "uid_digit": 12,
-    "agent_icon": 30
+    "uid_digit": 13,
+    "agent_icon": 36,
+    "equipment": 8
   },
   "labelCounts": {},
   "reviewedLabelCounts": {},
@@ -227,23 +230,40 @@
     "agent_aria"
   ],
   "localeCounts": {
-    "RU": 42
+    "RU": 57
   },
   "resolutionCounts": {
-    "1080p": 42
+    "1080p": 42,
+    "1440p": 15
   },
   "sourceCounts": {
     "live_session_1772677479": 12,
     "live_session_1772677498": 10,
     "live_session_1772677518": 10,
-    "live_session_1772677537": 10
+    "live_session_1772677537": 10,
+    "onedrive_account_20260308_agent_detail_30c32a48ceae": 1,
+    "onedrive_account_20260308_amplifier_detail_ca490a37cfdd": 1,
+    "onedrive_account_20260308_disk_detail_b410d0c21e2c": 1,
+    "onedrive_account_20260308_disk_detail_5e6ec3d3953a": 1,
+    "onedrive_account_20260308_disk_detail_3aee303cbafa": 1,
+    "onedrive_account_20260308_disk_detail_0c7e7cae2403": 1,
+    "onedrive_account_20260308_disk_detail_ce03de23bc5e": 1,
+    "onedrive_account_20260308_disk_detail_301e80567619": 1,
+    "onedrive_account_20260308_equipment_47995a506e46": 1,
+    "onedrive_account_20260308_roster_eb831650fd58": 1,
+    "onedrive_account_20260308_roster_5c2f5a208daf": 1,
+    "onedrive_account_20260308_roster_b5bcfdee7438": 1,
+    "onedrive_account_20260308_roster_8123196dd5e8": 1,
+    "onedrive_account_20260308_roster_d392bba8ad57": 1,
+    "onedrive_account_20260308_uid_panel_f6fd2bc0d748": 1
   },
   "localeResolutionCounts": {
-    "RU:1080p": 42
+    "RU:1080p": 42,
+    "RU:1440p": 15
   },
   "deficits": {
-    "uid_digit": 19988,
-    "agent_icon": 14970,
-    "equipment": 15000
+    "uid_digit": 19987,
+    "agent_icon": 14964,
+    "equipment": 14992
   }
 }
