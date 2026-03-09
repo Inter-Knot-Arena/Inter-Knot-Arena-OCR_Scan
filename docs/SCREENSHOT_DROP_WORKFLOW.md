@@ -56,6 +56,41 @@ Only import detail screens for slots that are really occupied on the `equipment.
 python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
 ```
 
+## Ordered generic screenshot series
+
+If screenshots were saved as a stable sequence like:
+
+- `agent_detail`
+- `equipment`
+- `disk1`
+- `disk2`
+- `disk3`
+- `disk4`
+- `disk5`
+- `disk6`
+- `amplificator`
+
+then you do not need to rename them manually. First materialize them into a structured drop folder:
+
+```powershell
+python scripts/materialize_ordered_account_batch.py `
+  --input-root C:\Users\loval\OneDrive\Pictures\Screenshots\dataset `
+  --output-root D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255 `
+  --start-index 129 `
+  --end-index 255 `
+  --agent "Е Шуньгуан" `
+  --agent "Джейн Доу"
+```
+
+Then import that structured batch with the normal screenshot importer.
+
+Use `--skip canonical_agent_id:role1,role2` for empty slots. Example:
+
+```powershell
+--skip "agent_billy:disk2,disk3,disk5"
+--skip "agent_grace:disk2,amplificator"
+```
+
 Optional flags:
 
 - `--batch-id ellen_ru_20260308`

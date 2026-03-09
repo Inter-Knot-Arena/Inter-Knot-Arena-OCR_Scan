@@ -55,6 +55,13 @@ Supported buckets:
 - `amplificator` or `amplifier`
 - `mindscape` (optional provenance only)
 
+If screenshots are saved as a generic ordered series, materialize them first:
+
+```powershell
+python scripts/materialize_ordered_account_batch.py --input-root C:\Users\loval\OneDrive\Pictures\Screenshots\dataset --output-root D:\IKA_DATA\ocr\drops\batch_001 --start-index 129 --end-index 255 --agent "Е Шуньгуан" --agent "Джейн Доу"
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
+```
+
 ## Empty slot handling
 
 Treat `equipment` as the authoritative equipped-state screen.

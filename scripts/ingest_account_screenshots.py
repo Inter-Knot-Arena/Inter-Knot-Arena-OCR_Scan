@@ -29,6 +29,7 @@ from ocr_dataset_policy import (
     apply_source_policy_defaults,
     source_index_from_manifest,
 )
+from roster_taxonomy import canonicalize_agent_label
 
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
@@ -68,6 +69,18 @@ def _extract_slot(text: str) -> int | None:
     if not match:
         return None
     return int(match.group(1))
+
+
+def _detect_focus_agent(path: Path, root: Path) -> str:
+    relative = path.relative_to(root)
+    for part in relative.parts[:-1]:
+        token = str(part).strip().lower()
+        if not token:
+            continue
+        canonical = canonicalize_agent_label(token, include_upcoming=True)
+        if canonical:
+            return canonical
+    return ""
 
 
 def _detect_screen_role(path: Path, root: Path) -> tuple[str, Dict[str, Any]] | None:
@@ -200,6 +213,7 @@ def main() -> int:
             continue
 
         role, capture_hints = detection
+        focus_agent_id = _detect_focus_agent(image_path, input_root)
         sha256 = hash_file_sha256(image_path)
         if sha256.lower() in existing_hashes:
             skipped_duplicate += 1
@@ -228,6 +242,8 @@ def main() -> int:
             "sourceTags": _source_tags(role, capture_hints),
             "originPath": str(image_path),
         }
+        if focus_agent_id:
+            source["focusAgentId"] = focus_agent_id
         sources.append(apply_source_policy_defaults(source))
 
         if not args.dry_run:
@@ -254,6 +270,8 @@ def main() -> int:
             "dimensions": {"width": width, "height": height},
             "captureHints": capture_hints,
         }
+        if focus_agent_id:
+            record["focusAgentId"] = focus_agent_id
         records.append(apply_record_policy_defaults(record, source_index))
         existing_hashes.add(sha256.lower())
         imported += 1

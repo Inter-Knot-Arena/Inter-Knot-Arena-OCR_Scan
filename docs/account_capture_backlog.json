@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-09T05:11:27Z",
+  "generatedAt": "2026-03-09T08:01:25Z",
   "workflow": "account_import",
-  "eligibleRecordCount": 15,
+  "eligibleRecordCount": 121,
   "roleHeadCounts": {
-    "agent_detail:agent_icon": 1,
-    "amplifier_detail:equipment": 1,
-    "disk_detail:equipment": 6,
-    "equipment:equipment": 1,
+    "agent_detail:agent_icon": 15,
+    "amplifier_detail:equipment": 14,
+    "disk_detail:equipment": 71,
+    "equipment:equipment": 15,
     "roster:agent_icon": 5,
     "uid_panel:uid_digit": 1
   },
@@ -24,9 +24,9 @@
     "rosterOwnedAgents": 20,
     "rosterNotOwnedAgents": 29,
     "agentDetailCoveredAgents": 1,
-    "equipmentFrames": 1,
-    "diskDetailFrames": 6,
-    "amplifierDetailFrames": 1,
+    "equipmentFrames": 15,
+    "diskDetailFrames": 71,
+    "amplifierDetailFrames": 14,
     "agentDetailMindscapeFrames": 1,
     "optionalMindscapeFrames": 0
   },
@@ -187,7 +187,7 @@
     "agent_sunna",
     "agent_aria"
   ],
-  "equipmentMissingFrames": 299,
+  "equipmentMissingFrames": 285,
   "rosterDeficits": {
     "agent_anby": 8,
     "agent_nicole": 8,
