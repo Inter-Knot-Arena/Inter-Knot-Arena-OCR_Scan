@@ -56,6 +56,18 @@ Optional flags:
 4. Marks everything as `workflow=account_import`.
 5. Preserves `mindscape` captures in the manifest, but keeps them outside the current import-eligible training slice.
 
+## Roster ownership review
+
+Full-page `roster` screenshots should be reviewed as account ownership truth, not as a fake single `agent_icon_id`.
+
+Example:
+
+```powershell
+python scripts/apply_roster_ownership_review.py --manifest dataset_manifest.json --session-id onedrive_account_20260308 --reviewer-id loval --owned-agent "Эллен Джо" --owned-agent "Джейн Доу"
+```
+
+The script writes `owned_agent_ids` and `not_owned_agent_ids` into the reviewed roster records and marks those screenshots as `qaStatus=reviewed`.
+
 ## After import
 
 Rebuild the OCR artifacts:

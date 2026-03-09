@@ -38,12 +38,17 @@ python scripts/apply_review_labels.py --manifest dataset_manifest.json --input-c
 python scripts/qa_audit.py --manifest dataset_manifest.json --workflow account_import --output-file docs/qa_report.json --double-review-file docs/double_review_samples.json
 ```
 5. Do not review `combat_reference` rows in OCR queues. Those belong to match-monitor/CV context, not roster import.
+6. Do not force full-page `roster` screenshots into a fake single `agent_icon_id`. For those, confirm the owned roster list instead:
+```powershell
+python scripts/apply_roster_ownership_review.py --manifest dataset_manifest.json --session-id onedrive_account_20260308 --reviewer-id loval --owned-agent "Ellen Joe" --owned-agent "Jane Doe"
+```
 
 ## Validation
 - CV agent ids must resolve to canonical roster ids or `unknown`.
 - OCR `uid_digit` must be a single digit `0-9`.
 - OCR `agent_icon_id` must resolve to a canonical roster id or `unknown`.
 - OCR `disc_level` must be numeric or `unknown`.
+- OCR `roster` pages use `owned_agent_ids` / `not_owned_agent_ids` truth, not a single `agent_icon_id`.
 
 ## Current priority
 - Review records for agents missing in `reviewed` counts.
