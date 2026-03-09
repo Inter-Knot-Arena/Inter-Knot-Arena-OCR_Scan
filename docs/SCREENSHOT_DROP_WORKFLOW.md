@@ -20,19 +20,35 @@ The importer classifies files by folder names or file names. These aliases are s
 D:\IKA_DATA\ocr\drops\batch_001\
   uid\
   roster\
-  agent_detail\
-  equipment\
-  disk1\
-  disk2\
-  disk3\
-  disk4\
-  disk5\
-  disk6\
-  amplificator\
-  mindscape\
+  billy_kid\
+    agent_detail.png
+    equipment.png
+    amplificator.png
+    disk1.png
+    disk4.png
+    disk6.png
+  lucy_de_montefio\
+    agent_detail.png
+    equipment.png
+    amplificator.png
+    disk3.png
+    disk5.png
+    disk6.png
 ```
 
 The importer also works if the files are mixed in one folder, as long as the file names contain the bucket name.
+
+Generic names like `Снимок экрана (17).png` are not enough for reliable import. Rename them or sort them into per-agent folders with stable names before importing.
+
+## Empty slots rule
+
+`equipment.png` is the source of truth for what is actually equipped.
+
+- If a disk slot is empty, do not include `diskN.png` for that slot.
+- If the amplifier slot is empty, do not include `amplificator.png`.
+- If clicking an empty slot opens a recommended item screen, do not use that screen in the dataset.
+
+Only import detail screens for slots that are really occupied on the `equipment.png` overview.
 
 ## Import command
 

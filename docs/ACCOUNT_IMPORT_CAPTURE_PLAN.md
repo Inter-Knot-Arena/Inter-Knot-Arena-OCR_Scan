@@ -55,6 +55,22 @@ Supported buckets:
 - `amplificator` or `amplifier`
 - `mindscape` (optional provenance only)
 
+## Empty slot handling
+
+Treat `equipment` as the authoritative equipped-state screen.
+
+- If a slot is empty on `equipment`, do not capture `diskN` for that slot.
+- If no amplifier is equipped, do not capture `amplificator`.
+- Ignore recommendation screens that appear after clicking an empty slot. They do not describe the equipped build and must stay out of the OCR dataset.
+
+Practical examples:
+
+- Billy Kid with empty `2,3,5` -> capture `disk1`, `disk4`, `disk6` only
+- Lucy de Montefio with empty `1,2,4` -> capture `disk3`, `disk5`, `disk6` only
+- Nicole Demara with all disks empty -> no `disk1..disk6`
+- Grace Howard with empty `disk2` and no amplifier -> capture `disk1`, `disk3`, `disk4`, `disk5`, `disk6`, no `amplificator`
+- Ben Bigger with all disks empty -> no `disk1..disk6`
+
 ## Acceptance baseline
 
 - OCR manifest review queues must be built from `workflow=account_import` only.
