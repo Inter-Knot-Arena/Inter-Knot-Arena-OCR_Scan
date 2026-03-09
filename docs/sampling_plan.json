@@ -17,8 +17,18 @@
     "agent_icon": 36,
     "equipment": 8
   },
-  "labelCounts": {},
-  "reviewedLabelCounts": {},
+  "labelCounts": {
+    "agent_ellen": 1,
+    "????? ?? ??????": 1,
+    "????????-???????": 4,
+    "????? ? ????? ? ??????": 2
+  },
+  "reviewedLabelCounts": {
+    "agent_ellen": 1,
+    "????? ?? ??????": 1,
+    "????????-???????": 4,
+    "????? ? ????? ? ??????": 2
+  },
   "suggestedLabelCounts": {
     "1": 12,
     "agent_vivian": 20,
@@ -39,7 +49,7 @@
     "agent_miyabi": 0,
     "agent_grace": 0,
     "agent_rina": 0,
-    "agent_ellen": 0,
+    "agent_ellen": 1,
     "agent_zhu_yuan": 0,
     "agent_lucy": 0,
     "agent_piper": 0,
@@ -127,7 +137,7 @@
     "agent_aria": 0
   },
   "rosterAgentCount": 49,
-  "coveredAgentCount": 0,
+  "coveredAgentCount": 1,
   "suggestedCoveredAgentCount": 2,
   "missingAgentIcons": [
     "agent_anby",
@@ -144,7 +154,6 @@
     "agent_miyabi",
     "agent_grace",
     "agent_rina",
-    "agent_ellen",
     "agent_zhu_yuan",
     "agent_lucy",
     "agent_piper",

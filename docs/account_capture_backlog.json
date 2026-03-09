@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T03:33:13Z",
+  "generatedAt": "2026-03-09T03:49:31Z",
   "workflow": "account_import",
   "eligibleRecordCount": 57,
   "roleHeadCounts": {
@@ -22,7 +22,7 @@
     "rosterOwnershipCoveredAgents": 49,
     "rosterOwnedAgents": 20,
     "rosterNotOwnedAgents": 29,
-    "agentDetailCoveredAgents": 2,
+    "agentDetailCoveredAgents": 3,
     "equipmentFrames": 1,
     "diskDetailFrames": 6,
     "amplifierDetailFrames": 1,
@@ -249,7 +249,7 @@
     "agent_miyabi": 10,
     "agent_grace": 10,
     "agent_rina": 10,
-    "agent_ellen": 10,
+    "agent_ellen": 9,
     "agent_zhu_yuan": 10,
     "agent_lucy": 10,
     "agent_piper": 10,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T03:33:13Z",
+  "generatedAt": "2026-03-09T03:49:33Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "statusFilter": [
@@ -8,7 +8,7 @@
   ],
   "batchSize": 150,
   "batchCount": 1,
-  "queuedRecords": 52,
+  "queuedRecords": 44,
   "missingReviewedAgentIcons": [
     "agent_alice",
     "agent_anby",
@@ -22,7 +22,6 @@
     "agent_caesar",
     "agent_corin",
     "agent_dialyn",
-    "agent_ellen",
     "agent_evelyn",
     "agent_grace",
     "agent_harumasa",
@@ -63,12 +62,12 @@
   "batches": [
     {
       "batchId": "ocr-review-001",
-      "size": 52,
+      "size": 44,
       "maxPriority": 94,
       "headCounts": {
-        "agent_icon": 31,
+        "agent_icon": 30,
         "uid_digit": 13,
-        "equipment": 8
+        "equipment": 1
       },
       "focusAgentCounts": {}
     }
