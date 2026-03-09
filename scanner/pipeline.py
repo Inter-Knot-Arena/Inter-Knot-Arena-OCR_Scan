@@ -146,7 +146,10 @@ def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
     return {
         "agentId": agent_id,
         "level": None,
+        "levelCap": None,
         "mindscape": None,
+        "mindscapeCap": None,
+        "stats": {},
         "weapon": {},
         "discs": [],
         "confidenceByField": {
@@ -203,15 +206,23 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
 
         level_raw = raw.get("level")
         level = float(level_raw) if isinstance(level_raw, (int, float)) else None
+        level_cap_raw = raw.get("levelCap")
+        level_cap = float(level_cap_raw) if isinstance(level_cap_raw, (int, float)) else None
         level_conf = 0.84 if level is None else (0.88 + 0.12 * _normalized_fraction(level, 1.0, 60.0))
         if level is None:
             low_conf_reasons.append(f"{agent_id}.level_missing")
 
         mindscape_raw = raw.get("mindscape")
         mindscape = float(mindscape_raw) if isinstance(mindscape_raw, (int, float)) else None
+        mindscape_cap_raw = raw.get("mindscapeCap")
+        mindscape_cap = float(mindscape_cap_raw) if isinstance(mindscape_cap_raw, (int, float)) else None
         mindscape_conf = 0.82 if mindscape is None else (0.88 + 0.1 * _normalized_fraction(mindscape, 0.0, 6.0))
         if mindscape is None:
             low_conf_reasons.append(f"{agent_id}.mindscape_missing")
+
+        stats = raw.get("stats")
+        if not isinstance(stats, dict):
+            stats = {}
 
         weapon = raw.get("weapon")
         discs = raw.get("discs")
@@ -236,7 +247,10 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
             {
                 "agentId": agent_id,
                 "level": level,
+                "levelCap": level_cap,
                 "mindscape": mindscape,
+                "mindscapeCap": mindscape_cap,
+                "stats": stats,
                 "weapon": weapon,
                 "discs": discs,
                 "confidenceByField": confidence_by_field,
@@ -380,7 +394,9 @@ def run_scan(seed: str, region: str, full_sync: bool) -> Dict[str, Any]:
         {
             "agentId": "agent_anby",
             "level": rng.randint(40, 60),
+            "levelCap": 60,
             "mindscape": rng.randint(0, 6),
+            "mindscapeCap": 6,
             "weapon": {"weaponId": "amp_starlight_engine", "level": rng.randint(40, 60)},
             "discs": [
                 {"slot": 1, "setId": "set_woodpecker", "level": rng.randint(12, 15)},
@@ -390,7 +406,9 @@ def run_scan(seed: str, region: str, full_sync: bool) -> Dict[str, Any]:
         {
             "agentId": "agent_nicole",
             "level": rng.randint(40, 60),
+            "levelCap": 60,
             "mindscape": rng.randint(0, 6),
+            "mindscapeCap": 6,
             "weapon": {"weaponId": "amp_rainforest", "level": rng.randint(40, 60)},
             "discs": [
                 {"slot": 1, "setId": "set_swing_jazz", "level": rng.randint(12, 15)},
@@ -400,7 +418,9 @@ def run_scan(seed: str, region: str, full_sync: bool) -> Dict[str, Any]:
         {
             "agentId": "agent_ellen",
             "level": rng.randint(40, 60),
+            "levelCap": 60,
             "mindscape": rng.randint(0, 6),
+            "mindscapeCap": 6,
             "weapon": {"weaponId": "amp_deep_sea", "level": rng.randint(40, 60)},
             "discs": [
                 {"slot": 1, "setId": "set_polar_metal", "level": rng.randint(12, 15)},

@@ -80,7 +80,8 @@ def main() -> int:
     equipment_frames = 0
     disk_detail_frames = 0
     amplifier_detail_frames = 0
-    mindscape_frames = 0
+    optional_mindscape_frames = 0
+    agent_detail_mindscape_frames = 0
     roster_owned_agents: set[str] = set()
     roster_not_owned_agents: set[str] = set()
 
@@ -115,7 +116,9 @@ def main() -> int:
             elif role == AMPLIFIER_DETAIL_ROLE:
                 amplifier_detail_frames += 1
             elif role == MINDSCAPE_ROLE:
-                mindscape_frames += 1
+                optional_mindscape_frames += 1
+        if role == "agent_detail" and _labels(record, "labels").get("agent_mindscape") is not None:
+            agent_detail_mindscape_frames += 1
 
     roster_agents = current_agent_ids()
     roster_deficits = {agent: max(0, int(args.target_roster_per_agent) - roster_counts.get(agent, 0)) for agent in roster_agents}
@@ -128,24 +131,27 @@ def main() -> int:
         "roleHeadCounts": dict(role_head_counts),
         "targets": {
             "uidPanelFrames": int(args.target_uid_panel),
+            "rosterOwnershipAgents": len(roster_agents),
             "rosterPerAgent": int(args.target_roster_per_agent),
             "agentDetailPerAgent": int(args.target_agent_detail_per_agent),
             "equipmentFrames": int(args.target_equipment_frames),
         },
         "current": {
             "uidPanelFrames": int(role_head_counts.get("uid_panel:uid_digit", 0)),
-            "rosterCoveredAgents": sum(1 for agent in roster_agents if roster_counts.get(agent, 0) > 0),
-            "rosterOwnershipCoveredAgents": len(roster_owned_agents | roster_not_owned_agents),
+            "rosterCoveredAgents": len(roster_owned_agents | roster_not_owned_agents),
+            "rosterIconLabeledAgents": sum(1 for agent in roster_agents if roster_counts.get(agent, 0) > 0),
             "rosterOwnedAgents": len(roster_owned_agents),
             "rosterNotOwnedAgents": len(roster_not_owned_agents),
             "agentDetailCoveredAgents": sum(1 for agent in roster_agents if detail_counts.get(agent, 0) > 0),
             "equipmentFrames": int(equipment_frames),
             "diskDetailFrames": int(disk_detail_frames),
             "amplifierDetailFrames": int(amplifier_detail_frames),
-            "mindscapeFrames": int(mindscape_frames),
+            "agentDetailMindscapeFrames": int(agent_detail_mindscape_frames),
+            "optionalMindscapeFrames": int(optional_mindscape_frames),
         },
         "uidPanelMissingFrames": max(0, int(args.target_uid_panel) - int(role_head_counts.get("uid_panel:uid_digit", 0))),
-        "missingRosterAgents": [agent for agent, deficit in roster_deficits.items() if deficit > 0],
+        "missingRosterAgents": [agent for agent in roster_agents if agent not in roster_owned_agents and agent not in roster_not_owned_agents],
+        "missingRosterIconAgents": [agent for agent, deficit in roster_deficits.items() if deficit > 0],
         "missingAgentDetailAgents": [agent for agent, deficit in detail_deficits.items() if deficit > 0],
         "ownedAgentIds": [agent for agent in roster_agents if agent in roster_owned_agents],
         "notOwnedAgentIds": [agent for agent in roster_agents if agent in roster_not_owned_agents],
@@ -159,7 +165,6 @@ def main() -> int:
             "equipment",
             "disk_detail",
             "amplifier_detail",
-            "mindscape",
         ],
         "recommendedCommands": [
             "python scripts/session_capture.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --duration-sec 60 --fps 1.0 --locale RU --resolution 1080p",

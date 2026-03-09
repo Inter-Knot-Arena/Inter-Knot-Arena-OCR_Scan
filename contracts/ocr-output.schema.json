@@ -28,11 +28,53 @@
         "properties": {
           "agentId": { "type": "string" },
           "level": { "type": "number" },
+          "levelCap": { "type": "number" },
           "mindscape": { "type": "number" },
-          "weapon": { "type": "object" },
+          "mindscapeCap": { "type": "number" },
+          "stats": {
+            "type": "object",
+            "additionalProperties": { "type": "number" }
+          },
+          "weapon": {
+            "type": "object",
+            "properties": {
+              "weaponId": { "type": "string" },
+              "displayName": { "type": "string" },
+              "level": { "type": "number" },
+              "levelCap": { "type": "number" },
+              "baseStatKey": { "type": "string" },
+              "baseStatValue": { "type": "number" },
+              "advancedStatKey": { "type": "string" },
+              "advancedStatValue": { "type": "number" }
+            },
+            "additionalProperties": true
+          },
           "discs": {
             "type": "array",
-            "items": { "type": "object" }
+            "items": {
+              "type": "object",
+              "properties": {
+                "slot": { "type": "number" },
+                "setId": { "type": "string" },
+                "displayName": { "type": "string" },
+                "level": { "type": "number" },
+                "levelCap": { "type": "number" },
+                "mainStatKey": { "type": "string" },
+                "mainStatValue": { "type": "number" },
+                "substats": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": { "type": "string" },
+                      "value": { "type": "number" }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
           },
           "confidenceByField": {
             "type": "object",

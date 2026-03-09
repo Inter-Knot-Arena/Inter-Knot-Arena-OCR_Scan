@@ -10,7 +10,7 @@ Build OCR data only for Verifier account import:
 - `equipment` -> amplifiers, discs, levels, stats
 - `disk_detail` -> one screenshot per slot when detailed disc stats are visible
 - `amplifier_detail` -> dedicated amplifier detail screen
-- `mindscape` -> progression screen kept for future parser coverage
+- `mindscape` -> derive from `agent_detail` footer when visible; dedicated `mindscape` screen is optional provenance only
 
 ## Do not use
 
@@ -53,10 +53,11 @@ Supported buckets:
 - `equipment`
 - `disk1` ... `disk6`
 - `amplificator` or `amplifier`
-- `mindscape`
+- `mindscape` (optional provenance only)
 
 ## Acceptance baseline
 
 - OCR manifest review queues must be built from `workflow=account_import` only.
 - `uid_digit`, `agent_icon`, and `equipment` all need dedicated account-screen captures.
+- Mindscape truth should come from the left-lower `agent_detail` footer counter, not the nearby unrelated footer counter.
 - No combat-only source should affect OCR QA, sampling, or training metrics.

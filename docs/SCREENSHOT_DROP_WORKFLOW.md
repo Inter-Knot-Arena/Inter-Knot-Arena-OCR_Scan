@@ -12,7 +12,7 @@ The importer classifies files by folder names or file names. These aliases are s
 - `equipment`
 - `disk1` ... `disk6`
 - `amplificator` or `amplifier`
-- `mindscape`
+- `mindscape` (optional provenance only; primary mindscape truth should come from `agent_detail`)
 
 ## Recommended folder layout
 
@@ -54,7 +54,7 @@ Optional flags:
 2. Copies each image into private storage under `raw\manual_screens\<batch-id>\...`.
 3. Appends one `source` and one `record` per screenshot into `dataset_manifest.json`.
 4. Marks everything as `workflow=account_import`.
-5. Preserves `mindscape` captures in the manifest, but keeps them outside the current import-eligible training slice.
+5. Preserves optional `mindscape` captures in the manifest, but keeps them outside the current import-eligible training slice because primary mindscape truth should come from `agent_detail`.
 
 ## Roster ownership review
 

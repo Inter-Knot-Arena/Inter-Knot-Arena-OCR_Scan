@@ -30,16 +30,37 @@ FIELDS = [
     "locale",
     "resolution",
     "path",
+    "reviewed_uid_full",
     "reviewed_uid_digit",
     "suggested_uid_digit",
     "reviewed_agent_icon_id",
     "suggested_agent_icon_id",
+    "reviewed_agent_level",
+    "reviewed_agent_level_cap",
+    "reviewed_agent_mindscape",
+    "reviewed_agent_mindscape_cap",
+    "reviewed_agent_stats_json",
     "reviewed_amplifier_id",
+    "reviewed_amplifier_name",
     "suggested_amplifier_id",
+    "reviewed_amplifier_level",
+    "reviewed_amplifier_level_cap",
+    "reviewed_amplifier_base_stat_key",
+    "reviewed_amplifier_base_stat_value",
+    "reviewed_amplifier_advanced_stat_key",
+    "reviewed_amplifier_advanced_stat_value",
     "reviewed_disc_set_id",
     "suggested_disc_set_id",
+    "reviewed_disc_set_name",
+    "reviewed_disc_slot",
     "reviewed_disc_level",
     "suggested_disc_level",
+    "reviewed_disc_level_cap",
+    "reviewed_disc_main_stat_key",
+    "reviewed_disc_main_stat_value",
+    "reviewed_disc_substats_json",
+    "reviewed_equipment_agent_id",
+    "reviewed_equipment_disc_summary_json",
     "suggested_confidence",
 ]
 
@@ -53,7 +74,22 @@ def _labels(record: Dict[str, Any], key: str) -> Dict[str, Any]:
 
 def _str_value(payload: Dict[str, Any], key: str) -> str:
     value = payload.get(key)
-    return str(value).strip() if isinstance(value, str) else ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, (int, float)):
+        return str(value)
+    return ""
+
+
+def _json_value(payload: Dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return value.strip()
+    return ""
 
 
 def _confidence_value(payload: Dict[str, Any]) -> float:
@@ -179,16 +215,37 @@ def _row(item: Dict[str, Any], source_index: Dict[str, Dict[str, Any]], batch_id
         "locale": str(record.get("locale") or ""),
         "resolution": str(record.get("resolution") or ""),
         "path": str(record.get("path") or ""),
+        "reviewed_uid_full": _str_value(reviewed, "uid_full"),
         "reviewed_uid_digit": _str_value(reviewed, "uid_digit"),
         "suggested_uid_digit": _str_value(suggested, "uid_digit"),
         "reviewed_agent_icon_id": _str_value(reviewed, "agent_icon_id"),
         "suggested_agent_icon_id": _str_value(suggested, "agent_icon_id"),
+        "reviewed_agent_level": _str_value(reviewed, "agent_level"),
+        "reviewed_agent_level_cap": _str_value(reviewed, "agent_level_cap"),
+        "reviewed_agent_mindscape": _str_value(reviewed, "agent_mindscape"),
+        "reviewed_agent_mindscape_cap": _str_value(reviewed, "agent_mindscape_cap"),
+        "reviewed_agent_stats_json": _json_value(reviewed, "agent_stats"),
         "reviewed_amplifier_id": _str_value(reviewed, "amplifier_id"),
+        "reviewed_amplifier_name": _str_value(reviewed, "amplifier_name"),
         "suggested_amplifier_id": _str_value(suggested, "amplifier_id"),
+        "reviewed_amplifier_level": _str_value(reviewed, "amplifier_level"),
+        "reviewed_amplifier_level_cap": _str_value(reviewed, "amplifier_level_cap"),
+        "reviewed_amplifier_base_stat_key": _str_value(reviewed, "amplifier_base_stat_key"),
+        "reviewed_amplifier_base_stat_value": _str_value(reviewed, "amplifier_base_stat_value"),
+        "reviewed_amplifier_advanced_stat_key": _str_value(reviewed, "amplifier_advanced_stat_key"),
+        "reviewed_amplifier_advanced_stat_value": _str_value(reviewed, "amplifier_advanced_stat_value"),
         "reviewed_disc_set_id": _str_value(reviewed, "disc_set_id"),
         "suggested_disc_set_id": _str_value(suggested, "disc_set_id"),
+        "reviewed_disc_set_name": _str_value(reviewed, "disc_set_name"),
+        "reviewed_disc_slot": _str_value(reviewed, "disc_slot"),
         "reviewed_disc_level": _str_value(reviewed, "disc_level"),
         "suggested_disc_level": _str_value(suggested, "disc_level"),
+        "reviewed_disc_level_cap": _str_value(reviewed, "disc_level_cap"),
+        "reviewed_disc_main_stat_key": _str_value(reviewed, "disc_main_stat_key"),
+        "reviewed_disc_main_stat_value": _str_value(reviewed, "disc_main_stat_value"),
+        "reviewed_disc_substats_json": _json_value(reviewed, "disc_substats"),
+        "reviewed_equipment_agent_id": _str_value(reviewed, "equipment_agent_id"),
+        "reviewed_equipment_disc_summary_json": _json_value(reviewed, "equipment_disc_summary"),
         "suggested_confidence": f"{_confidence_value(suggested):.4f}" if suggested else "",
     }
 

@@ -38,7 +38,7 @@ def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
     head = _detect_head(record, suggested=suggested)
     if not labels:
         return ""
-    for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id"):
+    for key in ("uid_full", "uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id", "equipment_agent_id"):
         value = labels.get(key)
         if isinstance(value, str) and value.strip():
             return value.strip()
@@ -47,6 +47,29 @@ def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return ""
+
+
+def _has_scalar_truth(record: Dict[str, Any], *, suggested: bool) -> bool:
+    labels = _label_payload(record, suggested=suggested)
+    if not labels:
+        return False
+    scalar_keys = {
+        "uid_full",
+        "uid_digit",
+        "agent_icon_id",
+        "agent_level",
+        "agent_mindscape",
+        "amplifier_id",
+        "amplifier_level",
+        "disc_set_id",
+        "disc_slot",
+        "disc_level",
+        "equipment_agent_id",
+    }
+    nested_keys = {"uid", "agentSnapshot", "weapon", "disc", "equipmentOverview"}
+    if any(key in labels for key in scalar_keys):
+        return True
+    return any(key in labels for key in nested_keys)
 
 
 def _extract_owned_agent_ids(record: Dict[str, Any], *, suggested: bool) -> List[str]:
@@ -122,10 +145,12 @@ def main() -> int:
 
         label = _extract_label(record, suggested=False)
         reviewed_owned = _extract_owned_agent_ids(record, suggested=False)
-        if label:
+        scalar_truth = _has_scalar_truth(record, suggested=False)
+        if scalar_truth:
             reviewed += 1
+        if label:
             label_counts[label] = label_counts.get(label, 0) + 1
-        if label or reviewed_owned or str(record.get("qaStatus") or "").lower() == "reviewed":
+        if scalar_truth or reviewed_owned or str(record.get("qaStatus") or "").lower() == "reviewed":
             reviewed_records += 1
         if str(record.get("screenRole") or "").strip().lower() == "roster" and reviewed_owned:
             roster_reviewed_count += 1

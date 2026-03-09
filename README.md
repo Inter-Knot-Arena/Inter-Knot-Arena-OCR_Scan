@@ -7,6 +7,7 @@ OCR and parsing package for VerifierApp full roster scan.
 - Detect UID from profile/account screens.
 - Detect owned agents and progression values.
 - Parse amplifiers and discs from inventory/equipment UI.
+- Derive mindscape from the lower-left agent detail footer when that footer is visible.
 - Emit normalized payload consumed by VerifierApp.
 - OCR dataset scope is `account import` only. Match gameplay footage is not treated as roster-import ground truth.
 
@@ -97,7 +98,7 @@ Drop-folder screenshot import is the preferred route for manual account captures
 - `equipment`
 - `disk1` ... `disk6`
 - `amplificator` or `amplifier`
-- `mindscape`
+- `mindscape` (optional provenance only; primary mindscape truth should come from `agent_detail`)
 
 Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual_screens\...` and appended to `dataset_manifest.json`.
 
@@ -106,7 +107,7 @@ Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual
 - `workflow=account_import` is the only default scope for OCR training/review artifacts.
 - `workflow=combat_reference` may exist in the manifest for provenance, but those records are excluded from OCR review, QA, and sampling by default.
 - Use `scripts/realign_import_workflow.py` if an older manifest mixed account-import and gameplay sources.
-- `mindscape` screenshots are preserved in the manifest for future parser coverage, but are not yet included in the current import-eligible training slice.
+- `mindscape` should be derived from `agent_detail` when the footer counter is visible. Separate `mindscape` screenshots are optional provenance and stay out of the current import-eligible training slice.
 
 ## Non-goals
 
