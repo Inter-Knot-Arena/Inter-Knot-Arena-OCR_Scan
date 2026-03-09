@@ -1,21 +1,21 @@
 {
-  "recordCount": 57,
+  "recordCount": 15,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "headCounts": {
-    "uid_digit": 13,
-    "agent_icon": 36,
-    "equipment": 8
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 1
   },
   "reviewedHeadCounts": {
-    "uid_digit": 13,
-    "agent_icon": 36,
-    "equipment": 8
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 1
   },
   "suggestedHeadCounts": {
-    "uid_digit": 13,
-    "agent_icon": 36,
-    "equipment": 8
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 1
   },
   "labelCounts": {
     "agent_ellen": 1,
@@ -31,11 +31,7 @@
     "set_branch_and_blade_song": 2,
     "1503067100": 1
   },
-  "suggestedLabelCounts": {
-    "1": 12,
-    "agent_vivian": 20,
-    "agent_nicole": 10
-  },
+  "suggestedLabelCounts": {},
   "agentIconCounts": {
     "agent_anby": 0,
     "agent_nicole": 0,
@@ -89,7 +85,7 @@
   },
   "suggestedAgentIconCounts": {
     "agent_anby": 0,
-    "agent_nicole": 10,
+    "agent_nicole": 0,
     "agent_billy": 0,
     "agent_soldier_11": 0,
     "agent_nekomiya_mana": 0,
@@ -119,7 +115,7 @@
     "agent_soldier_0_anby": 0,
     "agent_pulchra": 0,
     "agent_trigger": 0,
-    "agent_vivian": 20,
+    "agent_vivian": 0,
     "agent_hugo": 0,
     "agent_yixuan": 0,
     "agent_pan_yinhu": 0,
@@ -140,7 +136,7 @@
   },
   "rosterAgentCount": 49,
   "coveredAgentCount": 1,
-  "suggestedCoveredAgentCount": 2,
+  "suggestedCoveredAgentCount": 0,
   "missingAgentIcons": [
     "agent_anby",
     "agent_nicole",
@@ -193,6 +189,7 @@
   ],
   "missingSuggestedAgentIcons": [
     "agent_anby",
+    "agent_nicole",
     "agent_billy",
     "agent_soldier_11",
     "agent_nekomiya_mana",
@@ -222,6 +219,7 @@
     "agent_soldier_0_anby",
     "agent_pulchra",
     "agent_trigger",
+    "agent_vivian",
     "agent_hugo",
     "agent_yixuan",
     "agent_pan_yinhu",
@@ -241,17 +239,12 @@
     "agent_aria"
   ],
   "localeCounts": {
-    "RU": 57
+    "RU": 15
   },
   "resolutionCounts": {
-    "1080p": 42,
     "1440p": 15
   },
   "sourceCounts": {
-    "live_session_1772677479": 12,
-    "live_session_1772677498": 10,
-    "live_session_1772677518": 10,
-    "live_session_1772677537": 10,
     "onedrive_account_20260308_agent_detail_30c32a48ceae": 1,
     "onedrive_account_20260308_amplifier_detail_ca490a37cfdd": 1,
     "onedrive_account_20260308_disk_detail_b410d0c21e2c": 1,
@@ -269,12 +262,11 @@
     "onedrive_account_20260308_uid_panel_f6fd2bc0d748": 1
   },
   "localeResolutionCounts": {
-    "RU:1080p": 42,
     "RU:1440p": 15
   },
   "deficits": {
-    "uid_digit": 19987,
-    "agent_icon": 14964,
+    "uid_digit": 19999,
+    "agent_icon": 14994,
     "equipment": 14992
   }
 }

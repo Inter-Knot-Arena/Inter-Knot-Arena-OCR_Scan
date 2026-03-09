@@ -1,12 +1,12 @@
 {
-  "recordCount": 57,
+  "recordCount": 15,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "labeledCount": 10,
   "reviewedCount": 15,
   "reviewedScalarLabelCount": 10,
-  "suggestedCount": 42,
-  "needsReviewCount": 42,
+  "suggestedCount": 0,
+  "needsReviewCount": 0,
   "reviewedRosterRecordCount": 5,
   "reviewedRosterOwnedAgentCount": 20,
   "reviewedRosterNotOwnedAgentCount": 29,
@@ -64,16 +64,16 @@
     "agent_zhu_yuan"
   ],
   "lowConfidenceCount": 0,
-  "suggestedLowConfidenceCount": 12,
+  "suggestedLowConfidenceCount": 0,
   "headCounts": {
-    "uid_digit": 13,
-    "agent_icon": 36,
-    "equipment": 8
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 1
   },
   "suggestedHeadCounts": {
-    "uid_digit": 13,
-    "agent_icon": 36,
-    "equipment": 8
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 1
   },
   "labelCounts": {
     "agent_ellen": 1,
@@ -82,10 +82,6 @@
     "set_branch_and_blade_song": 2,
     "1503067100": 1
   },
-  "suggestedLabelCounts": {
-    "1": 12,
-    "agent_vivian": 20,
-    "agent_nicole": 10
-  },
-  "generatedAt": "2026-03-09T04:53:19Z"
+  "suggestedLabelCounts": {},
+  "generatedAt": "2026-03-09T05:11:27Z"
 }

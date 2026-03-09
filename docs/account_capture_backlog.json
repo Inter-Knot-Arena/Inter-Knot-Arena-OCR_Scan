@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-09T04:55:03Z",
+  "generatedAt": "2026-03-09T05:11:27Z",
   "workflow": "account_import",
-  "eligibleRecordCount": 57,
+  "eligibleRecordCount": 15,
   "roleHeadCounts": {
-    "uid_panel:uid_digit": 13,
-    "agent_detail:agent_icon": 31,
+    "agent_detail:agent_icon": 1,
     "amplifier_detail:equipment": 1,
     "disk_detail:equipment": 6,
     "equipment:equipment": 1,
-    "roster:agent_icon": 5
+    "roster:agent_icon": 5,
+    "uid_panel:uid_digit": 1
   },
   "targets": {
     "uidPanelFrames": 80,
@@ -18,19 +18,19 @@
     "equipmentFrames": 300
   },
   "current": {
-    "uidPanelFrames": 13,
+    "uidPanelFrames": 1,
     "rosterCoveredAgents": 49,
     "rosterIconLabeledAgents": 0,
     "rosterOwnedAgents": 20,
     "rosterNotOwnedAgents": 29,
-    "agentDetailCoveredAgents": 3,
+    "agentDetailCoveredAgents": 1,
     "equipmentFrames": 1,
     "diskDetailFrames": 6,
     "amplifierDetailFrames": 1,
     "agentDetailMindscapeFrames": 1,
     "optionalMindscapeFrames": 0
   },
-  "uidPanelMissingFrames": 67,
+  "uidPanelMissingFrames": 79,
   "missingRosterAgents": [],
   "missingRosterIconAgents": [
     "agent_anby",
@@ -85,6 +85,7 @@
   ],
   "missingAgentDetailAgents": [
     "agent_anby",
+    "agent_nicole",
     "agent_billy",
     "agent_soldier_11",
     "agent_nekomiya_mana",
@@ -114,6 +115,7 @@
     "agent_soldier_0_anby",
     "agent_pulchra",
     "agent_trigger",
+    "agent_vivian",
     "agent_hugo",
     "agent_yixuan",
     "agent_pan_yinhu",
@@ -239,7 +241,7 @@
   },
   "agentDetailDeficits": {
     "agent_anby": 10,
-    "agent_nicole": 0,
+    "agent_nicole": 10,
     "agent_billy": 10,
     "agent_soldier_11": 10,
     "agent_nekomiya_mana": 10,
@@ -269,7 +271,7 @@
     "agent_soldier_0_anby": 10,
     "agent_pulchra": 10,
     "agent_trigger": 10,
-    "agent_vivian": 0,
+    "agent_vivian": 10,
     "agent_hugo": 10,
     "agent_yixuan": 10,
     "agent_pan_yinhu": 10,
