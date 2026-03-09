@@ -62,6 +62,19 @@ def normalize_display_text(value: str) -> str:
     return token
 
 
+def looks_corrupted_display_name(value: str) -> bool:
+    token = str(value or "").strip()
+    if not token:
+        return True
+    meaningful = [char for char in token if not char.isspace() and char not in "-_[]()"]
+    if not meaningful:
+        return True
+    question_count = sum(1 for char in meaningful if char == "?")
+    if question_count == len(meaningful):
+        return True
+    return (question_count / len(meaningful)) >= 0.35
+
+
 def _alias_index(alias_map: Dict[str, tuple[str, ...]]) -> Dict[str, str]:
     output: Dict[str, str] = {}
     for canonical, aliases in alias_map.items():
@@ -114,7 +127,11 @@ def normalize_name_and_id(
         raise ValueError(f"Unsupported taxonomy kind: {kind}")
     if not canonical:
         raise ValueError(f"Invalid {kind} value: id={requested_id!r}, name={requested_name!r}")
-    display_name = requested_name or display_name_for_id(canonical)
+    display_name = requested_name
+    if looks_corrupted_display_name(display_name):
+        display_name = ""
+    if not display_name:
+        display_name = display_name_for_id(canonical)
     if not display_name:
         raise ValueError(f"Missing display name for {kind}: {canonical}")
     return canonical, display_name

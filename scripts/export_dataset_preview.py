@@ -12,6 +12,7 @@ from manifest_lib import ensure_manifest_defaults, load_manifest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from equipment_taxonomy import normalize_name_and_id
 from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, record_screen_role, record_workflow, source_index_from_manifest
 from roster_taxonomy import source_focus_agent_ids
 
@@ -85,7 +86,7 @@ def _value(labels: Dict[str, Any], key: str) -> str:
 def _json_value(labels: Dict[str, Any], key: str) -> str:
     value = labels.get(key)
     if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     if isinstance(value, (int, float)):
         return str(value)
     if isinstance(value, str):
@@ -117,6 +118,38 @@ def _joined_list(labels: Dict[str, Any], key: str) -> str:
     if not isinstance(values, list):
         return ""
     return "|".join(str(value).strip() for value in values if isinstance(value, str) and str(value).strip())
+
+
+def _normalized_name(labels: Dict[str, Any], *, kind: str, id_key: str, name_key: str) -> str:
+    try:
+        _, display_name = normalize_name_and_id(labels.get(name_key), labels.get(id_key), kind=kind)
+        return display_name
+    except ValueError:
+        return _value(labels, name_key)
+
+
+def _normalized_equipment_summary_json(labels: Dict[str, Any]) -> str:
+    summary = labels.get("equipment_disc_summary")
+    if not isinstance(summary, list):
+        return ""
+    normalized: List[Dict[str, Any]] = []
+    for entry in summary:
+        if not isinstance(entry, dict):
+            continue
+        item = dict(entry)
+        try:
+            _, display_name = normalize_name_and_id(
+                item.get("displayName") or item.get("setName"),
+                item.get("setId"),
+                kind="disc_set",
+            )
+            item["displayName"] = display_name
+        except ValueError:
+            pass
+        normalized.append(item)
+    if not normalized:
+        return ""
+    return json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
 
 
 def _source_focus(source_index: Dict[str, Dict[str, Any]], source_id: str) -> str:
@@ -172,7 +205,7 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "reviewed_owned_agent_count": str(len([item for item in reviewed.get("owned_agent_ids", []) if isinstance(item, str) and item.strip()])) if isinstance(reviewed.get("owned_agent_ids"), list) else "",
         "reviewed_owned_agent_ids": _joined_list(reviewed, "owned_agent_ids"),
         "reviewed_amplifier_id": _value(reviewed, "amplifier_id"),
-        "reviewed_amplifier_name": _value(reviewed, "amplifier_name"),
+        "reviewed_amplifier_name": _normalized_name(reviewed, kind="amplifier", id_key="amplifier_id", name_key="amplifier_name"),
         "suggested_amplifier_id": _value(suggested, "amplifier_id"),
         "reviewed_amplifier_level": _value(reviewed, "amplifier_level"),
         "reviewed_amplifier_level_cap": _value(reviewed, "amplifier_level_cap"),
@@ -182,7 +215,7 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "reviewed_amplifier_advanced_stat_value": _value(reviewed, "amplifier_advanced_stat_value"),
         "reviewed_disc_set_id": _value(reviewed, "disc_set_id"),
         "suggested_disc_set_id": _value(suggested, "disc_set_id"),
-        "reviewed_disc_set_name": _value(reviewed, "disc_set_name"),
+        "reviewed_disc_set_name": _normalized_name(reviewed, kind="disc_set", id_key="disc_set_id", name_key="disc_set_name"),
         "reviewed_disc_slot": _value(reviewed, "disc_slot"),
         "reviewed_disc_level": _value(reviewed, "disc_level"),
         "suggested_disc_level": _value(suggested, "disc_level"),
@@ -191,7 +224,7 @@ def _row(record: Dict[str, Any], source_index: Dict[str, Dict[str, Any]]) -> Dic
         "reviewed_disc_main_stat_value": _value(reviewed, "disc_main_stat_value"),
         "reviewed_disc_substats_json": _json_value(reviewed, "disc_substats"),
         "reviewed_equipment_agent_id": _value(reviewed, "equipment_agent_id"),
-        "reviewed_equipment_disc_summary_json": _json_value(reviewed, "equipment_disc_summary"),
+        "reviewed_equipment_disc_summary_json": _normalized_equipment_summary_json(reviewed),
         "suggested_confidence": _confidence(suggested),
     }
 
@@ -268,7 +301,7 @@ def main() -> int:
 
     output_csv = Path(args.output_csv).resolve()
     output_csv.parent.mkdir(parents=True, exist_ok=True)
-    with output_csv.open("w", encoding="utf-8", newline="") as fh:
+    with output_csv.open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
