@@ -122,7 +122,10 @@ def _extract_label(payload: Dict[str, Any], head: str) -> str:
         for key in ("uid_digit", "label"):
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
-                return value.strip()
+                digits = "".join(ch for ch in value if ch.isdigit())
+                if len(digits) == 1:
+                    return digits
+        return ""
     if head == "agent_icon":
         for key in ("agent_icon_id", "agentId", "label"):
             value = payload.get(key)

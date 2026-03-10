@@ -51,7 +51,13 @@ python scripts/train_synthetic_models.py --output-dir models --metrics-file docs
 Train production OCR heads from manifest data (with fallback to synthetic baseline):
 
 ```powershell
-python scripts/train_ocr_models.py --manifest dataset_manifest.json --output-dir models --metrics-file docs/model_metrics.json --model-version ocr-heads-v1.3
+python scripts/train_ocr_models.py --manifest dataset_manifest.json --output-dir models --metrics-file docs/model_metrics.json --model-version ocr-heads-v1.4 --label-source reviewed --split-source manifest --backend torch --torch-device cuda
+```
+
+Build reviewed-truth training readiness report before running real training:
+
+```powershell
+python scripts/build_training_readiness.py --manifest dataset_manifest.json --output-json docs/training_readiness.json --output-md docs/training_readiness.md
 ```
 
 Domain-adaptive training with private live backgrounds:
@@ -108,6 +114,7 @@ Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual
 - `workflow=combat_reference` may exist in the manifest for provenance, but those records are excluded from OCR review, QA, and sampling by default.
 - Use `scripts/realign_import_workflow.py` if an older manifest mixed account-import and gameplay sources.
 - `mindscape` should be derived from `agent_detail` when the footer counter is visible. Separate `mindscape` screenshots are optional provenance and stay out of the current import-eligible training slice.
+- Current strict runtime still targets the supported `RU/EN` layout family, but resolution is now inferred from the actual capture and canonicalized to the nearest layout family (`1080p`/`1440p`). Fractional crops removed hard pixel constants, though the pipeline is still not fully UI/layout-agnostic.
 
 ## Non-goals
 

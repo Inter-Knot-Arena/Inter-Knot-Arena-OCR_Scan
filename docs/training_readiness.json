@@ -1,0 +1,227 @@
+{
+  "generatedAt": "2026-03-10T14:31:33Z",
+  "workflow": "account_import",
+  "importEligibleOnly": true,
+  "summary": {
+    "scopedRecordCount": 134,
+    "reviewedRecordCount": 15,
+    "reviewedHeadCounts": {
+      "agent_icon": 6,
+      "equipment": 8,
+      "uid_digit": 1
+    },
+    "reviewedScreenRoleCounts": {
+      "agent_detail": 1,
+      "amplifier_detail": 1,
+      "disk_detail": 6,
+      "equipment": 1,
+      "roster": 5,
+      "uid_panel": 1
+    },
+    "reviewedSplitCounts": {
+      "train": 0,
+      "val": 0,
+      "test": 0,
+      "unsplit": 15
+    }
+  },
+  "trainHeads": {
+    "uid_digit": {
+      "name": "uid_digit",
+      "sampleCount": 0,
+      "distinctLabelCount": 0,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 0
+      },
+      "readyForCurrentTrainPath": false,
+      "blockers": [
+        "need_at_least_2000_reviewed_samples",
+        "need_at_least_10_distinct_labels",
+        "missing_train_split_samples",
+        "missing_val_split_samples",
+        "missing_test_split_samples"
+      ],
+      "missingDigits": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "reviewedUidPanelTruthCount": 1,
+      "notes": [
+        "Reviewed uid_panel records with full UID exist, but they are not valid digit-classifier samples."
+      ]
+    },
+    "agent_icon": {
+      "name": "agent_icon",
+      "sampleCount": 2,
+      "distinctLabelCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 2
+      },
+      "readyForCurrentTrainPath": false,
+      "blockers": [
+        "need_at_least_2000_reviewed_samples",
+        "need_at_least_2_distinct_labels",
+        "missing_train_split_samples",
+        "missing_val_split_samples",
+        "missing_test_split_samples",
+        "missing_current_roster_agent_coverage"
+      ],
+      "rosterAgentCount": 49,
+      "reviewedCurrentAgentCount": 1,
+      "missingReviewedAgents": [
+        "agent_anby",
+        "agent_nicole",
+        "agent_billy",
+        "agent_soldier_11",
+        "agent_nekomiya_mana",
+        "agent_corin",
+        "agent_lycaon",
+        "agent_koleda",
+        "agent_anton",
+        "agent_ben",
+        "agent_soukaku",
+        "agent_miyabi",
+        "agent_grace",
+        "agent_rina",
+        "agent_zhu_yuan",
+        "agent_lucy",
+        "agent_piper",
+        "agent_qingyi",
+        "agent_jane_doe",
+        "agent_seth",
+        "agent_caesar",
+        "agent_burnice",
+        "agent_yanagi",
+        "agent_lighter",
+        "agent_harumasa",
+        "agent_astra_yao",
+        "agent_evelyn",
+        "agent_soldier_0_anby",
+        "agent_pulchra",
+        "agent_trigger",
+        "agent_vivian",
+        "agent_hugo",
+        "agent_yixuan",
+        "agent_pan_yinhu",
+        "agent_ju_fufu",
+        "agent_yuzuha",
+        "agent_alice",
+        "agent_seed",
+        "agent_orphie_magus",
+        "agent_lucia",
+        "agent_komano_manato",
+        "agent_yidhari",
+        "agent_dialyn",
+        "agent_banyue",
+        "agent_zhao",
+        "agent_ye_shunguang",
+        "agent_sunna",
+        "agent_aria"
+      ]
+    }
+  },
+  "fieldTargets": {
+    "uid_panel_full_uid": {
+      "name": "uid_panel_full_uid",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 1
+      }
+    },
+    "agent_detail_level": {
+      "name": "agent_detail_level",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 1
+      }
+    },
+    "agent_detail_mindscape": {
+      "name": "agent_detail_mindscape",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 1
+      }
+    },
+    "agent_detail_stats": {
+      "name": "agent_detail_stats",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 1
+      }
+    },
+    "amplifier_detail": {
+      "name": "amplifier_detail",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 1,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 1
+      }
+    },
+    "disk_detail": {
+      "name": "disk_detail",
+      "reviewedRecordCount": 6,
+      "completeRecordCount": 6,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 6
+      }
+    },
+    "equipment_overview": {
+      "name": "equipment_overview",
+      "reviewedRecordCount": 1,
+      "completeRecordCount": 0,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 0
+      }
+    },
+    "roster_owned_agents": {
+      "name": "roster_owned_agents",
+      "reviewedRecordCount": 5,
+      "completeRecordCount": 5,
+      "splitCounts": {
+        "train": 0,
+        "val": 0,
+        "test": 0,
+        "unsplit": 5
+      }
+    }
+  }
+}
