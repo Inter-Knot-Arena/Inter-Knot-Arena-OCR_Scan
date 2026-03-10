@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,10 @@ from sklearn.model_selection import train_test_split
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from manifest_lib import hash_file_sha256
+from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 from train_synthetic_models import (
     train_agent_icon_model as train_synthetic_agent_icon_model,
     train_uid_model as train_synthetic_uid_model,
@@ -53,10 +57,12 @@ def _extract_label(record: Dict[str, Any], head: str) -> str:
             for key in ("agent_icon_id", "agentId", "label"):
                 value = labels.get(key)
                 if isinstance(value, str) and value.strip():
-                    return value.strip()
+                    return canonicalize_agent_label(value.strip())
     for key in ("label", "agentId"):
         value = record.get(key)
         if isinstance(value, str) and value.strip():
+            if head == "agent_icon":
+                return canonicalize_agent_label(value.strip())
             return value.strip()
     return ""
 
@@ -160,6 +166,20 @@ def _stratify_target(y: np.ndarray) -> np.ndarray | None:
     if int(np.min(counts)) < 2:
         return None
     return y
+
+
+def _synthetic_fallback_metrics(raw_metrics: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "accuracy": float(raw_metrics.get("accuracy", 0.0)),
+        "macroF1": None,
+        "precision": None,
+        "recall": None,
+        "ece": None,
+        "latencyMsP50": None,
+        "latencyMsP95": None,
+        "backgroundCount": int(raw_metrics.get("backgroundCount", 0)),
+        "evaluationMode": "synthetic_holdout_only",
+    }
 
 
 def _train_real_classifier(
@@ -268,16 +288,7 @@ def main() -> int:
             samples_per_class=max(400, args.uid_samples_per_class),
             background_probability=0.0,
         )
-        uid_metrics = {
-            "accuracy": float(uid_metrics.get("accuracy", 0.0)),
-            "macroF1": float(uid_metrics.get("accuracy", 0.0)),
-            "precision": float(uid_metrics.get("accuracy", 0.0)),
-            "recall": float(uid_metrics.get("accuracy", 0.0)),
-            "ece": 0.0,
-            "latencyMsP50": 0.0,
-            "latencyMsP95": 0.0,
-            "backgroundCount": int(uid_metrics.get("backgroundCount", 0)),
-        }
+        uid_metrics = _synthetic_fallback_metrics(uid_metrics)
         uid_mode = "synthetic_fallback"
 
     if icon_real:
@@ -296,16 +307,7 @@ def main() -> int:
             samples_per_class=max(400, args.icon_samples_per_class),
             background_probability=0.0,
         )
-        icon_metrics = {
-            "accuracy": float(icon_metrics.get("accuracy", 0.0)),
-            "macroF1": float(icon_metrics.get("accuracy", 0.0)),
-            "precision": float(icon_metrics.get("accuracy", 0.0)),
-            "recall": float(icon_metrics.get("accuracy", 0.0)),
-            "ece": 0.0,
-            "latencyMsP50": 0.0,
-            "latencyMsP95": 0.0,
-            "backgroundCount": int(icon_metrics.get("backgroundCount", 0)),
-        }
+        icon_metrics = _synthetic_fallback_metrics(icon_metrics)
         icon_mode = "synthetic_fallback"
 
     data_version = args.data_version
@@ -344,6 +346,9 @@ def main() -> int:
             "recordCount": int(icon_x.shape[0]),
             "skippedRecords": icon_skipped,
             "mode": icon_mode,
+            "rosterAgentCount": len(current_agent_ids()),
+            "trainedAgentCount": sum(1 for label in icon_labels if label in set(current_agent_ids())),
+            "missingRosterAgents": [agent for agent in current_agent_ids() if agent not in set(icon_labels)],
         },
     }
     with metrics_path.open("w", encoding="utf-8") as fh:
