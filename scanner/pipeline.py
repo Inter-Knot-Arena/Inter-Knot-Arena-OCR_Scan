@@ -10,7 +10,7 @@ from typing import Any, Dict, Iterable, List
 import cv2
 import numpy as np
 
-from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata
+from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata, segment_uid_digits
 from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures, normalize_runtime_resolution
 
 SUPPORTED_LOCALES = {"RU", "EN"}
@@ -50,39 +50,6 @@ def _digits_only(value: str) -> str:
     return "".join(ch for ch in value if ch.isdigit())
 
 
-def _split_uid_digits(image: np.ndarray) -> list[np.ndarray]:
-    gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (3, 3), 0)
-    threshold = cv2.adaptiveThreshold(
-        blur,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        31,
-        3,
-    )
-    contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    boxes: list[tuple[int, int, int, int]] = []
-    h, w = threshold.shape[:2]
-    for contour in contours:
-        x, y, cw, ch = cv2.boundingRect(contour)
-        area = cw * ch
-        if area < 18:
-            continue
-        if ch < int(h * 0.35):
-            continue
-        if cw > int(w * 0.4):
-            continue
-        boxes.append((x, y, cw, ch))
-
-    boxes.sort(key=lambda item: item[0])
-    digits: list[np.ndarray] = []
-    for x, y, cw, ch in boxes:
-        crop = threshold[y : y + ch, x : x + cw]
-        digits.append(crop)
-    return digits
-
-
 def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
     reasons: list[str] = []
     uid_path_raw = session_context.get("uidImagePath")
@@ -102,7 +69,7 @@ def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None,
         reasons.append("uid_image_decode_failed")
         return None, None, reasons
 
-    digit_images = _split_uid_digits(image)
+    digit_images = segment_uid_digits(image)
     if len(digit_images) < 6:
         reasons.append("uid_digit_segmentation_failed")
         return None, None, reasons

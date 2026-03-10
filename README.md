@@ -91,9 +91,10 @@ python scripts/qa_audit.py --manifest dataset_manifest.json --workflow account_i
 python scripts/export_review_pack.py --manifest dataset_manifest.json --status needs_review --output-csv docs/review_queue.csv
 # after manual edit of docs/review_queue.csv:
 python scripts/apply_review_labels.py --manifest dataset_manifest.json --input-csv docs/review_queue.csv --review-round final --reviewer-id qa_operator_1
+python scripts/materialize_uid_digit_records.py --manifest dataset_manifest.json
+python scripts/split_dataset.py --manifest dataset_manifest.json --workflow account_import --import-eligible-only --reviewed-only --seed 42
 python scripts/build_sampling_plan.py --manifest dataset_manifest.json --workflow account_import --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
 python scripts/build_account_capture_backlog.py --manifest dataset_manifest.json --output-file docs/account_capture_backlog.json
-python scripts/split_dataset.py --manifest dataset_manifest.json --seed 42
 ```
 
 Drop-folder screenshot import is the preferred route for manual account captures. The importer understands these screen buckets from file names or parent folders:
@@ -114,6 +115,8 @@ Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual
 - `workflow=combat_reference` may exist in the manifest for provenance, but those records are excluded from OCR review, QA, and sampling by default.
 - Use `scripts/realign_import_workflow.py` if an older manifest mixed account-import and gameplay sources.
 - `mindscape` should be derived from `agent_detail` when the footer counter is visible. Separate `mindscape` screenshots are optional provenance and stay out of the current import-eligible training slice.
+- Reviewed full UID panels are not trainable digit samples by themselves. Materialize them into derived `uid_digit` crops with `scripts/materialize_uid_digit_records.py` before building readiness or training.
+- For OCR training, assign splits on the reviewed `account_import` slice instead of the full mixed manifest: `python scripts/split_dataset.py --manifest dataset_manifest.json --workflow account_import --import-eligible-only --reviewed-only --seed 42`.
 - Current strict runtime still targets the supported `RU/EN` layout family, but resolution is now inferred from the actual capture and canonicalized to the nearest layout family (`1080p`/`1440p`). Fractional crops removed hard pixel constants, though the pipeline is still not fully UI/layout-agnostic.
 
 ## Non-goals

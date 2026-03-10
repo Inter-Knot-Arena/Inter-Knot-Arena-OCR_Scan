@@ -18,7 +18,7 @@ _ASPECT_TOLERANCE = 0.2
 # Canonical layout boxes are stored as fractions so the same runtime path can
 # crop from any captured frame that maps to the supported layout family.
 _UID_PANEL_UID_BOX = (0.02, 0.095, 0.19, 0.062)
-_ROSTER_UID_BOX = (0.603, 0.852, 0.336, 0.124)
+_UID_PANEL_DIGITS_BOX = (0.355, 0.555, 0.37, 0.28)
 _ROSTER_AGENT_ICON_BOXES = (
     (0.612, 0.139, 0.272, 0.207),
     (0.612, 0.365, 0.272, 0.207),
@@ -127,6 +127,17 @@ def _fractional_crop(image: np.ndarray, box: tuple[float, float, float, float]) 
     return crop
 
 
+def crop_uid_region(image: np.ndarray, role: str) -> np.ndarray | None:
+    normalized_role = _as_text(role)
+    if normalized_role == UID_PANEL_ROLE:
+        widget_crop = _fractional_crop(image, _UID_PANEL_UID_BOX)
+        if widget_crop is None:
+            return None
+        digits_crop = _fractional_crop(widget_crop, _UID_PANEL_DIGITS_BOX)
+        return digits_crop if digits_crop is not None else widget_crop
+    return None
+
+
 def _ensure_temp_root(session_id: str) -> Path:
     root = Path(tempfile.gettempdir()) / "ika_ocr_runtime" / session_id
     root.mkdir(parents=True, exist_ok=True)
@@ -195,25 +206,15 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
 
 
 def _derive_uid_from_capture(capture: RuntimeCapture, root: Path) -> str | None:
-    if capture.role == UID_PANEL_ROLE:
-        image = _load_image(capture.path)
-        if image is None:
-            return None
-        crop = _fractional_crop(image, _UID_PANEL_UID_BOX)
-        if crop is None:
-            return None
-        return _save_crop(root, "uid_from_uid_panel.png", crop)
-
-    if capture.role == ROSTER_ROLE:
-        image = _load_image(capture.path)
-        if image is None:
-            return None
-        crop = _fractional_crop(image, _ROSTER_UID_BOX)
-        if crop is None:
-            return None
-        return _save_crop(root, "uid_from_roster.png", crop)
-
-    return None
+    if capture.role != UID_PANEL_ROLE:
+        return None
+    image = _load_image(capture.path)
+    if image is None:
+        return None
+    crop = crop_uid_region(image, capture.role)
+    if crop is None:
+        return None
+    return _save_crop(root, "uid_from_uid_panel.png", crop)
 
 
 def _derive_agent_icons_from_capture(capture: RuntimeCapture, root: Path) -> List[Dict[str, str]]:

@@ -290,6 +290,58 @@ def preprocess_digit(image: np.ndarray) -> np.ndarray:
     return normalized
 
 
+def segment_uid_digits(image: np.ndarray) -> List[np.ndarray]:
+    gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, threshold = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    column_counts = np.count_nonzero(threshold, axis=0)
+    min_column_pixels = max(2, int(round(threshold.shape[0] * 0.12)))
+    boxes: list[tuple[int, int, int, int]] = []
+
+    start: int | None = None
+    for column_index, pixel_count in enumerate(column_counts):
+        if pixel_count >= min_column_pixels:
+            if start is None:
+                start = column_index
+            continue
+        if start is None:
+            continue
+        end = column_index - 1
+        segment = threshold[:, start : end + 1]
+        ys, xs = np.nonzero(segment)
+        if xs.size:
+            y0 = int(ys.min())
+            y1 = int(ys.max())
+            boxes.append((start, y0, end - start + 1, y1 - y0 + 1))
+        start = None
+
+    if start is not None:
+        segment = threshold[:, start:]
+        ys, xs = np.nonzero(segment)
+        if xs.size:
+            y0 = int(ys.min())
+            y1 = int(ys.max())
+            boxes.append((start, y0, threshold.shape[1] - start, y1 - y0 + 1))
+
+    digits: list[np.ndarray] = []
+    height, width = threshold.shape[:2]
+    for x, y, contour_width, contour_height in boxes:
+        if contour_width < 3:
+            continue
+        if contour_height < int(round(height * 0.45)):
+            continue
+        if contour_width > int(round(width * 0.2)):
+            continue
+        pad = 1
+        x0 = max(0, x - pad)
+        y0 = max(0, y - pad)
+        x1 = min(width, x + contour_width + pad)
+        y1 = min(height, y + contour_height + pad)
+        crop = threshold[y0:y1, x0:x1]
+        if crop.size:
+            digits.append(crop)
+    return digits
+
+
 def preprocess_digit_for_classifier(image: np.ndarray, classifier: OnnxClassifier) -> np.ndarray:
     normalized = preprocess_digit(image)
     if classifier.expects_image_input():
