@@ -6,6 +6,8 @@ import json
 import statistics
 import sys
 import time
+from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -31,6 +33,16 @@ from train_synthetic_models import (
 DEFAULT_MODEL_VERSION = "ocr-heads-v1.4"
 
 
+@dataclass(slots=True)
+class LoadedDataset:
+    x: np.ndarray
+    y: np.ndarray
+    label_names: List[str]
+    skipped_records: int
+    sample_splits: List[str]
+    split_mode: str
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
@@ -47,7 +59,53 @@ def _torch_cuda_available() -> bool:
     return bool(torch.cuda.is_available())
 
 
-def _extract_head(record: Dict[str, Any]) -> str:
+def _normalize_split_name(raw: Any) -> str:
+    value = str(raw or "").strip().lower()
+    return value if value in {"train", "val", "test"} else ""
+
+
+def _build_manifest_split_index(manifest: Dict[str, Any]) -> Dict[str, str]:
+    split_index: Dict[str, str] = {}
+    splits = manifest.get("splits")
+    if not isinstance(splits, dict):
+        return split_index
+    for split_name in ("train", "val", "test"):
+        record_ids = splits.get(split_name)
+        if not isinstance(record_ids, list):
+            continue
+        for record_id in record_ids:
+            normalized = _normalize_split_name(split_name)
+            if normalized:
+                split_index[str(record_id)] = normalized
+    return split_index
+
+
+def _select_label_payload(record: Dict[str, Any], label_source: str) -> Dict[str, Any] | None:
+    labels = record.get("labels")
+    labels = labels if isinstance(labels, dict) else {}
+    suggested = record.get("suggestedLabels")
+    suggested = suggested if isinstance(suggested, dict) else {}
+
+    is_reviewed = (
+        str(record.get("qaStatus") or "").lower() == "reviewed"
+        and isinstance(labels.get("reviewFinal"), dict)
+    )
+    if label_source == "reviewed":
+        return labels if is_reviewed else None
+    if label_source == "suggested":
+        return suggested or None
+    if is_reviewed:
+        return labels
+    if labels:
+        return labels
+    return suggested or None
+
+
+def _extract_head(record: Dict[str, Any], payload: Dict[str, Any] | None = None) -> str:
+    if isinstance(payload, dict):
+        value = payload.get("head")
+        if isinstance(value, str) and value.strip():
+            return value.strip()
     labels = record.get("labels")
     if isinstance(labels, dict):
         value = labels.get("head")
@@ -59,21 +117,19 @@ def _extract_head(record: Dict[str, Any]) -> str:
     return ""
 
 
-def _extract_label(record: Dict[str, Any], head: str) -> str:
-    labels = record.get("labels")
-    if isinstance(labels, dict):
-        if head == "uid_digit":
-            for key in ("uid_digit", "label"):
-                value = labels.get(key)
-                if isinstance(value, str) and value.strip():
-                    return value.strip()
-        if head == "agent_icon":
-            for key in ("agent_icon_id", "agentId", "label"):
-                value = labels.get(key)
-                if isinstance(value, str) and value.strip():
-                    return canonicalize_agent_label(value.strip())
+def _extract_label(payload: Dict[str, Any], head: str) -> str:
+    if head == "uid_digit":
+        for key in ("uid_digit", "label"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    if head == "agent_icon":
+        for key in ("agent_icon_id", "agentId", "label"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return canonicalize_agent_label(value.strip())
     for key in ("label", "agentId"):
-        value = record.get(key)
+        value = payload.get(key)
         if isinstance(value, str) and value.strip():
             if head == "agent_icon":
                 return canonicalize_agent_label(value.strip())
@@ -92,27 +148,39 @@ def _preprocess(image: np.ndarray, head: str) -> np.ndarray:
     return resized.astype(np.float32).reshape(-1) / 255.0
 
 
-def _load_dataset(manifest_path: Path, head: str) -> Tuple[np.ndarray, np.ndarray, List[str], int]:
+def _load_dataset(manifest_path: Path, head: str, label_source: str, split_source: str) -> LoadedDataset:
     with manifest_path.open("r", encoding="utf-8") as fh:
         manifest = json.load(fh)
     records = manifest.get("records", [])
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
+    split_index = _build_manifest_split_index(manifest) if split_source == "manifest" else {}
 
     features: List[np.ndarray] = []
     labels: List[str] = []
+    sample_splits: List[str] = []
     skipped = 0
     for record in records:
         if not isinstance(record, dict):
             skipped += 1
             continue
-        record_head = _extract_head(record)
+        payload = _select_label_payload(record, label_source=label_source)
+        if not isinstance(payload, dict):
+            skipped += 1
+            continue
+        record_head = _extract_head(record, payload)
         if record_head and record_head != head:
             continue
-        label = _extract_label(record, head=head)
+        label = _extract_label(payload, head=head)
         if not label:
             skipped += 1
             continue
+        split_name = ""
+        if split_source == "manifest":
+            split_name = _normalize_split_name(split_index.get(str(record.get("id") or "")))
+            if not split_name:
+                skipped += 1
+                continue
         path_value = str(record.get("path") or "")
         if not path_value:
             skipped += 1
@@ -127,14 +195,29 @@ def _load_dataset(manifest_path: Path, head: str) -> Tuple[np.ndarray, np.ndarra
             continue
         features.append(_preprocess(image=image, head=head))
         labels.append(label)
+        sample_splits.append(split_name)
 
     if not features:
-        return np.empty((0, 1), dtype=np.float32), np.empty((0,), dtype=np.int64), [], skipped
+        return LoadedDataset(
+            x=np.empty((0, 1), dtype=np.float32),
+            y=np.empty((0,), dtype=np.int64),
+            label_names=[],
+            skipped_records=skipped,
+            sample_splits=[],
+            split_mode=split_source,
+        )
     label_names = sorted(set(labels))
     label_map = {label: idx for idx, label in enumerate(label_names)}
     x = np.vstack(features).astype(np.float32)
     y = np.array([label_map[label] for label in labels], dtype=np.int64)
-    return x, y, label_names, skipped
+    return LoadedDataset(
+        x=x,
+        y=y,
+        label_names=label_names,
+        skipped_records=skipped,
+        sample_splits=sample_splits,
+        split_mode=split_source,
+    )
 
 
 def _expected_calibration_error(y_true: np.ndarray, probs: np.ndarray, bins: int = 15) -> float:
@@ -213,6 +296,8 @@ def _synthetic_fallback_metrics(raw_metrics: Dict[str, Any]) -> Dict[str, Any]:
         "evaluationMode": "synthetic_holdout_only",
         "trainingBackend": "synthetic_baseline",
         "trainingDevice": "cpu",
+        "splitMode": "synthetic_only",
+        "splitCounts": {},
     }
 
 
@@ -237,18 +322,30 @@ def _resolve_backend(requested: str, requested_device: str) -> str:
     return requested
 
 
-def _train_sklearn_classifier(
+def _partition_dataset(
     x: np.ndarray,
     y: np.ndarray,
-    labels: List[str],
-    output_model_path: Path,
-    output_labels_path: Path,
-) -> Dict[str, Any]:
-    if x.shape[0] < 10:
-        raise ValueError("Not enough samples for real training.")
-    values, counts = np.unique(y, return_counts=True)
-    if values.size < 2:
-        raise ValueError("Need at least two classes for real training.")
+    sample_splits: List[str],
+    split_source: str,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, str, Dict[str, int]]:
+    if split_source == "manifest":
+        split_counts = Counter(split for split in sample_splits if split)
+        if all(split_counts.get(name, 0) > 0 for name in ("train", "val", "test")):
+            split_array = np.array(sample_splits)
+            train_mask = split_array == "train"
+            val_mask = split_array == "val"
+            test_mask = split_array == "test"
+            return (
+                x[train_mask],
+                x[val_mask],
+                x[test_mask],
+                y[train_mask],
+                y[val_mask],
+                y[test_mask],
+                "manifest",
+                {name: int(split_counts.get(name, 0)) for name in ("train", "val", "test")},
+            )
+        raise ValueError("Manifest splits are missing train/val/test samples for the filtered dataset.")
 
     x_train, x_temp, y_train, y_temp = train_test_split(
         x,
@@ -263,6 +360,39 @@ def _train_sklearn_classifier(
         test_size=0.5,
         random_state=42,
         stratify=_stratify_target(y_temp),
+    )
+    return (
+        x_train,
+        x_val,
+        x_test,
+        y_train,
+        y_val,
+        y_test,
+        "random",
+        {"train": int(x_train.shape[0]), "val": int(x_val.shape[0]), "test": int(x_test.shape[0])},
+    )
+
+
+def _train_sklearn_classifier(
+    x: np.ndarray,
+    y: np.ndarray,
+    labels: List[str],
+    output_model_path: Path,
+    output_labels_path: Path,
+    sample_splits: List[str],
+    split_source: str,
+) -> Dict[str, Any]:
+    if x.shape[0] < 10:
+        raise ValueError("Not enough samples for real training.")
+    values, counts = np.unique(y, return_counts=True)
+    if values.size < 2:
+        raise ValueError("Need at least two classes for real training.")
+
+    x_train, x_val, x_test, y_train, y_val, y_test, split_mode, split_counts = _partition_dataset(
+        x=x,
+        y=y,
+        sample_splits=sample_splits,
+        split_source=split_source,
     )
     clf = LogisticRegression(max_iter=1000, solver="lbfgs")
     clf.fit(x_train, y_train)
@@ -303,6 +433,8 @@ def _train_sklearn_classifier(
         "evaluationMode": "real_holdout",
         "trainingBackend": "sklearn_logreg",
         "trainingDevice": "cpu",
+        "splitMode": split_mode,
+        "splitCounts": split_counts,
     }
 
 
@@ -313,6 +445,8 @@ def _train_torch_classifier(
     output_model_path: Path,
     output_labels_path: Path,
     head: str,
+    sample_splits: List[str],
+    split_source: str,
     requested_device: str,
     epochs: int,
     batch_size: int,
@@ -329,19 +463,11 @@ def _train_torch_classifier(
         raise ValueError("Need at least two classes for real training.")
 
     images = _reshape_for_torch(x, head=head)
-    x_train, x_temp, y_train, y_temp = train_test_split(
-        images,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=_stratify_target(y),
-    )
-    x_val, x_test, y_val, y_test = train_test_split(
-        x_temp,
-        y_temp,
-        test_size=0.5,
-        random_state=42,
-        stratify=_stratify_target(y_temp),
+    x_train, x_val, x_test, y_train, y_val, y_test, split_mode, split_counts = _partition_dataset(
+        x=images,
+        y=y,
+        sample_splits=sample_splits,
+        split_source=split_source,
     )
 
     device_name = requested_device.strip().lower()
@@ -452,6 +578,8 @@ def _train_torch_classifier(
         "evaluationMode": "real_holdout",
         "trainingBackend": "torch_cnn",
         "trainingDevice": device.type,
+        "splitMode": split_mode,
+        "splitCounts": split_counts,
     }
 
 
@@ -463,6 +591,8 @@ def main() -> int:
     parser.add_argument("--uid-samples-per-class", type=int, default=1500)
     parser.add_argument("--icon-samples-per-class", type=int, default=1600)
     parser.add_argument("--min-real-samples", type=int, default=2000)
+    parser.add_argument("--label-source", choices=["reviewed", "suggested", "any"], default="reviewed")
+    parser.add_argument("--split-source", choices=["manifest", "random"], default="manifest")
     parser.add_argument("--backend", choices=["auto", "sklearn", "torch"], default="auto")
     parser.add_argument("--torch-device", choices=["auto", "cpu", "cuda"], default="cuda")
     parser.add_argument("--epochs", type=int, default=12)
@@ -478,22 +608,34 @@ def main() -> int:
     metrics_path = Path(args.metrics_file).resolve()
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
 
-    uid_x, uid_y, uid_labels, uid_skipped = _load_dataset(manifest_path=manifest_path, head="uid_digit")
-    icon_x, icon_y, icon_labels, icon_skipped = _load_dataset(manifest_path=manifest_path, head="agent_icon")
+    uid_dataset = _load_dataset(
+        manifest_path=manifest_path,
+        head="uid_digit",
+        label_source=args.label_source,
+        split_source=args.split_source,
+    )
+    icon_dataset = _load_dataset(
+        manifest_path=manifest_path,
+        head="agent_icon",
+        label_source=args.label_source,
+        split_source=args.split_source,
+    )
 
     selected_backend = _resolve_backend(args.backend, args.torch_device)
-    uid_real = uid_x.shape[0] >= max(20, args.min_real_samples) and len(uid_labels) >= 2
-    icon_real = icon_x.shape[0] >= max(20, args.min_real_samples) and len(icon_labels) >= 2
+    uid_real = uid_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(uid_dataset.label_names) >= 2
+    icon_real = icon_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(icon_dataset.label_names) >= 2
 
     if uid_real:
         if selected_backend == "torch":
             uid_metrics = _train_torch_classifier(
-                x=uid_x,
-                y=uid_y,
-                labels=uid_labels,
+                x=uid_dataset.x,
+                y=uid_dataset.y,
+                labels=uid_dataset.label_names,
                 output_model_path=output_dir / "uid_digit.onnx",
                 output_labels_path=output_dir / "uid_digit.labels.json",
                 head="uid_digit",
+                sample_splits=uid_dataset.sample_splits,
+                split_source=uid_dataset.split_mode,
                 requested_device=args.torch_device,
                 epochs=args.epochs,
                 batch_size=args.batch_size,
@@ -501,11 +643,13 @@ def main() -> int:
             )
         else:
             uid_metrics = _train_sklearn_classifier(
-                x=uid_x,
-                y=uid_y,
-                labels=uid_labels,
+                x=uid_dataset.x,
+                y=uid_dataset.y,
+                labels=uid_dataset.label_names,
                 output_model_path=output_dir / "uid_digit.onnx",
                 output_labels_path=output_dir / "uid_digit.labels.json",
+                sample_splits=uid_dataset.sample_splits,
+                split_source=uid_dataset.split_mode,
             )
         uid_mode = "real"
     else:
@@ -521,12 +665,14 @@ def main() -> int:
     if icon_real:
         if selected_backend == "torch":
             icon_metrics = _train_torch_classifier(
-                x=icon_x,
-                y=icon_y,
-                labels=icon_labels,
+                x=icon_dataset.x,
+                y=icon_dataset.y,
+                labels=icon_dataset.label_names,
                 output_model_path=output_dir / "agent_icon.onnx",
                 output_labels_path=output_dir / "agent_icon.labels.json",
                 head="agent_icon",
+                sample_splits=icon_dataset.sample_splits,
+                split_source=icon_dataset.split_mode,
                 requested_device=args.torch_device,
                 epochs=args.epochs,
                 batch_size=args.batch_size,
@@ -534,14 +680,16 @@ def main() -> int:
             )
         else:
             icon_metrics = _train_sklearn_classifier(
-                x=icon_x,
-                y=icon_y,
-                labels=icon_labels,
+                x=icon_dataset.x,
+                y=icon_dataset.y,
+                labels=icon_dataset.label_names,
                 output_model_path=output_dir / "agent_icon.onnx",
                 output_labels_path=output_dir / "agent_icon.labels.json",
+                sample_splits=icon_dataset.sample_splits,
+                split_source=icon_dataset.split_mode,
             )
         icon_mode = "real"
-        icon_trained_labels = list(icon_labels)
+        icon_trained_labels = list(icon_dataset.label_names)
     else:
         icon_metrics = train_synthetic_agent_icon_model(
             output_dir=output_dir,
@@ -582,17 +730,19 @@ def main() -> int:
             **uid_metrics,
             "dataVersion": data_version,
             "trainedAt": model_manifest["trainedAt"],
-            "recordCount": int(uid_x.shape[0]),
-            "skippedRecords": uid_skipped,
+            "recordCount": int(uid_dataset.x.shape[0]),
+            "skippedRecords": uid_dataset.skipped_records,
             "mode": uid_mode,
+            "labelSource": args.label_source,
         },
         "agent_icon_model": {
             **icon_metrics,
             "dataVersion": data_version,
             "trainedAt": model_manifest["trainedAt"],
-            "recordCount": int(icon_x.shape[0]),
-            "skippedRecords": icon_skipped,
+            "recordCount": int(icon_dataset.x.shape[0]),
+            "skippedRecords": icon_dataset.skipped_records,
             "mode": icon_mode,
+            "labelSource": args.label_source,
             "rosterAgentCount": len(current_agent_ids()),
             "trainedAgentCount": sum(1 for label in icon_trained_labels if label in set(current_agent_ids())),
             "missingRosterAgents": [agent for agent in current_agent_ids() if agent not in set(icon_trained_labels)],
