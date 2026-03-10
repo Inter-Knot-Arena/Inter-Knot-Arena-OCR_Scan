@@ -14,7 +14,11 @@ from manifest_lib import ensure_manifest_defaults, load_manifest, save_manifest,
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, source_index_from_manifest
 from roster_taxonomy import canonicalize_agent_label
-from scanner.model_runtime import ModelRegistry, preprocess_digit, preprocess_icon
+from scanner.model_runtime import (
+    ModelRegistry,
+    preprocess_digit_for_classifier,
+    preprocess_icon_for_classifier,
+)
 
 
 def _has_labels(record: Dict[str, Any]) -> bool:
@@ -56,12 +60,13 @@ def _predict_uid_digit(image: np.ndarray) -> Tuple[str, float]:
     classifier = ModelRegistry.uid_classifier()
     gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     crop = _center_crop(gray, 16, 24)
-    pred = classifier.predict(preprocess_digit(crop))
+    pred = classifier.predict(preprocess_digit_for_classifier(crop, classifier))
     return pred.label, float(pred.confidence)
 
 
 def _predict_agent_icon(image: np.ndarray) -> Tuple[str, float]:
-    prediction = ModelRegistry.agent_classifier().predict(preprocess_icon(image))
+    classifier = ModelRegistry.agent_classifier()
+    prediction = classifier.predict(preprocess_icon_for_classifier(image, classifier))
     return prediction.label, float(prediction.confidence)
 
 

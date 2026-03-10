@@ -64,6 +64,20 @@ def _normalize_probability_output(value: object, labels: Sequence[str], class_id
             first_value = float(probs[0])
             if np.issubdtype(probs.dtype, np.integer) or first_value < 0.0 or first_value > 1.0:
                 return {}
+        if probs.size > 1:
+            total = float(np.sum(probs))
+            looks_like_probabilities = bool(
+                np.all(np.isfinite(probs))
+                and np.all(probs >= 0.0)
+                and np.all(probs <= 1.0)
+                and 0.95 <= total <= 1.05
+            )
+            if not looks_like_probabilities:
+                shifted = probs - float(np.max(probs))
+                exp_values = np.exp(shifted)
+                denom = float(np.sum(exp_values))
+                if denom > 0.0:
+                    probs = exp_values / denom
         output: Dict[str, float] = {}
         for idx, label in enumerate(labels):
             if idx < probs.shape[0]:
@@ -137,26 +151,79 @@ class OnnxClassifier:
 
         providers = _provider_priority()
         self.session = ort.InferenceSession(str(model_path), providers=providers)
-        self.input_name = self.session.get_inputs()[0].name
+        input_meta = self.session.get_inputs()[0]
+        self.input_name = input_meta.name
+        self.input_shape = tuple(input_meta.shape)
         self.output_names = [output.name for output in self.session.get_outputs()]
 
-    def predict(self, feature_vector: np.ndarray) -> Prediction:
-        vector = np.asarray(feature_vector, dtype=np.float32)
-        if vector.ndim == 1:
-            vector = vector.reshape(1, -1)
-        elif vector.ndim != 2:
-            raise ValueError("feature_vector must be 1D or 2D")
+    def expects_image_input(self) -> bool:
+        return len(self.input_shape) == 4
 
-        raw_outputs = self.session.run(self.output_names, {self.input_name: vector})
+    def _expected_channel_count(self) -> int | None:
+        if not self.expects_image_input():
+            return None
+        for raw_value in (self.input_shape[1], self.input_shape[-1]):
+            if isinstance(raw_value, (int, np.integer)) and int(raw_value) in {1, 3}:
+                return int(raw_value)
+        return None
+
+    def _expects_nchw(self) -> bool:
+        if not self.expects_image_input():
+            return False
+        value = self.input_shape[1]
+        return isinstance(value, (int, np.integer)) and int(value) in {1, 3}
+
+    def _expects_nhwc(self) -> bool:
+        if not self.expects_image_input():
+            return False
+        value = self.input_shape[-1]
+        return isinstance(value, (int, np.integer)) and int(value) in {1, 3}
+
+    def _prepare_input(self, sample: np.ndarray) -> np.ndarray:
+        array = np.asarray(sample, dtype=np.float32)
+        if not self.expects_image_input():
+            if array.ndim == 1:
+                return array.reshape(1, -1)
+            if array.ndim == 2:
+                if array.shape[0] == 1:
+                    return array
+                return array.reshape(1, -1)
+            return array.reshape(1, -1)
+
+        if array.ndim == 2:
+            array = array[:, :, None]
+        if array.ndim == 3:
+            channel_count = self._expected_channel_count()
+            if self._expects_nchw():
+                if channel_count is not None and array.shape[0] != channel_count and array.shape[-1] == channel_count:
+                    array = np.transpose(array, (2, 0, 1))
+                return array.reshape(1, *array.shape)
+            if self._expects_nhwc():
+                if channel_count is not None and array.shape[-1] != channel_count and array.shape[0] == channel_count:
+                    array = np.transpose(array, (1, 2, 0))
+                return array.reshape(1, *array.shape)
+            return array.reshape(1, *array.shape)
+        if array.ndim == 4:
+            channel_count = self._expected_channel_count()
+            if self._expects_nchw() and channel_count is not None and array.shape[1] != channel_count and array.shape[-1] == channel_count:
+                array = np.transpose(array, (0, 3, 1, 2))
+            elif self._expects_nhwc() and channel_count is not None and array.shape[-1] != channel_count and array.shape[1] == channel_count:
+                array = np.transpose(array, (0, 2, 3, 1))
+            return array
+        raise ValueError("sample must be 1D, 2D, 3D, or 4D")
+
+    def predict(self, sample: np.ndarray) -> Prediction:
+        prepared = self._prepare_input(sample)
+        raw_outputs = self.session.run(self.output_names, {self.input_name: prepared})
         label: str | None = None
         probability_candidates: list[Dict[str, float]] = []
 
         for output in raw_outputs:
             if label is None:
-                if isinstance(output, np.ndarray) and output.size > 0:
-                    raw_label = output[0]
+                if isinstance(output, np.ndarray) and np.asarray(output).size == 1:
+                    raw_label = np.asarray(output).reshape(-1)[0]
                     label = _map_label_key(raw_label, self.labels, self.class_id_map)
-                elif isinstance(output, list) and output:
+                elif isinstance(output, list) and output and not isinstance(output[0], dict):
                     label = _map_label_key(output[0], self.labels, self.class_id_map)
 
             candidate = _normalize_probability_output(output, self.labels, self.class_id_map)
@@ -220,6 +287,13 @@ def preprocess_digit(image: np.ndarray) -> np.ndarray:
     gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     resized = cv2.resize(gray, (16, 24), interpolation=cv2.INTER_AREA)
     normalized = resized.astype(np.float32) / 255.0
+    return normalized
+
+
+def preprocess_digit_for_classifier(image: np.ndarray, classifier: OnnxClassifier) -> np.ndarray:
+    normalized = preprocess_digit(image)
+    if classifier.expects_image_input():
+        return normalized
     return normalized.reshape(-1)
 
 
@@ -228,6 +302,13 @@ def preprocess_icon(image: np.ndarray) -> np.ndarray:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     resized = cv2.resize(image, (32, 32), interpolation=cv2.INTER_AREA)
     normalized = resized.astype(np.float32) / 255.0
+    return normalized
+
+
+def preprocess_icon_for_classifier(image: np.ndarray, classifier: OnnxClassifier) -> np.ndarray:
+    normalized = preprocess_icon(image)
+    if classifier.expects_image_input():
+        return normalized
     return normalized.reshape(-1)
 
 
@@ -236,7 +317,7 @@ def classify_uid_digits(digit_images: Iterable[np.ndarray]) -> Tuple[str, float]
     labels: list[str] = []
     confidences: list[float] = []
     for image in digit_images:
-        prediction = classifier.predict(preprocess_digit(image))
+        prediction = classifier.predict(preprocess_digit_for_classifier(image, classifier))
         labels.append(prediction.label)
         confidences.append(prediction.confidence)
 
@@ -247,4 +328,4 @@ def classify_uid_digits(digit_images: Iterable[np.ndarray]) -> Tuple[str, float]
 
 def classify_agent_icon(image: np.ndarray) -> Prediction:
     classifier = ModelRegistry.agent_classifier()
-    return classifier.predict(preprocess_icon(image))
+    return classifier.predict(preprocess_icon_for_classifier(image, classifier))
