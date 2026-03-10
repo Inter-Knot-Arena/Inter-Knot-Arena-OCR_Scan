@@ -1,35 +1,45 @@
 {
-  "recordCount": 134,
+  "recordCount": 144,
   "workflow": "account_import",
   "importEligibleOnly": true,
   "headCounts": {
-    "agent_icon": 25,
-    "equipment": 108,
-    "uid_digit": 1
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 11
   },
   "reviewedHeadCounts": {
-    "agent_icon": 25,
-    "equipment": 108,
-    "uid_digit": 1
+    "agent_icon": 6,
+    "equipment": 8,
+    "uid_digit": 11
   },
   "suggestedHeadCounts": {
     "agent_icon": 25,
     "equipment": 108,
-    "uid_digit": 1
+    "uid_digit": 11
   },
   "labelCounts": {
     "agent_ellen": 1,
     "amp_deep_sea_visitor": 2,
     "set_woodpecker_electro": 4,
     "set_branch_and_blade_song": 2,
-    "1503067100": 1
+    "1": 2,
+    "5": 1,
+    "0": 4,
+    "3": 1,
+    "6": 1,
+    "7": 1
   },
   "reviewedLabelCounts": {
     "agent_ellen": 1,
     "amp_deep_sea_visitor": 2,
     "set_woodpecker_electro": 4,
     "set_branch_and_blade_song": 2,
-    "1503067100": 1
+    "1": 2,
+    "5": 1,
+    "0": 4,
+    "3": 1,
+    "6": 1,
+    "7": 1
   },
   "suggestedLabelCounts": {},
   "agentIconCounts": {
@@ -239,10 +249,10 @@
     "agent_aria"
   ],
   "localeCounts": {
-    "RU": 134
+    "RU": 144
   },
   "resolutionCounts": {
-    "1440p": 134
+    "1440p": 144
   },
   "sourceCounts": {
     "onedrive_account_20260308_agent_detail_30c32a48ceae": 1,
@@ -259,7 +269,7 @@
     "onedrive_account_20260308_roster_b5bcfdee7438": 1,
     "onedrive_account_20260308_roster_8123196dd5e8": 1,
     "onedrive_account_20260308_roster_d392bba8ad57": 1,
-    "onedrive_account_20260308_uid_panel_f6fd2bc0d748": 1,
+    "onedrive_account_20260308_uid_panel_f6fd2bc0d748": 11,
     "onedrive_dataset_20260309_agents_129_255_agent_detail_4de7a25d325f": 1,
     "onedrive_dataset_20260309_agents_129_255_amplifier_detail_cd8c24ae4979": 1,
     "onedrive_dataset_20260309_agents_129_255_disk_detail_705c711156ea": 1,
@@ -381,11 +391,11 @@
     "onedrive_account_20260309_agents_256_268_equipment_fb2d77fc8166": 1
   },
   "localeResolutionCounts": {
-    "RU:1440p": 134
+    "RU:1440p": 144
   },
   "deficits": {
-    "uid_digit": 19999,
-    "agent_icon": 14975,
-    "equipment": 14892
+    "uid_digit": 19989,
+    "agent_icon": 14994,
+    "equipment": 14992
   }
 }

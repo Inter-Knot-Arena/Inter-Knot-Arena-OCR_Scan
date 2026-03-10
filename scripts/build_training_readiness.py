@@ -38,6 +38,12 @@ def _reviewed_labels(record: Dict[str, Any]) -> Dict[str, Any]:
     return labels
 
 
+def _is_materialized_uid_digit(record: Dict[str, Any], labels: Dict[str, Any]) -> bool:
+    if str(record.get("kind") or "").strip() == "derived_uid_digit":
+        return True
+    return isinstance(labels.get("derivedFromRecordId"), str) and bool(str(labels.get("derivedFromRecordId")).strip())
+
+
 def _manifest_split_index(manifest: Dict[str, Any]) -> Dict[str, str]:
     output: Dict[str, str] = {}
     splits = manifest.get("splits")
@@ -174,6 +180,7 @@ def _markdown_report(report: Dict[str, Any]) -> str:
         )
         if key == "uid_digit":
             lines.append(f"- Missing digits: `{', '.join(item['missingDigits']) if item['missingDigits'] else 'none'}`")
+            lines.append(f"- Materialized digit samples: `{item['materializedUidDigitSampleCount']}`")
         if key == "agent_icon":
             lines.append(
                 f"- Reviewed current agents: `{item['reviewedCurrentAgentCount']}/{item['rosterAgentCount']}`"
@@ -230,6 +237,7 @@ def main() -> int:
 
     uid_digit_labels: List[str] = []
     uid_digit_split_counts: Counter[str] = Counter()
+    materialized_uid_digit_samples = 0
 
     uid_panel_full_uid_records = 0
     uid_panel_full_uid_split_counts: Counter[str] = Counter()
@@ -259,6 +267,7 @@ def main() -> int:
         labels = _reviewed_labels(record)
         if not labels:
             continue
+        is_materialized_uid_digit = _is_materialized_uid_digit(record, labels)
 
         reviewed_records.append(record)
         split_name = split_index.get(str(record.get("id") or ""), "")
@@ -267,15 +276,18 @@ def main() -> int:
         head = record_head(record)
         role = record_screen_role(record, source_index)
         reviewed_head_counts[head] += 1
-        reviewed_role_counts[role] += 1
+        if not is_materialized_uid_digit:
+            reviewed_role_counts[role] += 1
 
         uid_digit = _normalize_uid_digit_label(labels)
         if uid_digit:
             uid_digit_labels.append(uid_digit)
             _increment_split(uid_digit_split_counts, split_name)
+            if is_materialized_uid_digit:
+                materialized_uid_digit_samples += 1
 
         uid_full = _normalize_uid_full(labels)
-        if role == UID_PANEL_ROLE and uid_full:
+        if role == UID_PANEL_ROLE and uid_full and not is_materialized_uid_digit:
             uid_panel_full_uid_records += 1
             _increment_split(uid_panel_full_uid_split_counts, split_name)
 
@@ -330,10 +342,11 @@ def main() -> int:
         extra_blockers=[],
     )
     uid_digit_head["missingDigits"] = missing_digits
+    uid_digit_head["materializedUidDigitSampleCount"] = int(materialized_uid_digit_samples)
     uid_digit_head["reviewedUidPanelTruthCount"] = int(uid_panel_full_uid_records)
     if uid_panel_full_uid_records > 0:
         uid_digit_head["notes"] = [
-            "Reviewed uid_panel records with full UID exist, but they are not valid digit-classifier samples.",
+            "Reviewed uid_panel source records hold full UID truth; trainable per-digit samples come from materialized uid_digit crops.",
         ]
 
     agent_icon_head = _head_readiness(

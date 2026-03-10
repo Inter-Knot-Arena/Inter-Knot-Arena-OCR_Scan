@@ -15,6 +15,15 @@ from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, filter_records, source_i
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 
 
+def _reviewed_truth(record: Dict[str, Any]) -> bool:
+    labels = record.get("labels")
+    return (
+        isinstance(labels, dict)
+        and str(record.get("qaStatus") or "").strip().lower() == "reviewed"
+        and isinstance(labels.get("reviewFinal"), dict)
+    )
+
+
 def _label_payload(record: Dict[str, Any], suggested: bool) -> Dict[str, Any]:
     key = "suggestedLabels" if suggested else "labels"
     labels = record.get(key)
@@ -39,7 +48,15 @@ def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
     labels = _label_payload(record, suggested=suggested)
     head = _extract_head(record, suggested=suggested)
     if labels:
-        for key in ("uid_digit", "agent_icon_id", "amplifier_id", "disc_set_id"):
+        if head == "uid_digit":
+            for key in ("uid_digit", "label"):
+                value = labels.get(key)
+                if isinstance(value, str) and value.strip():
+                    digits = "".join(ch for ch in value if ch.isdigit())
+                    if len(digits) == 1:
+                        return digits
+            return ""
+        for key in ("agent_icon_id", "amplifier_id", "disc_set_id"):
             value = labels.get(key)
             if isinstance(value, str) and value.strip():
                 raw = value.strip()
@@ -94,9 +111,10 @@ def main() -> int:
     for record in scoped_records:
         if not isinstance(record, dict):
             continue
-        reviewed_head = _extract_head(record, suggested=False)
+        is_reviewed = _reviewed_truth(record)
+        reviewed_head = _extract_head(record, suggested=False) if is_reviewed else ""
         suggested_head = _extract_head(record, suggested=True)
-        reviewed_label = _extract_label(record, suggested=False)
+        reviewed_label = _extract_label(record, suggested=False) if is_reviewed else ""
         suggested_label = _extract_label(record, suggested=True)
         if reviewed_head:
             reviewed_head_counts[reviewed_head] += 1

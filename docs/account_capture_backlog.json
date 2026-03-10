@@ -1,12 +1,20 @@
 {
-  "generatedAt": "2026-03-09T13:03:17Z",
+  "generatedAt": "2026-03-10T15:14:49Z",
   "workflow": "account_import",
-  "eligibleRecordCount": 134,
+  "eligibleRecordCount": 144,
   "roleHeadCounts": {
     "agent_detail:agent_icon": 20,
     "amplifier_detail:equipment": 17,
     "disk_detail:equipment": 71,
     "equipment:equipment": 20,
+    "roster:agent_icon": 5,
+    "uid_panel:uid_digit": 1
+  },
+  "reviewedRoleHeadCounts": {
+    "agent_detail:agent_icon": 1,
+    "amplifier_detail:equipment": 1,
+    "disk_detail:equipment": 6,
+    "equipment:equipment": 1,
     "roster:agent_icon": 5,
     "uid_panel:uid_digit": 1
   },
@@ -19,11 +27,14 @@
   },
   "current": {
     "uidPanelFrames": 1,
+    "reviewedUidDigitSamples": 10,
     "rosterCoveredAgents": 49,
     "rosterIconLabeledAgents": 0,
+    "reviewedRosterIconLabeledAgents": 0,
     "rosterOwnedAgents": 20,
     "rosterNotOwnedAgents": 29,
     "agentDetailCoveredAgents": 1,
+    "reviewedAgentDetailCoveredAgents": 1,
     "equipmentFrames": 20,
     "diskDetailFrames": 71,
     "amplifierDetailFrames": 17,

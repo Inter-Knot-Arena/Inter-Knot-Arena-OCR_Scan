@@ -32,9 +32,20 @@ def _labels(record: Dict[str, Any], key: str) -> Dict[str, Any]:
     return {}
 
 
-def _agent_icon_label(record: Dict[str, Any]) -> str:
-    for payload_key in ("labels", "suggestedLabels"):
-        payload = _labels(record, payload_key)
+def _reviewed_labels(record: Dict[str, Any]) -> Dict[str, Any]:
+    labels = _labels(record, "labels")
+    if str(record.get("qaStatus") or "").strip().lower() != "reviewed":
+        return {}
+    if not isinstance(labels.get("reviewFinal"), dict):
+        return {}
+    return labels
+
+
+def _agent_icon_label(record: Dict[str, Any], *, reviewed_only: bool) -> str:
+    payloads = [_reviewed_labels(record)] if reviewed_only else [_labels(record, "labels"), _labels(record, "suggestedLabels")]
+    for payload in payloads:
+        if not payload:
+            continue
         for key in ("agent_icon_id", "agentId", "label"):
             value = payload.get(key)
             if not isinstance(value, str):
@@ -43,6 +54,21 @@ def _agent_icon_label(record: Dict[str, Any]) -> str:
             if canonical and canonical != "unknown":
                 return canonical
     return ""
+
+
+def _reviewed_uid_digit(record: Dict[str, Any]) -> str:
+    labels = _reviewed_labels(record)
+    for key in ("uid_digit", "label"):
+        value = labels.get(key)
+        if isinstance(value, str) and value.strip():
+            digits = "".join(ch for ch in value if ch.isdigit())
+            if len(digits) == 1:
+                return digits
+    return ""
+
+
+def _is_materialized_uid_digit(record: Dict[str, Any]) -> bool:
+    return str(record.get("kind") or "").strip() == "derived_uid_digit"
 
 
 def _owned_agent_ids(record: Dict[str, Any]) -> List[str]:
@@ -75,13 +101,17 @@ def main() -> int:
     scoped_records = filter_records(records, source_index, workflow=ACCOUNT_IMPORT_WORKFLOW, import_eligible_only=True)
 
     role_head_counts: Counter[str] = Counter()
+    reviewed_role_head_counts: Counter[str] = Counter()
     roster_counts: Counter[str] = Counter()
     detail_counts: Counter[str] = Counter()
+    reviewed_roster_counts: Counter[str] = Counter()
+    reviewed_detail_counts: Counter[str] = Counter()
     equipment_frames = 0
     disk_detail_frames = 0
     amplifier_detail_frames = 0
     optional_mindscape_frames = 0
     agent_detail_mindscape_frames = 0
+    reviewed_uid_digit_samples = 0
     roster_owned_agents: set[str] = set()
     roster_not_owned_agents: set[str] = set()
 
@@ -90,9 +120,17 @@ def main() -> int:
             continue
         head = record_head(record)
         role = record_screen_role(record, source_index)
-        role_head_counts[f"{role}:{head}"] += 1
+        is_materialized_uid_digit = _is_materialized_uid_digit(record)
+        if not is_materialized_uid_digit:
+            role_head_counts[f"{role}:{head}"] += 1
+        reviewed = _reviewed_labels(record)
+        if reviewed and not is_materialized_uid_digit:
+            reviewed_role_head_counts[f"{role}:{head}"] += 1
+        if head == "uid_digit" and _reviewed_uid_digit(record):
+            reviewed_uid_digit_samples += 1
         if head == "agent_icon":
-            agent_id = _agent_icon_label(record)
+            agent_id = _agent_icon_label(record, reviewed_only=False)
+            reviewed_agent_id = _agent_icon_label(record, reviewed_only=True)
             if role == "roster":
                 owned = _owned_agent_ids(record)
                 if owned:
@@ -108,6 +146,11 @@ def main() -> int:
                 roster_counts[agent_id] += 1
             elif role == "agent_detail":
                 detail_counts[agent_id] += 1
+            if reviewed_agent_id:
+                if role == "roster":
+                    reviewed_roster_counts[reviewed_agent_id] += 1
+                elif role == "agent_detail":
+                    reviewed_detail_counts[reviewed_agent_id] += 1
         elif head == "equipment":
             if role == EQUIPMENT_ROLE:
                 equipment_frames += 1
@@ -121,14 +164,15 @@ def main() -> int:
             agent_detail_mindscape_frames += 1
 
     roster_agents = current_agent_ids()
-    roster_deficits = {agent: max(0, int(args.target_roster_per_agent) - roster_counts.get(agent, 0)) for agent in roster_agents}
-    detail_deficits = {agent: max(0, int(args.target_agent_detail_per_agent) - detail_counts.get(agent, 0)) for agent in roster_agents}
+    roster_deficits = {agent: max(0, int(args.target_roster_per_agent) - reviewed_roster_counts.get(agent, 0)) for agent in roster_agents}
+    detail_deficits = {agent: max(0, int(args.target_agent_detail_per_agent) - reviewed_detail_counts.get(agent, 0)) for agent in roster_agents}
 
     backlog = {
         "generatedAt": utc_now(),
         "workflow": ACCOUNT_IMPORT_WORKFLOW,
         "eligibleRecordCount": len(scoped_records),
         "roleHeadCounts": dict(role_head_counts),
+        "reviewedRoleHeadCounts": dict(reviewed_role_head_counts),
         "targets": {
             "uidPanelFrames": int(args.target_uid_panel),
             "rosterOwnershipAgents": len(roster_agents),
@@ -138,11 +182,14 @@ def main() -> int:
         },
         "current": {
             "uidPanelFrames": int(role_head_counts.get("uid_panel:uid_digit", 0)),
+            "reviewedUidDigitSamples": int(reviewed_uid_digit_samples),
             "rosterCoveredAgents": len(roster_owned_agents | roster_not_owned_agents),
             "rosterIconLabeledAgents": sum(1 for agent in roster_agents if roster_counts.get(agent, 0) > 0),
+            "reviewedRosterIconLabeledAgents": sum(1 for agent in roster_agents if reviewed_roster_counts.get(agent, 0) > 0),
             "rosterOwnedAgents": len(roster_owned_agents),
             "rosterNotOwnedAgents": len(roster_not_owned_agents),
             "agentDetailCoveredAgents": sum(1 for agent in roster_agents if detail_counts.get(agent, 0) > 0),
+            "reviewedAgentDetailCoveredAgents": sum(1 for agent in roster_agents if reviewed_detail_counts.get(agent, 0) > 0),
             "equipmentFrames": int(equipment_frames),
             "diskDetailFrames": int(disk_detail_frames),
             "amplifierDetailFrames": int(amplifier_detail_frames),

@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-10T14:31:33Z",
+  "generatedAt": "2026-03-10T15:18:35Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
-    "scopedRecordCount": 134,
-    "reviewedRecordCount": 15,
+    "scopedRecordCount": 144,
+    "reviewedRecordCount": 25,
     "reviewedHeadCounts": {
       "agent_icon": 6,
       "equipment": 8,
-      "uid_digit": 1
+      "uid_digit": 11
     },
     "reviewedScreenRoleCounts": {
       "agent_detail": 1,
@@ -19,19 +19,19 @@
       "uid_panel": 1
     },
     "reviewedSplitCounts": {
-      "train": 0,
-      "val": 0,
-      "test": 0,
-      "unsplit": 15
+      "train": 22,
+      "val": 1,
+      "test": 2,
+      "unsplit": 0
     }
   },
   "trainHeads": {
     "uid_digit": {
       "name": "uid_digit",
-      "sampleCount": 0,
-      "distinctLabelCount": 0,
+      "sampleCount": 10,
+      "distinctLabelCount": 6,
       "splitCounts": {
-        "train": 0,
+        "train": 10,
         "val": 0,
         "test": 0,
         "unsplit": 0
@@ -40,25 +40,19 @@
       "blockers": [
         "need_at_least_2000_reviewed_samples",
         "need_at_least_10_distinct_labels",
-        "missing_train_split_samples",
         "missing_val_split_samples",
         "missing_test_split_samples"
       ],
       "missingDigits": [
-        "0",
-        "1",
         "2",
-        "3",
         "4",
-        "5",
-        "6",
-        "7",
         "8",
         "9"
       ],
+      "materializedUidDigitSampleCount": 10,
       "reviewedUidPanelTruthCount": 1,
       "notes": [
-        "Reviewed uid_panel records with full UID exist, but they are not valid digit-classifier samples."
+        "Reviewed uid_panel source records hold full UID truth; trainable per-digit samples come from materialized uid_digit crops."
       ]
     },
     "agent_icon": {
@@ -66,17 +60,15 @@
       "sampleCount": 2,
       "distinctLabelCount": 1,
       "splitCounts": {
-        "train": 0,
-        "val": 0,
+        "train": 1,
+        "val": 1,
         "test": 0,
-        "unsplit": 2
+        "unsplit": 0
       },
       "readyForCurrentTrainPath": false,
       "blockers": [
         "need_at_least_2000_reviewed_samples",
         "need_at_least_2_distinct_labels",
-        "missing_train_split_samples",
-        "missing_val_split_samples",
         "missing_test_split_samples",
         "missing_current_roster_agent_coverage"
       ],
@@ -140,10 +132,10 @@
       "reviewedRecordCount": 1,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 0,
+        "train": 1,
         "val": 0,
         "test": 0,
-        "unsplit": 1
+        "unsplit": 0
       }
     },
     "agent_detail_level": {
@@ -152,9 +144,9 @@
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
-        "val": 0,
+        "val": 1,
         "test": 0,
-        "unsplit": 1
+        "unsplit": 0
       }
     },
     "agent_detail_mindscape": {
@@ -163,9 +155,9 @@
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
-        "val": 0,
+        "val": 1,
         "test": 0,
-        "unsplit": 1
+        "unsplit": 0
       }
     },
     "agent_detail_stats": {
@@ -174,9 +166,9 @@
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
-        "val": 0,
+        "val": 1,
         "test": 0,
-        "unsplit": 1
+        "unsplit": 0
       }
     },
     "amplifier_detail": {
@@ -186,8 +178,8 @@
       "splitCounts": {
         "train": 0,
         "val": 0,
-        "test": 0,
-        "unsplit": 1
+        "test": 1,
+        "unsplit": 0
       }
     },
     "disk_detail": {
@@ -195,10 +187,10 @@
       "reviewedRecordCount": 6,
       "completeRecordCount": 6,
       "splitCounts": {
-        "train": 0,
+        "train": 6,
         "val": 0,
         "test": 0,
-        "unsplit": 6
+        "unsplit": 0
       }
     },
     "equipment_overview": {
@@ -217,10 +209,10 @@
       "reviewedRecordCount": 5,
       "completeRecordCount": 5,
       "splitCounts": {
-        "train": 0,
+        "train": 4,
         "val": 0,
-        "test": 0,
-        "unsplit": 5
+        "test": 1,
+        "unsplit": 0
       }
     }
   }
