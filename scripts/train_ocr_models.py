@@ -25,10 +25,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from manifest_lib import hash_file_sha256
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
-from train_synthetic_models import (
-    train_agent_icon_model as train_synthetic_agent_icon_model,
-    train_uid_model as train_synthetic_uid_model,
-)
 
 DEFAULT_MODEL_VERSION = "ocr-heads-v1.4"
 
@@ -57,6 +53,17 @@ def _torch_cuda_available() -> bool:
     import torch
 
     return bool(torch.cuda.is_available())
+
+
+def _cuda_onnx_providers() -> list[str]:
+    available = set(ort.get_available_providers())
+    if "CUDAExecutionProvider" not in available:
+        available_list = ", ".join(sorted(available)) or "none"
+        raise RuntimeError(
+            "CUDAExecutionProvider is required for OCR ONNX validation. "
+            f"Available providers: {available_list}."
+        )
+    return ["CUDAExecutionProvider"]
 
 
 def _normalize_split_name(raw: Any) -> str:
@@ -260,8 +267,7 @@ def _latency_stats(clf: LogisticRegression, sample: np.ndarray, iterations: int 
 def _onnx_latency_stats(model_path: Path, sample: np.ndarray, iterations: int = 120) -> Tuple[float, float]:
     if sample.size == 0 or not model_path.exists():
         return 0.0, 0.0
-    providers = [provider for provider in ("DmlExecutionProvider", "CPUExecutionProvider") if provider in ort.get_available_providers()] or ["CPUExecutionProvider"]
-    session = ort.InferenceSession(str(model_path), providers=providers)
+    session = ort.InferenceSession(str(model_path), providers=_cuda_onnx_providers())
     input_name = session.get_inputs()[0].name
     latencies: List[float] = []
     count = min(iterations, max(20, sample.shape[0]))
@@ -311,18 +317,15 @@ def _reshape_for_torch(x: np.ndarray, head: str) -> np.ndarray:
 
 
 def _resolve_backend(requested: str, requested_device: str) -> str:
-    if requested == "auto":
-        if not _torch_available():
-            return "sklearn"
-        if requested_device == "cuda" and not _torch_cuda_available():
-            return "sklearn"
-        return "torch"
-    if requested == "torch":
-        if not _torch_available():
-            raise ImportError("Torch backend requested, but torch is not installed.")
-        if requested_device == "cuda" and not _torch_cuda_available():
-            raise RuntimeError("Torch CUDA backend requested, but CUDA is not available.")
-    return requested
+    if requested != "torch":
+        raise RuntimeError("OCR training is locked to the torch backend. CPU/sklearn fallback is disabled.")
+    if requested_device != "cuda":
+        raise RuntimeError("OCR training is locked to CUDA. CPU execution is disabled.")
+    if not _torch_available():
+        raise ImportError("Torch backend requested, but torch is not installed.")
+    if not _torch_cuda_available():
+        raise RuntimeError("Torch CUDA backend requested, but CUDA is not available.")
+    return "torch"
 
 
 def _partition_dataset(
@@ -475,8 +478,10 @@ def _train_torch_classifier(
 
     device_name = requested_device.strip().lower()
     if device_name == "auto":
-        device_name = "cuda" if torch.cuda.is_available() else "cpu"
-    if device_name == "cuda" and not torch.cuda.is_available():
+        device_name = "cuda"
+    if device_name != "cuda":
+        raise RuntimeError("OCR training is locked to CUDA. CPU execution is disabled.")
+    if not torch.cuda.is_available():
         raise RuntimeError("CUDA backend requested, but torch.cuda.is_available() is false.")
     device = torch.device(device_name)
 
@@ -587,17 +592,15 @@ def _train_torch_classifier(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Train OCR UID and agent-icon heads from manifest data with fallback.")
+    parser = argparse.ArgumentParser(description="Train OCR UID and agent-icon heads from manifest data on CUDA only.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
     parser.add_argument("--output-dir", default="models")
     parser.add_argument("--metrics-file", default="docs/model_metrics.json")
-    parser.add_argument("--uid-samples-per-class", type=int, default=1500)
-    parser.add_argument("--icon-samples-per-class", type=int, default=1600)
     parser.add_argument("--min-real-samples", type=int, default=2000)
     parser.add_argument("--label-source", choices=["reviewed", "suggested", "any"], default="reviewed")
     parser.add_argument("--split-source", choices=["manifest", "random"], default="manifest")
-    parser.add_argument("--backend", choices=["auto", "sklearn", "torch"], default="auto")
-    parser.add_argument("--torch-device", choices=["auto", "cpu", "cuda"], default="cuda")
+    parser.add_argument("--backend", choices=["torch"], default="torch")
+    parser.add_argument("--torch-device", choices=["cuda"], default="cuda")
     parser.add_argument("--epochs", type=int, default=12)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=0.001)
@@ -624,85 +627,53 @@ def main() -> int:
         split_source=args.split_source,
     )
 
-    selected_backend = _resolve_backend(args.backend, args.torch_device)
+    _resolve_backend(args.backend, args.torch_device)
     uid_real = uid_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(uid_dataset.label_names) >= 2
     icon_real = icon_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(icon_dataset.label_names) >= 2
 
-    if uid_real:
-        if selected_backend == "torch":
-            uid_metrics = _train_torch_classifier(
-                x=uid_dataset.x,
-                y=uid_dataset.y,
-                labels=uid_dataset.label_names,
-                output_model_path=output_dir / "uid_digit.onnx",
-                output_labels_path=output_dir / "uid_digit.labels.json",
-                head="uid_digit",
-                sample_splits=uid_dataset.sample_splits,
-                split_source=uid_dataset.split_mode,
-                requested_device=args.torch_device,
-                epochs=args.epochs,
-                batch_size=args.batch_size,
-                learning_rate=args.learning_rate,
-            )
-        else:
-            uid_metrics = _train_sklearn_classifier(
-                x=uid_dataset.x,
-                y=uid_dataset.y,
-                labels=uid_dataset.label_names,
-                output_model_path=output_dir / "uid_digit.onnx",
-                output_labels_path=output_dir / "uid_digit.labels.json",
-                sample_splits=uid_dataset.sample_splits,
-                split_source=uid_dataset.split_mode,
-            )
-        uid_mode = "real"
-    else:
-        uid_metrics = train_synthetic_uid_model(
-            output_dir=output_dir,
-            backgrounds=[],
-            samples_per_class=max(400, args.uid_samples_per_class),
-            background_probability=0.0,
+    missing_real_heads: List[str] = []
+    if not uid_real:
+        missing_real_heads.append("uid_digit")
+    if not icon_real:
+        missing_real_heads.append("agent_icon")
+    if missing_real_heads:
+        raise RuntimeError(
+            "CUDA-only OCR training requires reviewed real datasets for every head. "
+            f"Missing trainable heads: {', '.join(missing_real_heads)}."
         )
-        uid_metrics = _synthetic_fallback_metrics(uid_metrics)
-        uid_mode = "synthetic_fallback"
 
-    if icon_real:
-        if selected_backend == "torch":
-            icon_metrics = _train_torch_classifier(
-                x=icon_dataset.x,
-                y=icon_dataset.y,
-                labels=icon_dataset.label_names,
-                output_model_path=output_dir / "agent_icon.onnx",
-                output_labels_path=output_dir / "agent_icon.labels.json",
-                head="agent_icon",
-                sample_splits=icon_dataset.sample_splits,
-                split_source=icon_dataset.split_mode,
-                requested_device=args.torch_device,
-                epochs=args.epochs,
-                batch_size=args.batch_size,
-                learning_rate=args.learning_rate,
-            )
-        else:
-            icon_metrics = _train_sklearn_classifier(
-                x=icon_dataset.x,
-                y=icon_dataset.y,
-                labels=icon_dataset.label_names,
-                output_model_path=output_dir / "agent_icon.onnx",
-                output_labels_path=output_dir / "agent_icon.labels.json",
-                sample_splits=icon_dataset.sample_splits,
-                split_source=icon_dataset.split_mode,
-            )
-        icon_mode = "real"
-        icon_trained_labels = list(icon_dataset.label_names)
-    else:
-        icon_metrics = train_synthetic_agent_icon_model(
-            output_dir=output_dir,
-            backgrounds=[],
-            samples_per_class=max(400, args.icon_samples_per_class),
-            background_probability=0.0,
-        )
-        icon_metrics = _synthetic_fallback_metrics(icon_metrics)
-        icon_mode = "synthetic_fallback"
-        icon_trained_labels = current_agent_ids()
+    uid_metrics = _train_torch_classifier(
+        x=uid_dataset.x,
+        y=uid_dataset.y,
+        labels=uid_dataset.label_names,
+        output_model_path=output_dir / "uid_digit.onnx",
+        output_labels_path=output_dir / "uid_digit.labels.json",
+        head="uid_digit",
+        sample_splits=uid_dataset.sample_splits,
+        split_source=uid_dataset.split_mode,
+        requested_device=args.torch_device,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+    )
+    uid_mode = "real"
+
+    icon_metrics = _train_torch_classifier(
+        x=icon_dataset.x,
+        y=icon_dataset.y,
+        labels=icon_dataset.label_names,
+        output_model_path=output_dir / "agent_icon.onnx",
+        output_labels_path=output_dir / "agent_icon.labels.json",
+        head="agent_icon",
+        sample_splits=icon_dataset.sample_splits,
+        split_source=icon_dataset.split_mode,
+        requested_device=args.torch_device,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+    )
+    icon_mode = "real"
+    icon_trained_labels = list(icon_dataset.label_names)
 
     data_version = args.data_version
     if not data_version:

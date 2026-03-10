@@ -17,8 +17,13 @@ MODEL_MANIFEST_PATH = MODEL_DIR / "model_manifest.json"
 
 def _provider_priority() -> list[str]:
     available = set(ort.get_available_providers())
-    preferred = ["DmlExecutionProvider", "CPUExecutionProvider"]
-    return [provider for provider in preferred if provider in available] or ["CPUExecutionProvider"]
+    if "CUDAExecutionProvider" not in available:
+        available_list = ", ".join(sorted(available)) or "none"
+        raise RuntimeError(
+            "CUDAExecutionProvider is required for OCR runtime. "
+            f"Available providers: {available_list}."
+        )
+    return ["CUDAExecutionProvider"]
 
 
 def _read_json(path: Path) -> dict:
