@@ -11,10 +11,9 @@ import cv2
 import numpy as np
 
 from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata
-from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures
+from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures, normalize_runtime_resolution
 
 SUPPORTED_LOCALES = {"RU", "EN"}
-SUPPORTED_RESOLUTIONS = {"1080p", "1440p"}
 SUPPORTED_REGIONS = {"NA", "EU", "ASIA", "SEA", "OTHER"}
 DEFAULT_MODEL_VERSION = "ocr-hybrid-v1.2"
 
@@ -40,11 +39,6 @@ class ScanFailure(RuntimeError):
 def _normalize_locale(locale: str | None) -> str:
     value = (locale or "EN").strip().upper()
     return value if value in SUPPORTED_LOCALES else ""
-
-
-def _normalize_resolution(resolution: str | None) -> str:
-    value = (resolution or "1080p").strip().lower()
-    return value if value in SUPPORTED_RESOLUTIONS else ""
 
 
 def _normalize_region(region_hint: str | None) -> str:
@@ -414,16 +408,16 @@ def scan_roster(
         )
 
     normalized_locale = _normalize_locale(locale)
-    normalized_resolution = _normalize_resolution(resolution)
-    if not normalized_locale or not normalized_resolution:
+    normalized_resolution = normalize_runtime_resolution(session_context, resolution)
+    if not normalized_locale:
         raise ScanFailure(
             ScanFailureCode.UNSUPPORTED_LAYOUT,
-            "Unsupported locale or resolution.",
+            "Unsupported locale or layout family.",
             [
                 f"locale={locale}",
                 f"resolution={resolution}",
                 "supported_locales=RU|EN",
-                "supported_resolutions=1080p|1440p",
+                "layout_family=16:9_fractional_crops",
             ],
         )
 

@@ -11,7 +11,9 @@ import numpy as np
 from ocr_dataset_policy import ROSTER_ROLE, UID_PANEL_ROLE
 
 
-_SUPPORTED_RESOLUTIONS = {"1080p", "1440p"}
+_CANONICAL_RESOLUTIONS = ("1080p", "1440p")
+_TARGET_ASPECT_RATIO = 16.0 / 9.0
+_ASPECT_TOLERANCE = 0.2
 
 # Canonical layout boxes are stored as fractions so the same runtime path can
 # crop from any captured frame that maps to the supported layout family.
@@ -33,9 +35,26 @@ class RuntimeCapture:
     slot_index: int | None = None
 
 
-def _normalize_resolution(resolution: str | None) -> str:
-    value = (resolution or "1080p").strip().lower()
-    return value if value in _SUPPORTED_RESOLUTIONS else "1080p"
+def _parse_resolution_height(value: str) -> int | None:
+    text = str(value or "").strip().lower()
+    if text.endswith("p") and text[:-1].isdigit():
+        return int(text[:-1])
+    if "x" in text:
+        parts = text.split("x", 1)
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            return int(parts[1])
+    return None
+
+
+def _canonical_resolution_for_height(height: int) -> str:
+    return "1440p" if int(height) >= 1296 else "1080p"
+
+
+def _is_layout_aspect(width: int, height: int) -> bool:
+    if width <= 0 or height <= 0:
+        return False
+    ratio = float(width) / float(height)
+    return abs(ratio - _TARGET_ASPECT_RATIO) <= _ASPECT_TOLERANCE
 
 
 def _as_text(value: Any) -> str:
@@ -48,6 +67,51 @@ def _load_image(path: Path) -> np.ndarray | None:
     if not path.exists():
         return None
     return cv2.imread(str(path), cv2.IMREAD_COLOR)
+
+
+def _capture_shape(session_context: Mapping[str, Any]) -> tuple[int, int] | None:
+    raw_captures = session_context.get("screenCaptures")
+    if isinstance(raw_captures, list):
+        preferred = sorted(
+            (
+                entry for entry in raw_captures
+                if isinstance(entry, dict) and _as_text(entry.get("path"))
+            ),
+            key=lambda entry: 0 if _as_text(entry.get("role")) == ROSTER_ROLE else 1,
+        )
+        for entry in preferred:
+            image = _load_image(Path(_as_text(entry.get("path"))))
+            if image is not None:
+                height, width = image.shape[:2]
+                return width, height
+
+    for key in ("uidImagePath",):
+        path_value = _as_text(session_context.get(key))
+        if not path_value:
+            continue
+        image = _load_image(Path(path_value))
+        if image is not None:
+            height, width = image.shape[:2]
+            return width, height
+    return None
+
+
+def normalize_runtime_resolution(session_context: Mapping[str, Any], resolution: str | None) -> str:
+    explicit = str(resolution or "").strip().lower()
+    if explicit in _CANONICAL_RESOLUTIONS:
+        return explicit
+
+    explicit_height = _parse_resolution_height(explicit)
+    if explicit_height is not None:
+        return _canonical_resolution_for_height(explicit_height)
+
+    capture_shape = _capture_shape(session_context)
+    if capture_shape is not None:
+        width, height = capture_shape
+        if _is_layout_aspect(width, height):
+            return _canonical_resolution_for_height(height)
+
+    return "1080p"
 
 
 def _fractional_crop(image: np.ndarray, box: tuple[float, float, float, float]) -> np.ndarray | None:
@@ -176,7 +240,7 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
     if not captures:
         return normalized
 
-    normalized_resolution = _normalize_resolution(resolution)
+    normalized_resolution = normalize_runtime_resolution(session_context, resolution)
     session_id = _as_text(session_context.get("sessionId")) or "session"
     temp_root = _ensure_temp_root(session_id)
 
