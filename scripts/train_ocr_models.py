@@ -300,6 +300,7 @@ def main() -> int:
             output_labels_path=output_dir / "agent_icon.labels.json",
         )
         icon_mode = "real"
+        icon_trained_labels = list(icon_labels)
     else:
         icon_metrics = train_synthetic_agent_icon_model(
             output_dir=output_dir,
@@ -309,6 +310,7 @@ def main() -> int:
         )
         icon_metrics = _synthetic_fallback_metrics(icon_metrics)
         icon_mode = "synthetic_fallback"
+        icon_trained_labels = current_agent_ids()
 
     data_version = args.data_version
     if not data_version:
@@ -347,8 +349,8 @@ def main() -> int:
             "skippedRecords": icon_skipped,
             "mode": icon_mode,
             "rosterAgentCount": len(current_agent_ids()),
-            "trainedAgentCount": sum(1 for label in icon_labels if label in set(current_agent_ids())),
-            "missingRosterAgents": [agent for agent in current_agent_ids() if agent not in set(icon_labels)],
+            "trainedAgentCount": sum(1 for label in icon_trained_labels if label in set(current_agent_ids())),
+            "missingRosterAgents": [agent for agent in current_agent_ids() if agent not in set(icon_trained_labels)],
         },
     }
     with metrics_path.open("w", encoding="utf-8") as fh:
