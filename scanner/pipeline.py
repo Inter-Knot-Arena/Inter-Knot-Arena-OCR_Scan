@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 
 from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata
+from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures
 
 SUPPORTED_LOCALES = {"RU", "EN"}
 SUPPORTED_RESOLUTIONS = {"1080p", "1440p"}
@@ -30,6 +31,7 @@ class ScanFailure(RuntimeError):
     code: ScanFailureCode
     message: str
     low_conf_reasons: List[str]
+    partial_result: Dict[str, Any] | None = None
 
     def __str__(self) -> str:
         return f"{self.code}: {self.message}"
@@ -158,6 +160,7 @@ def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
             "mindscape": 0.62,
             "weapon": 0.58,
             "discs": 0.58,
+            "occupancy": 0.52,
         },
     }
 
@@ -194,9 +197,56 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
     return agents, reasons
 
 
-def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+def _merge_agents(
+    parsed_agents: list[dict[str, Any]],
+    icon_agents: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not parsed_agents:
+        return icon_agents
+    if not icon_agents:
+        return parsed_agents
+
+    merged: list[dict[str, Any]] = []
+    total = max(len(parsed_agents), len(icon_agents))
+    for index in range(total):
+        parsed = parsed_agents[index] if index < len(parsed_agents) else None
+        icon = icon_agents[index] if index < len(icon_agents) else None
+        if parsed is None:
+            if icon is not None:
+                merged.append(icon)
+            continue
+        if icon is None:
+            merged.append(parsed)
+            continue
+
+        merged_payload = dict(parsed)
+        merged_confidence = dict(parsed.get("confidenceByField") or {})
+        icon_confidence = icon.get("confidenceByField")
+        icon_agent_id = str(icon.get("agentId", "")).strip()
+        if icon_agent_id:
+            merged_payload["agentId"] = icon_agent_id
+        if isinstance(icon_confidence, dict):
+            agent_conf = icon_confidence.get("agentId")
+            if isinstance(agent_conf, (int, float)):
+                merged_confidence["agentId"] = round(float(agent_conf), 4)
+        merged_payload["confidenceByField"] = merged_confidence
+        merged.append(merged_payload)
+
+    return merged
+
+
+def _extract_agents(
+    payload: Iterable[Dict[str, Any]],
+    session_context: Dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
     results: list[dict[str, Any]] = []
     low_conf_reasons: list[str] = []
+    occupancy_by_agent_raw = session_context.get("equipmentOccupancyByAgent")
+    occupancy_by_agent = (
+        occupancy_by_agent_raw
+        if isinstance(occupancy_by_agent_raw, dict)
+        else {}
+    )
 
     for index, raw in enumerate(payload):
         agent_id = str(raw.get("agentId", "")).strip()
@@ -235,12 +285,24 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
             low_conf_reasons.append(f"{agent_id}.discs_missing")
             discs = []
 
+        occupancy_override = occupancy_by_agent.get(agent_id)
+        if not isinstance(occupancy_override, dict):
+            occupancy_override = {}
+        occupancy = derive_equipment_occupancy(
+            weapon=weapon,
+            discs=discs,
+            explicit_weapon_present=raw.get("weaponPresent", occupancy_override.get("weaponPresent")),
+            explicit_slot_occupancy=raw.get("discSlotOccupancy", occupancy_override.get("discSlotOccupancy")),
+        )
+        occupancy_conf = 0.92 if occupancy_override else 0.84
+
         confidence_by_field = {
             "agentId": float(raw.get("agentConfidence", 0.99)),
             "level": round(level_conf, 4),
             "mindscape": round(mindscape_conf, 4),
             "weapon": round(weapon_conf, 4),
             "discs": round(disc_conf, 4),
+            "occupancy": round(occupancy_conf, 4),
         }
 
         results.append(
@@ -253,6 +315,8 @@ def _extract_agents(payload: Iterable[Dict[str, Any]]) -> tuple[list[dict[str, A
                 "stats": stats,
                 "weapon": weapon,
                 "discs": discs,
+                "weaponPresent": occupancy["weaponPresent"],
+                "discSlotOccupancy": occupancy["discSlotOccupancy"],
                 "confidenceByField": confidence_by_field,
             }
         )
@@ -293,6 +357,8 @@ def scan_roster(
             ],
         )
 
+    session_context = normalize_runtime_captures(session_context, normalized_resolution)
+
     anchors = session_context.get("anchors") if isinstance(session_context.get("anchors"), dict) else {}
     required_anchors = (
         calibration.get("requiredAnchors", ["profile", "agents", "equipment"])
@@ -328,10 +394,13 @@ def scan_roster(
     raw_agents = session_context.get("agents")
     if not isinstance(raw_agents, list):
         raw_agents = []
-    parsed_agents, parsed_reasons = _extract_agents(raw_agents)
+    parsed_agents, parsed_reasons = _extract_agents(raw_agents, session_context)
     low_conf_reasons.extend(parsed_reasons)
 
-    agents = icon_agents if icon_agents else parsed_agents
+    if parsed_agents and icon_agents and len(parsed_agents) != len(icon_agents):
+        low_conf_reasons.append("agent_count_mismatch_between_icon_and_payload")
+
+    agents = _merge_agents(parsed_agents, icon_agents)
     if not agents:
         low_conf_reasons.append("agents_missing")
 
@@ -383,6 +452,7 @@ def scan_roster(
             ScanFailureCode.LOW_CONFIDENCE,
             "Scan finished with low confidence.",
             sorted(set(low_conf_reasons)),
+            partial_result=result,
         )
 
     return result
