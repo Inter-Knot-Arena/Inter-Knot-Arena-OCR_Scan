@@ -162,6 +162,18 @@ def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
             "discs": 0.58,
             "occupancy": 0.52,
         },
+        "fieldSources": {
+            "agentId": "onnx_agent_icon",
+            "level": "missing",
+            "levelCap": "missing",
+            "mindscape": "missing",
+            "mindscapeCap": "missing",
+            "stats": "missing",
+            "weapon": "missing",
+            "discs": "missing",
+            "weaponPresent": "missing",
+            "discSlotOccupancy": "missing",
+        },
     }
 
 
@@ -221,15 +233,18 @@ def _merge_agents(
 
         merged_payload = dict(parsed)
         merged_confidence = dict(parsed.get("confidenceByField") or {})
+        merged_field_sources = dict(parsed.get("fieldSources") or {})
         icon_confidence = icon.get("confidenceByField")
         icon_agent_id = str(icon.get("agentId", "")).strip()
         if icon_agent_id:
             merged_payload["agentId"] = icon_agent_id
+            merged_field_sources["agentId"] = "onnx_agent_icon"
         if isinstance(icon_confidence, dict):
             agent_conf = icon_confidence.get("agentId")
             if isinstance(agent_conf, (int, float)):
                 merged_confidence["agentId"] = round(float(agent_conf), 4)
         merged_payload["confidenceByField"] = merged_confidence
+        merged_payload["fieldSources"] = merged_field_sources
         merged.append(merged_payload)
 
     return merged
@@ -288,6 +303,10 @@ def _extract_agents(
         occupancy_override = occupancy_by_agent.get(agent_id)
         if not isinstance(occupancy_override, dict):
             occupancy_override = {}
+        raw_has_weapon_present = "weaponPresent" in raw
+        raw_has_slot_occupancy = "discSlotOccupancy" in raw
+        override_has_weapon_present = "weaponPresent" in occupancy_override
+        override_has_slot_occupancy = "discSlotOccupancy" in occupancy_override
         occupancy = derive_equipment_occupancy(
             weapon=weapon,
             discs=discs,
@@ -304,6 +323,26 @@ def _extract_agents(
             "discs": round(disc_conf, 4),
             "occupancy": round(occupancy_conf, 4),
         }
+        field_sources = {
+            "agentId": "session_payload",
+            "level": "session_payload" if level is not None else "missing",
+            "levelCap": "session_payload" if level_cap is not None else "missing",
+            "mindscape": "session_payload" if mindscape is not None else "missing",
+            "mindscapeCap": "session_payload" if mindscape_cap is not None else "missing",
+            "stats": "session_payload" if stats else "missing",
+            "weapon": "session_payload" if weapon else "missing",
+            "discs": "session_payload" if discs else "missing",
+            "weaponPresent": (
+                "equipment_occupancy_payload"
+                if raw_has_weapon_present or override_has_weapon_present
+                else ("derived_from_weapon_payload" if weapon else "missing")
+            ),
+            "discSlotOccupancy": (
+                "equipment_occupancy_payload"
+                if raw_has_slot_occupancy or override_has_slot_occupancy
+                else ("derived_from_discs_payload" if discs else "missing")
+            ),
+        }
 
         results.append(
             {
@@ -318,6 +357,7 @@ def _extract_agents(
                 "weaponPresent": occupancy["weaponPresent"],
                 "discSlotOccupancy": occupancy["discSlotOccupancy"],
                 "confidenceByField": confidence_by_field,
+                "fieldSources": field_sources,
             }
         )
 
@@ -325,6 +365,36 @@ def _extract_agents(
         low_conf_reasons.append("agents_empty_after_parse")
 
     return results, low_conf_reasons
+
+
+def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
+    has_payload_equipment = False
+    has_payload_occupancy = False
+    has_derived_occupancy = False
+    for agent in agents:
+        field_sources = agent.get("fieldSources")
+        if not isinstance(field_sources, dict):
+            continue
+        if field_sources.get("weapon") == "session_payload" or field_sources.get("discs") == "session_payload":
+            has_payload_equipment = True
+        if (
+            field_sources.get("weaponPresent") == "equipment_occupancy_payload"
+            or field_sources.get("discSlotOccupancy") == "equipment_occupancy_payload"
+        ):
+            has_payload_occupancy = True
+        if (
+            field_sources.get("weaponPresent") == "derived_from_weapon_payload"
+            or field_sources.get("discSlotOccupancy") == "derived_from_discs_payload"
+        ):
+            has_derived_occupancy = True
+
+    if has_payload_equipment:
+        return "session_payload"
+    if has_payload_occupancy:
+        return "equipment_occupancy_payload"
+    if has_derived_occupancy:
+        return "derived_from_payload"
+    return "missing"
 
 
 def scan_roster(
@@ -387,6 +457,7 @@ def scan_roster(
 
     if not uid:
         low_conf_reasons.append("uid_missing")
+    uid_source = "onnx_uid_digits" if uid_from_image else ("uid_candidates" if uid else "missing")
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
@@ -423,6 +494,38 @@ def scan_roster(
             4,
         ),
     }
+    screen_captures = session_context.get("screenCaptures")
+    has_roster_capture = isinstance(screen_captures, list) and any(
+        isinstance(capture, dict) and str(capture.get("role", "")).strip() == "roster"
+        for capture in screen_captures
+    )
+    has_direct_crops = bool(session_context.get("uidImagePath")) or bool(session_context.get("agentIconPaths"))
+    field_sources = {
+        "uid": uid_source,
+        "region": (
+            "session_region"
+            if session_context.get("region")
+            else ("session_region_hint" if session_context.get("regionHint") else "default_other")
+        ),
+        "agents": (
+            "merged_pixels_and_payload"
+            if parsed_agents and icon_agents
+            else ("onnx_agent_icon" if icon_agents else ("session_payload" if parsed_agents else "missing"))
+        ),
+        "equipment": _top_level_equipment_source(agents),
+        "capture": (
+            "runtime_roster_screen"
+            if has_roster_capture
+            else ("provided_crops" if has_direct_crops else "missing")
+        ),
+    }
+    capabilities = {
+        "uidFromPixels": uid_source == "onnx_uid_digits",
+        "agentIdsFromPixels": bool(icon_agents),
+        "equipmentFromPixels": False,
+        "fullRosterCoverage": False,
+        "rawRosterCaptureAvailable": has_roster_capture,
+    }
 
     if top_confidence["uid"] < 0.9:
         low_conf_reasons.append("uid_low_confidence")
@@ -440,6 +543,8 @@ def scan_roster(
         "dataVersion": metadata["dataVersion"],
         "scanMeta": "hybrid_onnx_plus_rules",
         "confidenceByField": top_confidence,
+        "fieldSources": field_sources,
+        "capabilities": capabilities,
         "agents": agents,
         "lowConfReasons": sorted(set(low_conf_reasons)),
         "timingMs": timing_ms,

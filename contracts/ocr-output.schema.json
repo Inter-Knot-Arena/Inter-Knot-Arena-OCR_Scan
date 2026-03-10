@@ -16,6 +16,14 @@
       "type": "array",
       "items": { "type": "string" }
     },
+    "fieldSources": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" }
+    },
     "confidenceByField": {
       "type": "object",
       "additionalProperties": { "type": "number" }
@@ -79,6 +87,10 @@
           "confidenceByField": {
             "type": "object",
             "additionalProperties": { "type": "number" }
+          },
+          "fieldSources": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
           }
         },
         "additionalProperties": true
