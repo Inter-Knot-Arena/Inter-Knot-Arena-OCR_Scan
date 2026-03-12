@@ -1,0 +1,386 @@
+{
+  "version": "2026-03-12",
+  "sources": {
+    "datasetPreview": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\docs\\dataset_preview.csv",
+    "discCatalog": "D:\\Inter-Knot Arena\\Inter-Knot Arena web\\packages\\catalog\\disc-sets.v1.json"
+  },
+  "discSets": [
+    {
+      "discSetId": "set_astral_voice",
+      "displayName": "Astral Voice",
+      "aliases": [
+        "set_astral_voice",
+        "discset_astral_voice",
+        "discset_32800",
+        "32800",
+        "Astral Voice"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32800
+      }
+    },
+    {
+      "discSetId": "set_branch_and_blade_song",
+      "displayName": "Branch & Blade Song",
+      "aliases": [
+        "set_branch_and_blade_song",
+        "discset_branch_and_blade_song",
+        "discset_32700",
+        "32700",
+        "Branch & Blade Song",
+        "Песнь о ветке и клинке"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32700
+      }
+    },
+    {
+      "discSetId": "set_chaos_jazz",
+      "displayName": "Chaos Jazz",
+      "aliases": [
+        "set_chaos_jazz",
+        "discset_chaos_jazz",
+        "discset_31800",
+        "31800",
+        "Chaos Jazz"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31800
+      }
+    },
+    {
+      "discSetId": "set_chaotic_metal",
+      "displayName": "Chaotic Metal",
+      "aliases": [
+        "set_chaotic_metal",
+        "discset_chaotic_metal",
+        "discset_32300",
+        "32300",
+        "Chaotic Metal"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32300
+      }
+    },
+    {
+      "discSetId": "set_dawn_s_bloom",
+      "displayName": "Dawn's Bloom",
+      "aliases": [
+        "set_dawn_s_bloom",
+        "discset_dawn_s_bloom",
+        "discset_33300",
+        "33300",
+        "Dawn's Bloom"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33300
+      }
+    },
+    {
+      "discSetId": "set_fanged_metal",
+      "displayName": "Fanged Metal",
+      "aliases": [
+        "set_fanged_metal",
+        "discset_fanged_metal",
+        "discset_32600",
+        "32600",
+        "Fanged Metal"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32600
+      }
+    },
+    {
+      "discSetId": "set_freedom_blues",
+      "displayName": "Freedom Blues",
+      "aliases": [
+        "set_freedom_blues",
+        "discset_freedom_blues",
+        "discset_31300",
+        "31300",
+        "Freedom Blues"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31300
+      }
+    },
+    {
+      "discSetId": "set_hormone_punk",
+      "displayName": "Hormone Punk",
+      "aliases": [
+        "set_hormone_punk",
+        "discset_hormone_punk",
+        "discset_31400",
+        "31400",
+        "Hormone Punk"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31400
+      }
+    },
+    {
+      "discSetId": "set_inferno_metal",
+      "displayName": "Inferno Metal",
+      "aliases": [
+        "set_inferno_metal",
+        "discset_inferno_metal",
+        "discset_32200",
+        "32200",
+        "Inferno Metal"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32200
+      }
+    },
+    {
+      "discSetId": "set_king_of_the_summit",
+      "displayName": "King of the Summit",
+      "aliases": [
+        "set_king_of_the_summit",
+        "discset_king_of_the_summit",
+        "discset_33200",
+        "33200",
+        "King of the Summit"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33200
+      }
+    },
+    {
+      "discSetId": "set_moonlight_lullaby",
+      "displayName": "Moonlight Lullaby",
+      "aliases": [
+        "set_moonlight_lullaby",
+        "discset_moonlight_lullaby",
+        "discset_33400",
+        "33400",
+        "Moonlight Lullaby"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33400
+      }
+    },
+    {
+      "discSetId": "set_phaethon_s_melody",
+      "displayName": "Phaethon's Melody",
+      "aliases": [
+        "set_phaethon_s_melody",
+        "discset_phaethon_s_melody",
+        "discset_33000",
+        "33000",
+        "Phaethon's Melody"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33000
+      }
+    },
+    {
+      "discSetId": "set_polar_metal",
+      "displayName": "Polar Metal",
+      "aliases": [
+        "set_polar_metal",
+        "discset_polar_metal",
+        "discset_32500",
+        "32500",
+        "Polar Metal"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32500
+      }
+    },
+    {
+      "discSetId": "set_proto_punk",
+      "displayName": "Proto Punk",
+      "aliases": [
+        "set_proto_punk",
+        "discset_proto_punk",
+        "discset_31900",
+        "31900",
+        "Proto Punk"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31900
+      }
+    },
+    {
+      "discSetId": "set_puffer_electro",
+      "displayName": "Puffer Electro",
+      "aliases": [
+        "set_puffer_electro",
+        "discset_puffer_electro",
+        "discset_31100",
+        "31100",
+        "Puffer Electro"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31100
+      }
+    },
+    {
+      "discSetId": "set_shadow_harmony",
+      "displayName": "Shadow Harmony",
+      "aliases": [
+        "set_shadow_harmony",
+        "discset_shadow_harmony",
+        "discset_32900",
+        "32900",
+        "Shadow Harmony"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32900
+      }
+    },
+    {
+      "discSetId": "set_shining_aria",
+      "displayName": "Shining Aria",
+      "aliases": [
+        "set_shining_aria",
+        "discset_shining_aria",
+        "discset_33600",
+        "33600",
+        "Shining Aria"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33600
+      }
+    },
+    {
+      "discSetId": "set_shockstar_disco",
+      "displayName": "Shockstar Disco",
+      "aliases": [
+        "set_shockstar_disco",
+        "discset_shockstar_disco",
+        "discset_31200",
+        "31200",
+        "Shockstar Disco"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31200
+      }
+    },
+    {
+      "discSetId": "set_soul_rock",
+      "displayName": "Soul Rock",
+      "aliases": [
+        "set_soul_rock",
+        "discset_soul_rock",
+        "discset_31500",
+        "31500",
+        "Soul Rock"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31500
+      }
+    },
+    {
+      "discSetId": "set_swing_jazz",
+      "displayName": "Swing Jazz",
+      "aliases": [
+        "set_swing_jazz",
+        "discset_swing_jazz",
+        "discset_31600",
+        "31600",
+        "Swing Jazz"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31600
+      }
+    },
+    {
+      "discSetId": "set_thunder_metal",
+      "displayName": "Thunder Metal",
+      "aliases": [
+        "set_thunder_metal",
+        "discset_thunder_metal",
+        "discset_32400",
+        "32400",
+        "Thunder Metal"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 32400
+      }
+    },
+    {
+      "discSetId": "set_white_water_ballad",
+      "displayName": "White Water Ballad",
+      "aliases": [
+        "set_white_water_ballad",
+        "discset_white_water_ballad",
+        "discset_33500",
+        "33500",
+        "White Water Ballad"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33500
+      }
+    },
+    {
+      "discSetId": "set_woodpecker_electro",
+      "displayName": "Woodpecker Electro",
+      "aliases": [
+        "set_woodpecker_electro",
+        "discset_woodpecker_electro",
+        "discset_31000",
+        "31000",
+        "Woodpecker Electro",
+        "Дятлокор-электро"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 31000
+      }
+    },
+    {
+      "discSetId": "set_yunkui_tales",
+      "displayName": "Yunkui Tales",
+      "aliases": [
+        "set_yunkui_tales",
+        "discset_yunkui_tales",
+        "discset_33100",
+        "33100",
+        "Yunkui Tales"
+      ],
+      "source": {
+        "catalog": "web.disc-sets.v1",
+        "gameId": 33100
+      }
+    }
+  ],
+  "amplifiers": [
+    {
+      "amplifierId": "amp_deep_sea_visitor",
+      "displayName": "Deep Sea Visitor",
+      "aliases": [
+        "amp_deep_sea_visitor",
+        "Гость из глубин",
+        "Deep Sea Visitor",
+        "weapon_deep_sea_visitor"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    }
+  ]
+}

@@ -38,6 +38,22 @@ D:\IKA_DATA\ocr\drops\batch_001\
 
 The importer also works if the files are mixed in one folder, as long as the file names contain the bucket name.
 
+For mixed-language account drops, prefer one more level of locale folders:
+
+```text
+D:\IKA_DATA\ocr\drops\batch_mixed_001\
+  en\
+    agent_vivian\
+      agent_detail.png
+      equipment.png
+  ru\
+    agent_ellen\
+      agent_detail.png
+      equipment.png
+```
+
+Supported locale hints for mixed import are path/file tokens like `en`, `en-us`, `english`, `ru`, `ru-ru`, `russian`.
+
 Generic names like `Снимок экрана (17).png` are not enough for reliable import. Rename them or sort them into per-agent folders with stable names before importing.
 
 ## Empty slots rule
@@ -55,6 +71,20 @@ Only import detail screens for slots that are really occupied on the `equipment.
 ```powershell
 python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
 ```
+
+English-only batch:
+
+```powershell
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_en_001 --locale EN
+```
+
+Mixed-language batch with honest fallback:
+
+```powershell
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_mixed_001 --locale MIXED --fallback-locale UNKNOWN
+```
+
+In `MIXED`/`AUTO` mode, files without locale hints are saved as `UNKNOWN` instead of inheriting a wrong batch-wide locale.
 
 ## Ordered generic screenshot series
 
@@ -118,6 +148,7 @@ Optional flags:
 3. Appends one `source` and one `record` per screenshot into `dataset_manifest.json`.
 4. Marks everything as `workflow=account_import`.
 5. Preserves optional `mindscape` captures in the manifest, but keeps them outside the current import-eligible training slice because primary mindscape truth should come from `agent_detail`.
+6. Resolves locale per file in `MIXED`/`AUTO` mode from path hints instead of forcing one locale onto the whole batch.
 
 ## Roster ownership review
 

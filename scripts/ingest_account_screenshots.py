@@ -16,6 +16,7 @@ from manifest_lib import ensure_manifest_defaults, hash_file_sha256, load_manife
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from locale_utils import resolve_record_locale
 from ocr_dataset_policy import (
     ACCOUNT_IMPORT_WORKFLOW,
     AGENT_DETAIL_ROLE,
@@ -168,7 +169,16 @@ def main() -> int:
     parser.add_argument("--manifest", default="dataset_manifest.json")
     parser.add_argument("--input-root", required=True, help="Folder with uid/roster/agent_detail/equipment/disk1-6/amplificator/mindscape screenshots.")
     parser.add_argument("--batch-id", default="", help="Stable import batch id. Defaults to timestamp-based id.")
-    parser.add_argument("--locale", default="RU")
+    parser.add_argument(
+        "--locale",
+        default="RU",
+        help="Locale for imported records. Use EN or RU for single-locale batches, or AUTO/MIXED to resolve per file from path hints.",
+    )
+    parser.add_argument(
+        "--fallback-locale",
+        default="UNKNOWN",
+        help="Fallback locale when --locale AUTO/MIXED cannot resolve a file from path hints.",
+    )
     parser.add_argument("--resolution", default="", help="Override resolution label. Default is inferred from image size.")
     parser.add_argument("--collector", default="")
     parser.add_argument("--game-patch", default="unknown")
@@ -203,6 +213,7 @@ def main() -> int:
     skipped_duplicate = 0
     skipped_unclassified = 0
     role_counts: Counter[str] = Counter()
+    locale_counts: Counter[str] = Counter()
     skipped_files: list[str] = []
 
     for image_path in _iter_images(input_root):
@@ -226,13 +237,19 @@ def main() -> int:
         source_id = f"{batch_id}_{role}_{sha256[:12]}"
         record_id = f"{source_id}_record"
         target_path = _copy_target(raw_dir, batch_id, role, source_id, image_path)
+        record_locale = resolve_record_locale(
+            image_path,
+            input_root,
+            str(args.locale),
+            fallback=str(args.fallback_locale),
+        )
 
         source = {
             "sourceId": source_id,
             "url": "",
             "captureDate": capture_date,
             "licenseNote": "self-captured account import screenshot",
-            "locale": str(args.locale).strip() or "unknown",
+            "locale": record_locale,
             "resolution": resolution,
             "gamePatch": str(args.game_patch).strip() or "unknown",
             "collector": collector,
@@ -258,7 +275,7 @@ def main() -> int:
             "kind": "manual_screenshot",
             "head": head,
             "state": "other",
-            "locale": str(args.locale).strip() or "unknown",
+            "locale": record_locale,
             "resolution": resolution,
             "path": str(target_path.resolve()),
             "labelsPath": "",
@@ -276,6 +293,7 @@ def main() -> int:
         existing_hashes.add(sha256.lower())
         imported += 1
         role_counts[role] += 1
+        locale_counts[record_locale] += 1
 
     if not args.dry_run:
         save_manifest(manifest_path, manifest)
@@ -287,6 +305,7 @@ def main() -> int:
         "skippedDuplicate": skipped_duplicate,
         "skippedUnclassified": skipped_unclassified,
         "roleCounts": dict(role_counts),
+        "localeCounts": dict(locale_counts),
         "unclassifiedFiles": skipped_files[:50],
         "dryRun": bool(args.dry_run),
     }

@@ -25,7 +25,7 @@ See `contracts/ocr-output.schema.json`.
     - `LOW_CONFIDENCE`
     - `INPUT_LOCK_NOT_ACTIVE`
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
-- `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`) with DirectML -> CPU fallback.
+- `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`) with CUDA-only runtime validation.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 
 ## Quick run
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 python scripts/train_synthetic_models.py --output-dir models --metrics-file docs/model_metrics.json
 ```
 
-Train production OCR heads from manifest data (with fallback to synthetic baseline):
+Train production OCR heads from manifest data (CUDA-only, reviewed real data only):
 
 ```powershell
 python scripts/train_ocr_models.py --manifest dataset_manifest.json --output-dir models --metrics-file docs/model_metrics.json --model-version ocr-heads-v1.4 --label-source reviewed --split-source manifest --backend torch --torch-device cuda
@@ -79,6 +79,7 @@ Raw frames/crops are intentionally excluded from git. Use scripts to keep only m
 ```powershell
 python scripts/bootstrap_dataset.py --storage-root D:\IKA_DATA\ocr
 python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_001 --locale RU
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_en_001 --locale EN
 python scripts/ingest_public_sources.py --manifest dataset_manifest.json --sources-file D:\IKA_DATA\ocr_sources.json
 python scripts/extract_frames.py --manifest dataset_manifest.json --head uid_digit --workflow account_import --screen-role uid_panel --fps 1.0 --scene-aware
 python scripts/extract_frames.py --manifest dataset_manifest.json --head agent_icon --workflow account_import --screen-role roster --fps 1.0
@@ -95,6 +96,7 @@ python scripts/materialize_uid_digit_records.py --manifest dataset_manifest.json
 python scripts/split_dataset.py --manifest dataset_manifest.json --workflow account_import --import-eligible-only --reviewed-only --seed 42
 python scripts/build_sampling_plan.py --manifest dataset_manifest.json --workflow account_import --target-uid-digit 20000 --target-agent-icon 15000 --target-equipment 15000 --output-file docs/sampling_plan.json
 python scripts/build_account_capture_backlog.py --manifest dataset_manifest.json --output-file docs/account_capture_backlog.json
+python scripts/sync_equipment_taxonomy.py
 ```
 
 Drop-folder screenshot import is the preferred route for manual account captures. The importer understands these screen buckets from file names or parent folders:
@@ -108,6 +110,14 @@ Drop-folder screenshot import is the preferred route for manual account captures
 - `mindscape` (optional provenance only; primary mindscape truth should come from `agent_detail`)
 
 Imported files are copied into private storage under `D:\IKA_DATA\ocr\raw\manual_screens\...` and appended to `dataset_manifest.json`.
+
+For mixed-language drops, use path hints (`en\...`, `ru\...`, `english\...`, `russian\...`) and import with:
+
+```powershell
+python scripts/ingest_account_screenshots.py --manifest dataset_manifest.json --input-root D:\IKA_DATA\ocr\drops\batch_mixed_001 --locale MIXED --fallback-locale UNKNOWN
+```
+
+If a file has no locale hint in `MIXED` mode, the importer now stores `locale=UNKNOWN` instead of lying about the batch locale.
 
 ## Dataset policy
 
