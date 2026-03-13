@@ -1,6 +1,6 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-13T20:03:59Z`
+- Generated at: `2026-03-13T20:13:27Z`
 - Workflow: `account_import`
 - Scoped records: `4610`
 - Reviewed truth records: `1109`
@@ -9,12 +9,12 @@
 
 ### uid_digit (BLOCKED)
 
-- Samples: `26`
+- Samples: `10`
 - Distinct labels: `6`
-- Splits: `train=25` `val=1` `test=0` `unsplit=0`
+- Splits: `train=10` `val=0` `test=0` `unsplit=0`
 - Missing digits: `2, 4, 8, 9`
 - Materialized digit samples: `10`
-- Blockers: `need_at_least_2000_reviewed_samples; need_at_least_10_distinct_labels; missing_test_split_samples`
+- Blockers: `need_at_least_2000_reviewed_samples; need_at_least_10_distinct_labels; missing_val_split_samples; missing_test_split_samples`
 
 ### agent_icon (BLOCKED)
 

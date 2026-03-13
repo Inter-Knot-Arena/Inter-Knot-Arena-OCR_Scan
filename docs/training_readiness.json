@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-13T20:03:59Z",
+  "generatedAt": "2026-03-13T20:13:27Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
@@ -28,11 +28,11 @@
   "trainHeads": {
     "uid_digit": {
       "name": "uid_digit",
-      "sampleCount": 26,
+      "sampleCount": 10,
       "distinctLabelCount": 6,
       "splitCounts": {
-        "train": 25,
-        "val": 1,
+        "train": 10,
+        "val": 0,
         "test": 0,
         "unsplit": 0
       },
@@ -40,6 +40,7 @@
       "blockers": [
         "need_at_least_2000_reviewed_samples",
         "need_at_least_10_distinct_labels",
+        "missing_val_split_samples",
         "missing_test_split_samples"
       ],
       "missingDigits": [

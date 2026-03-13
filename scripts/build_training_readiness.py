@@ -279,11 +279,12 @@ def main() -> int:
         if not is_materialized_uid_digit:
             reviewed_role_counts[role] += 1
 
-        uid_digit = _normalize_uid_digit_label(labels)
-        if uid_digit:
-            uid_digit_labels.append(uid_digit)
-            _increment_split(uid_digit_split_counts, split_name)
-            if is_materialized_uid_digit:
+        uid_digit = ""
+        if is_materialized_uid_digit:
+            uid_digit = _normalize_uid_digit_label(labels)
+            if uid_digit:
+                uid_digit_labels.append(uid_digit)
+                _increment_split(uid_digit_split_counts, split_name)
                 materialized_uid_digit_samples += 1
 
         uid_full = _normalize_uid_full(labels)
