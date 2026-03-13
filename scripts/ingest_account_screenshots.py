@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable
 
 import cv2
+import numpy as np
 
 from manifest_lib import ensure_manifest_defaults, hash_file_sha256, load_manifest, save_manifest
 
@@ -130,7 +131,13 @@ def _source_tags(role: str, hints: Dict[str, Any]) -> list[str]:
 
 
 def _read_dimensions(path: Path) -> tuple[int, int]:
-    image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    try:
+        buffer = np.fromfile(str(path), dtype=np.uint8)
+    except OSError:
+        return 0, 0
+    if buffer.size <= 0:
+        return 0, 0
+    image = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
     if image is None:
         return 0, 0
     height, width = image.shape[:2]
