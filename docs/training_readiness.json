@@ -1,38 +1,38 @@
 {
-  "generatedAt": "2026-03-13T19:16:54Z",
+  "generatedAt": "2026-03-13T20:03:59Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
     "scopedRecordCount": 4610,
-    "reviewedRecordCount": 124,
+    "reviewedRecordCount": 1109,
     "reviewedHeadCounts": {
-      "agent_icon": 105,
-      "equipment": 8,
+      "agent_icon": 610,
+      "equipment": 488,
       "uid_digit": 11
     },
     "reviewedScreenRoleCounts": {
-      "agent_detail": 1,
+      "agent_detail": 506,
       "amplifier_detail": 1,
       "disk_detail": 6,
-      "equipment": 1,
+      "equipment": 481,
       "roster": 104,
       "uid_panel": 1
     },
     "reviewedSplitCounts": {
-      "train": 22,
-      "val": 1,
-      "test": 2,
-      "unsplit": 99
+      "train": 889,
+      "val": 109,
+      "test": 111,
+      "unsplit": 0
     }
   },
   "trainHeads": {
     "uid_digit": {
       "name": "uid_digit",
-      "sampleCount": 10,
+      "sampleCount": 26,
       "distinctLabelCount": 6,
       "splitCounts": {
-        "train": 10,
-        "val": 0,
+        "train": 25,
+        "val": 1,
         "test": 0,
         "unsplit": 0
       },
@@ -40,7 +40,6 @@
       "blockers": [
         "need_at_least_2000_reviewed_samples",
         "need_at_least_10_distinct_labels",
-        "missing_val_split_samples",
         "missing_test_split_samples"
       ],
       "missingDigits": [
@@ -57,73 +56,21 @@
     },
     "agent_icon": {
       "name": "agent_icon",
-      "sampleCount": 2,
-      "distinctLabelCount": 1,
+      "sampleCount": 987,
+      "distinctLabelCount": 49,
       "splitCounts": {
-        "train": 1,
-        "val": 1,
-        "test": 0,
+        "train": 798,
+        "val": 93,
+        "test": 96,
         "unsplit": 0
       },
       "readyForCurrentTrainPath": false,
       "blockers": [
-        "need_at_least_2000_reviewed_samples",
-        "need_at_least_2_distinct_labels",
-        "missing_test_split_samples",
-        "missing_current_roster_agent_coverage"
+        "need_at_least_2000_reviewed_samples"
       ],
       "rosterAgentCount": 49,
-      "reviewedCurrentAgentCount": 1,
-      "missingReviewedAgents": [
-        "agent_anby",
-        "agent_nicole",
-        "agent_billy",
-        "agent_soldier_11",
-        "agent_nekomiya_mana",
-        "agent_corin",
-        "agent_lycaon",
-        "agent_koleda",
-        "agent_anton",
-        "agent_ben",
-        "agent_soukaku",
-        "agent_miyabi",
-        "agent_grace",
-        "agent_rina",
-        "agent_zhu_yuan",
-        "agent_lucy",
-        "agent_piper",
-        "agent_qingyi",
-        "agent_jane_doe",
-        "agent_seth",
-        "agent_caesar",
-        "agent_burnice",
-        "agent_yanagi",
-        "agent_lighter",
-        "agent_harumasa",
-        "agent_astra_yao",
-        "agent_evelyn",
-        "agent_soldier_0_anby",
-        "agent_pulchra",
-        "agent_trigger",
-        "agent_vivian",
-        "agent_hugo",
-        "agent_yixuan",
-        "agent_pan_yinhu",
-        "agent_ju_fufu",
-        "agent_yuzuha",
-        "agent_alice",
-        "agent_seed",
-        "agent_orphie_magus",
-        "agent_lucia",
-        "agent_komano_manato",
-        "agent_yidhari",
-        "agent_dialyn",
-        "agent_banyue",
-        "agent_zhao",
-        "agent_ye_shunguang",
-        "agent_sunna",
-        "agent_aria"
-      ]
+      "reviewedCurrentAgentCount": 49,
+      "missingReviewedAgents": []
     }
   },
   "fieldTargets": {
@@ -140,7 +87,7 @@
     },
     "agent_detail_level": {
       "name": "agent_detail_level",
-      "reviewedRecordCount": 1,
+      "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
@@ -151,7 +98,7 @@
     },
     "agent_detail_mindscape": {
       "name": "agent_detail_mindscape",
-      "reviewedRecordCount": 1,
+      "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
@@ -162,7 +109,7 @@
     },
     "agent_detail_stats": {
       "name": "agent_detail_stats",
-      "reviewedRecordCount": 1,
+      "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
         "train": 0,
@@ -176,9 +123,9 @@
       "reviewedRecordCount": 1,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 0,
+        "train": 1,
         "val": 0,
-        "test": 1,
+        "test": 0,
         "unsplit": 0
       }
     },
@@ -187,20 +134,20 @@
       "reviewedRecordCount": 6,
       "completeRecordCount": 6,
       "splitCounts": {
-        "train": 6,
-        "val": 0,
+        "train": 5,
+        "val": 1,
         "test": 0,
         "unsplit": 0
       }
     },
     "equipment_overview": {
       "name": "equipment_overview",
-      "reviewedRecordCount": 1,
-      "completeRecordCount": 0,
+      "reviewedRecordCount": 481,
+      "completeRecordCount": 480,
       "splitCounts": {
-        "train": 0,
-        "val": 0,
-        "test": 0,
+        "train": 378,
+        "val": 50,
+        "test": 52,
         "unsplit": 0
       }
     },
@@ -209,10 +156,10 @@
       "reviewedRecordCount": 104,
       "completeRecordCount": 104,
       "splitCounts": {
-        "train": 4,
-        "val": 0,
-        "test": 1,
-        "unsplit": 99
+        "train": 74,
+        "val": 15,
+        "test": 15,
+        "unsplit": 0
       }
     }
   }

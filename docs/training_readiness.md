@@ -1,29 +1,28 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-13T19:16:54Z`
+- Generated at: `2026-03-13T20:03:59Z`
 - Workflow: `account_import`
 - Scoped records: `4610`
-- Reviewed truth records: `124`
+- Reviewed truth records: `1109`
 
 ## Current Train Heads
 
 ### uid_digit (BLOCKED)
 
-- Samples: `10`
+- Samples: `26`
 - Distinct labels: `6`
-- Splits: `train=10` `val=0` `test=0` `unsplit=0`
+- Splits: `train=25` `val=1` `test=0` `unsplit=0`
 - Missing digits: `2, 4, 8, 9`
 - Materialized digit samples: `10`
-- Blockers: `need_at_least_2000_reviewed_samples; need_at_least_10_distinct_labels; missing_val_split_samples; missing_test_split_samples`
+- Blockers: `need_at_least_2000_reviewed_samples; need_at_least_10_distinct_labels; missing_test_split_samples`
 
 ### agent_icon (BLOCKED)
 
-- Samples: `2`
-- Distinct labels: `1`
-- Splits: `train=1` `val=1` `test=0` `unsplit=0`
-- Reviewed current agents: `1/49`
-- Missing reviewed agents: `agent_anby, agent_nicole, agent_billy, agent_soldier_11, agent_nekomiya_mana, agent_corin, agent_lycaon, agent_koleda, agent_anton, agent_ben, agent_soukaku, agent_miyabi, agent_grace, agent_rina, agent_zhu_yuan, agent_lucy, agent_piper, agent_qingyi, agent_jane_doe, agent_seth, agent_caesar, agent_burnice, agent_yanagi, agent_lighter, agent_harumasa, agent_astra_yao, agent_evelyn, agent_soldier_0_anby, agent_pulchra, agent_trigger, agent_vivian, agent_hugo, agent_yixuan, agent_pan_yinhu, agent_ju_fufu, agent_yuzuha, agent_alice, agent_seed, agent_orphie_magus, agent_lucia, agent_komano_manato, agent_yidhari, agent_dialyn, agent_banyue, agent_zhao, agent_ye_shunguang, agent_sunna, agent_aria`
-- Blockers: `need_at_least_2000_reviewed_samples; need_at_least_2_distinct_labels; missing_test_split_samples; missing_current_roster_agent_coverage`
+- Samples: `987`
+- Distinct labels: `49`
+- Splits: `train=798` `val=93` `test=96` `unsplit=0`
+- Reviewed current agents: `49/49`
+- Blockers: `need_at_least_2000_reviewed_samples`
 
 ## OCR Field Targets
 
@@ -35,19 +34,19 @@
 
 ### agent_detail_level
 
-- Reviewed records: `1`
+- Reviewed records: `506`
 - Complete records: `1`
 - Splits: `train=0` `val=1` `test=0` `unsplit=0`
 
 ### agent_detail_mindscape
 
-- Reviewed records: `1`
+- Reviewed records: `506`
 - Complete records: `1`
 - Splits: `train=0` `val=1` `test=0` `unsplit=0`
 
 ### agent_detail_stats
 
-- Reviewed records: `1`
+- Reviewed records: `506`
 - Complete records: `1`
 - Splits: `train=0` `val=1` `test=0` `unsplit=0`
 
@@ -55,22 +54,22 @@
 
 - Reviewed records: `1`
 - Complete records: `1`
-- Splits: `train=0` `val=0` `test=1` `unsplit=0`
+- Splits: `train=1` `val=0` `test=0` `unsplit=0`
 
 ### disk_detail
 
 - Reviewed records: `6`
 - Complete records: `6`
-- Splits: `train=6` `val=0` `test=0` `unsplit=0`
+- Splits: `train=5` `val=1` `test=0` `unsplit=0`
 
 ### equipment_overview
 
-- Reviewed records: `1`
-- Complete records: `0`
-- Splits: `train=0` `val=0` `test=0` `unsplit=0`
+- Reviewed records: `481`
+- Complete records: `480`
+- Splits: `train=378` `val=50` `test=52` `unsplit=0`
 
 ### roster_owned_agents
 
 - Reviewed records: `104`
 - Complete records: `104`
-- Splits: `train=4` `val=0` `test=1` `unsplit=99`
+- Splits: `train=74` `val=15` `test=15` `unsplit=0`

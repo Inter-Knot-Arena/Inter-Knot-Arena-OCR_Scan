@@ -1,0 +1,22 @@
+{
+  "manifest": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\dataset_manifest.json",
+  "reviewerId": "auto_sorted_account_import",
+  "sessionFilter": [],
+  "stats": {
+    "orderedGroups": 144,
+    "orderedPacks": 486,
+    "reviewedAgentDetail": 505,
+    "reviewedEquipment": 480,
+    "skippedAmbiguousEquipmentPacks": 4,
+    "skippedAmbiguousEquipmentRecords": 6,
+    "skippedMissingOrderedOrigin": 128
+  },
+  "skippedEquipmentRecordIds": [
+    "batch_001_ru_equipment_81945a2c0c94_record",
+    "batch_001_ru_equipment_4eb27d35a13c_record",
+    "batch_001_ru_equipment_00b474fb9587_record",
+    "batch_001_ru_equipment_b36d7b427c09_record",
+    "batch_001_ru_equipment_1048e9cb0f38_record",
+    "batch_001_ru_equipment_52f868422466_record"
+  ]
+}
