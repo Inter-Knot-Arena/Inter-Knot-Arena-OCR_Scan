@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-03-13T20:13:27Z",
+  "generatedAt": "2026-03-13T21:33:07Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
-    "scopedRecordCount": 4610,
-    "reviewedRecordCount": 1109,
+    "scopedRecordCount": 6820,
+    "reviewedRecordCount": 3542,
     "reviewedHeadCounts": {
       "agent_icon": 610,
       "equipment": 488,
-      "uid_digit": 11
+      "uid_digit": 2444
     },
     "reviewedScreenRoleCounts": {
       "agent_detail": 506,
@@ -16,41 +16,31 @@
       "disk_detail": 6,
       "equipment": 481,
       "roster": 104,
-      "uid_panel": 1
+      "uid_panel": 224
     },
     "reviewedSplitCounts": {
-      "train": 889,
-      "val": 109,
-      "test": 111,
+      "train": 2807,
+      "val": 322,
+      "test": 413,
       "unsplit": 0
     }
   },
   "trainHeads": {
     "uid_digit": {
       "name": "uid_digit",
-      "sampleCount": 10,
-      "distinctLabelCount": 6,
+      "sampleCount": 2220,
+      "distinctLabelCount": 10,
       "splitCounts": {
-        "train": 10,
-        "val": 0,
-        "test": 0,
+        "train": 1750,
+        "val": 190,
+        "test": 280,
         "unsplit": 0
       },
-      "readyForCurrentTrainPath": false,
-      "blockers": [
-        "need_at_least_2000_reviewed_samples",
-        "need_at_least_10_distinct_labels",
-        "missing_val_split_samples",
-        "missing_test_split_samples"
-      ],
-      "missingDigits": [
-        "2",
-        "4",
-        "8",
-        "9"
-      ],
-      "materializedUidDigitSampleCount": 10,
-      "reviewedUidPanelTruthCount": 1,
+      "readyForCurrentTrainPath": true,
+      "blockers": [],
+      "missingDigits": [],
+      "materializedUidDigitSampleCount": 2220,
+      "reviewedUidPanelTruthCount": 224,
       "notes": [
         "Reviewed uid_panel source records hold full UID truth; trainable per-digit samples come from materialized uid_digit crops."
       ]
@@ -60,9 +50,9 @@
       "sampleCount": 987,
       "distinctLabelCount": 49,
       "splitCounts": {
-        "train": 798,
-        "val": 93,
-        "test": 96,
+        "train": 790,
+        "val": 103,
+        "test": 94,
         "unsplit": 0
       },
       "readyForCurrentTrainPath": false,
@@ -77,12 +67,12 @@
   "fieldTargets": {
     "uid_panel_full_uid": {
       "name": "uid_panel_full_uid",
-      "reviewedRecordCount": 1,
-      "completeRecordCount": 1,
+      "reviewedRecordCount": 224,
+      "completeRecordCount": 224,
       "splitCounts": {
-        "train": 1,
-        "val": 0,
-        "test": 0,
+        "train": 177,
+        "val": 19,
+        "test": 28,
         "unsplit": 0
       }
     },
@@ -91,8 +81,8 @@
       "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 0,
-        "val": 1,
+        "train": 1,
+        "val": 0,
         "test": 0,
         "unsplit": 0
       }
@@ -102,8 +92,8 @@
       "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 0,
-        "val": 1,
+        "train": 1,
+        "val": 0,
         "test": 0,
         "unsplit": 0
       }
@@ -113,8 +103,8 @@
       "reviewedRecordCount": 506,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 0,
-        "val": 1,
+        "train": 1,
+        "val": 0,
         "test": 0,
         "unsplit": 0
       }
@@ -124,8 +114,8 @@
       "reviewedRecordCount": 1,
       "completeRecordCount": 1,
       "splitCounts": {
-        "train": 1,
-        "val": 0,
+        "train": 0,
+        "val": 1,
         "test": 0,
         "unsplit": 0
       }
@@ -135,8 +125,8 @@
       "reviewedRecordCount": 6,
       "completeRecordCount": 6,
       "splitCounts": {
-        "train": 5,
-        "val": 1,
+        "train": 4,
+        "val": 2,
         "test": 0,
         "unsplit": 0
       }
@@ -146,9 +136,9 @@
       "reviewedRecordCount": 481,
       "completeRecordCount": 480,
       "splitCounts": {
-        "train": 378,
-        "val": 50,
-        "test": 52,
+        "train": 379,
+        "val": 51,
+        "test": 50,
         "unsplit": 0
       }
     },
@@ -157,9 +147,9 @@
       "reviewedRecordCount": 104,
       "completeRecordCount": 104,
       "splitCounts": {
-        "train": 74,
-        "val": 15,
-        "test": 15,
+        "train": 86,
+        "val": 7,
+        "test": 11,
         "unsplit": 0
       }
     }

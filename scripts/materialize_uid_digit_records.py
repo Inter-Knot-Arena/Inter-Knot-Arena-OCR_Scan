@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import statistics
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
 import cv2
+import numpy as np
 
 from manifest_lib import ensure_manifest_defaults, hash_file_sha256, load_manifest, save_manifest, utc_now
 
@@ -14,6 +16,136 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from ocr_dataset_policy import ACCOUNT_IMPORT_WORKFLOW, ROSTER_ROLE, UID_PANEL_ROLE, filter_records, record_screen_role, source_index_from_manifest
 from scanner.model_runtime import segment_uid_digits
 from scanner.screen_runtime import crop_uid_region
+
+
+_UID_PANEL_FALLBACK_BOX = (0.0, 0.12, 0.22, 0.12)
+_UID_PANEL_FALLBACK_THRESHOLDS = (200, 180, 160, 140, 120, 100, 80, 60, 40)
+_UID_COMPONENT_MAX_WIDTH = 35
+_UID_COMPONENT_MIN_HEIGHT = 8
+_UID_COMPONENT_MIN_AREA = 4
+_UID_BAND_TOLERANCE = 18.0
+
+
+def _load_image(path: Path, mode: int) -> Any:
+    if not path.exists():
+        return None
+    try:
+        buffer = np.fromfile(str(path), dtype=np.uint8)
+    except OSError:
+        return None
+    if buffer.size == 0:
+        return None
+    return cv2.imdecode(buffer, mode)
+
+
+def _fractional_crop(image: Any, box: tuple[float, float, float, float]) -> Any:
+    height, width = image.shape[:2]
+    x, y, w, h = box
+    x0 = max(0, min(int(round(width * x)), width - 1))
+    y0 = max(0, min(int(round(height * y)), height - 1))
+    x1 = max(x0 + 1, min(int(round(width * (x + w))), width))
+    y1 = max(y0 + 1, min(int(round(height * (y + h))), height))
+    crop = image[y0:y1, x0:x1]
+    return crop if crop.size else None
+
+
+def _component_bands(components: List[tuple[int, int, int, int, int, float]]) -> List[List[tuple[int, int, int, int, int, float]]]:
+    ordered = sorted(components, key=lambda item: item[5])
+    bands: List[List[tuple[int, int, int, int, int, float]]] = []
+    current: List[tuple[int, int, int, int, int, float]] = []
+    for component in ordered:
+        if not current or abs(component[5] - current[-1][5]) <= _UID_BAND_TOLERANCE:
+            current.append(component)
+            continue
+        bands.append(current)
+        current = [component]
+    if current:
+        bands.append(current)
+    return bands
+
+
+def _fallback_uid_digit_crops(image: Any) -> List[Any]:
+    roi = _fractional_crop(image, _UID_PANEL_FALLBACK_BOX)
+    if roi is None:
+        return []
+
+    gray = roi if roi.ndim == 2 else cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    best_sequence: List[tuple[int, int, int, int, int, float]] | None = None
+    best_score: float | None = None
+
+    for threshold in _UID_PANEL_FALLBACK_THRESHOLDS:
+        mask = (gray >= threshold).astype(np.uint8)
+        component_count, _, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+        components: List[tuple[int, int, int, int, int, float]] = []
+        for component_index in range(1, component_count):
+            x, y, width, height, area = stats[component_index]
+            if area < _UID_COMPONENT_MIN_AREA or height < _UID_COMPONENT_MIN_HEIGHT or width > _UID_COMPONENT_MAX_WIDTH:
+                continue
+            components.append((int(x), int(y), int(width), int(height), int(area), float(y + height / 2.0)))
+        if len(components) < 10:
+            continue
+
+        for band in _component_bands(components):
+            band = sorted(band, key=lambda item: item[0])
+            if len(band) < 10:
+                continue
+            max_start = min(6, len(band) - 9)
+            for start_index in range(max_start):
+                sequence = band[start_index : start_index + 10]
+                if len(sequence) != 10:
+                    continue
+                gaps = [sequence[idx + 1][0] - (sequence[idx][0] + sequence[idx][2]) for idx in range(9)]
+                widths = [item[2] for item in sequence]
+                heights = [item[3] for item in sequence]
+                if max(gaps) > 25 or min(gaps) < -2:
+                    continue
+
+                prefix_count = start_index
+                suffix_count = len(band) - (start_index + 10)
+                score = 0.0
+                score -= statistics.pstdev(gaps) * 4.0
+                score -= statistics.pstdev(widths) * 1.2
+                score -= statistics.pstdev(heights) * 1.0
+                score += sum(widths) * 0.2
+                score += float(min(prefix_count, 3) * 10)
+                score += float(min(suffix_count, 2) * 8)
+                if prefix_count == 3:
+                    score += 12.0
+                if 1 <= suffix_count <= 2:
+                    score += 8.0
+                score -= abs(start_index - 3) * 6.0
+
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_sequence = sequence
+
+    if not best_sequence:
+        return []
+
+    output: List[Any] = []
+    for x, y, width, height, _, _ in best_sequence:
+        pad = 1
+        x0 = max(0, x - pad)
+        y0 = max(0, y - pad)
+        x1 = min(roi.shape[1], x + width + pad)
+        y1 = min(roi.shape[0], y + height + pad)
+        crop = roi[y0:y1, x0:x1]
+        if crop.size:
+            output.append(crop.copy())
+    return output
+
+
+def _materialize_digit_crops(image: Any, parent_role: str, expected_count: int) -> List[Any]:
+    uid_crop = crop_uid_region(image, parent_role)
+    if uid_crop is not None:
+        digit_crops = segment_uid_digits(uid_crop)
+        if len(digit_crops) == expected_count:
+            return digit_crops
+    if parent_role == UID_PANEL_ROLE:
+        digit_crops = _fallback_uid_digit_crops(image)
+        if len(digit_crops) == expected_count:
+            return digit_crops
+    return []
 
 
 def _reviewed_labels(record: Dict[str, Any]) -> Dict[str, Any]:
@@ -98,7 +230,7 @@ def _derived_record(
 ) -> Dict[str, Any]:
     image = digit_image
     if image is None:
-        image = cv2.imread(str(output_path), cv2.IMREAD_GRAYSCALE)
+        image = _load_image(output_path, cv2.IMREAD_GRAYSCALE)
     if image is None:
         raise RuntimeError(f"Failed to load derived digit crop: {output_path}")
 
@@ -213,15 +345,11 @@ def main() -> int:
         if not record_path.exists():
             skipped_missing += 1
             continue
-        image = cv2.imread(str(record_path), cv2.IMREAD_COLOR)
+        image = _load_image(record_path, cv2.IMREAD_COLOR)
         if image is None:
             skipped_missing += 1
             continue
-        uid_crop = crop_uid_region(image, parent_role)
-        if uid_crop is None:
-            skipped_missing += 1
-            continue
-        digit_crops = segment_uid_digits(uid_crop)
+        digit_crops = _materialize_digit_crops(image, parent_role, len(uid_full))
         if len(digit_crops) != len(uid_full):
             skipped_mismatch += 1
             continue
