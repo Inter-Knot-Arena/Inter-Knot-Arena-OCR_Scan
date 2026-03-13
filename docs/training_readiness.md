@@ -1,9 +1,9 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-10T15:18:35Z`
+- Generated at: `2026-03-13T19:16:54Z`
 - Workflow: `account_import`
-- Scoped records: `144`
-- Reviewed truth records: `25`
+- Scoped records: `4610`
+- Reviewed truth records: `124`
 
 ## Current Train Heads
 
@@ -71,6 +71,6 @@
 
 ### roster_owned_agents
 
-- Reviewed records: `5`
-- Complete records: `5`
-- Splits: `train=4` `val=0` `test=1` `unsplit=0`
+- Reviewed records: `104`
+- Complete records: `104`
+- Splits: `train=4` `val=0` `test=1` `unsplit=99`

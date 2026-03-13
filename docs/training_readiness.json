@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-10T15:18:35Z",
+  "generatedAt": "2026-03-13T19:16:54Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
-    "scopedRecordCount": 144,
-    "reviewedRecordCount": 25,
+    "scopedRecordCount": 4610,
+    "reviewedRecordCount": 124,
     "reviewedHeadCounts": {
-      "agent_icon": 6,
+      "agent_icon": 105,
       "equipment": 8,
       "uid_digit": 11
     },
@@ -15,14 +15,14 @@
       "amplifier_detail": 1,
       "disk_detail": 6,
       "equipment": 1,
-      "roster": 5,
+      "roster": 104,
       "uid_panel": 1
     },
     "reviewedSplitCounts": {
       "train": 22,
       "val": 1,
       "test": 2,
-      "unsplit": 0
+      "unsplit": 99
     }
   },
   "trainHeads": {
@@ -206,13 +206,13 @@
     },
     "roster_owned_agents": {
       "name": "roster_owned_agents",
-      "reviewedRecordCount": 5,
-      "completeRecordCount": 5,
+      "reviewedRecordCount": 104,
+      "completeRecordCount": 104,
       "splitCounts": {
         "train": 4,
         "val": 0,
         "test": 1,
-        "unsplit": 0
+        "unsplit": 99
       }
     }
   }
