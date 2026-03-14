@@ -1,0 +1,188 @@
+{
+  "manifest": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\dataset_manifest.json",
+  "reviewerId": "auto_equipment_identity",
+  "sessionFilter": [],
+  "stats": {
+    "amplifier.reviewed": 450,
+    "amplifier.skippedUnknownName": 4,
+    "candidateRecords": 2984,
+    "disk.reviewed": 2491,
+    "disk.skippedUnknownSet": 24,
+    "disk_detail.skippedEmptyOcr": 8,
+    "skippedAlreadyReviewed": 7
+  },
+  "examples": {
+    "diskUnknownSet": [
+      {
+        "recordId": "batch_001_ru_disk_detail_96ce0177c6c9_record",
+        "locale": "RU",
+        "candidate": "Большой цилиндр о",
+        "titleText": "о Большой цилиндр о Ур. 10/10 Базовые параметры Базовая сила атаки 107"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_53621d932f4c_record",
+        "locale": "RU",
+        "candidate": "Ногтопе РипК t31 О",
+        "titleText": "Ногтопе РипК t31 15 О Lv.15/15 Maln Stat DEF 184"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_b042a129d90d_record",
+        "locale": "RU",
+        "candidate": "Ноттопе РипК t41 О",
+        "titleText": "15 Ноттопе РипК t41 О Lv.15/15 Maln Stat CRIT DMG"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_a4ae7d741202_record",
+        "locale": "RU",
+        "candidate": "souI Rock О ем. /",
+        "titleText": "15 souI Rock О ем. 15/15 Maln Stat Fire DMG вопив Sub-Stats 3096"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_c0a5c5d989d0_record",
+        "locale": "RU",
+        "candidate": "Реплика Звёздного двигателя О",
+        "titleText": "Реплика Звёздного двигателя О Ур. 20120 Базовые параметры Базовая сила атаки 211"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_58a6794a5bcd_record",
+        "locale": "RU",
+        "candidate": "Реплика Звёздного двигателя О",
+        "titleText": "Реплика Звёздного 60 двигателя О Ур. 50150 Базовые параметры Базовая сила атаки ПЕМО 521"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_b1991c05888f_record",
+        "locale": "RU",
+        "candidate": "S Домработница о",
+        "titleText": "60 S Домработница о Ур. ОЛО Базовые параметры Базовая сила атаки"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_4330c72773ca_record",
+        "locale": "RU",
+        "candidate": "Дятлокор-электро р",
+        "titleText": "Дятлокор-электро р Ур. оЛ5 Базовый параметр Сила атаки 7,50/0 дополнительные параметры"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_7982208a3d0f_record",
+        "locale": "RU",
+        "candidate": "Бум-пушка о",
+        "titleText": "NEW! Бум-пушка о Ур. 30130 Базовые параметры Базовая сила атаки"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_67c7fc9b3cf7_record",
+        "locale": "RU",
+        "candidate": "Фаза луны: Убывающая",
+        "titleText": "Фаза луны: Убывающая Ур. ТОЛО Базовые параметры Базовая сила атаки 82"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_eb7f5884cc82_record",
+        "locale": "RU",
+        "candidate": "Кадр на память",
+        "titleText": "Кадр на память Ур. ОЛО Базовые параметры Базовая сила атаки"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_92829327ed52_record",
+        "locale": "RU",
+        "candidate": "Колыбель плача",
+        "titleText": "Колыбель плача Ур. 30130 Базовые параметры Базовая сила атаки 344"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_0423700d5c0b_record",
+        "locale": "RU",
+        "candidate": "",
+        "titleText": "Lv. 15 AstraI Voice [З) О Lv. 15/15 Main Stat DEF Sub-Stats 184"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_5df37bff4341_record",
+        "locale": "RU",
+        "candidate": "",
+        "titleText": "15 15 Main Stat Sub-Stats CRIT DMG РЕН 2,200 9.696 О (.v. 15"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_8e14d8d27086_record",
+        "locale": "RU",
+        "candidate": "",
+        "titleText": "Lv. 15 AstraI Voice [41 О Lv. 15/15 Main Stat АТК Sub-Stats 300/0"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_14952ff66b62_record",
+        "locale": "RU",
+        "candidate": "Г",
+        "titleText": "(Г Lv. 15 Swing Jazz [51 О Lv.15/15 Main Stat АТК Sub-Stats зоох"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_25540d04381b_record",
+        "locale": "RU",
+        "candidate": "AstraI Voice t51 О ем. /",
+        "titleText": "15 AstraI Voice t51 О ем. 15/15 Maln Stat АТК"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_10edb887e6d1_record",
+        "locale": "RU",
+        "candidate": "",
+        "titleText": "Lv.15 Swing Jazz [61 О Lv. 15/15 Main Stat Energy Regen Sub-Stats 600/0"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_96c9b9d0d02d_record",
+        "locale": "RU",
+        "candidate": "Колыбель плача О",
+        "titleText": "Колыбель плача О Ур. ОЛО Базовые параметры Базовая сила атаки"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_f363e4ecafb2_record",
+        "locale": "RU",
+        "candidate": "Инферно-метал о О",
+        "titleText": "Инферно-метал [6] о О Ур. 15/15 Базовый параметр сила атаки дополнительные параметры 300/0"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_f67fe423ddab_record",
+        "locale": "RU",
+        "candidate": "хы„+.ч Свинг-джаз О",
+        "titleText": "15 хы„+.ч Свинг-джаз [6] О Ур. 15/15 Базовый параметр сила атаки дополнительные параметры 300/0"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_3604b934cbd6_record",
+        "locale": "RU",
+        "candidate": "Шар-головоломка",
+        "titleText": "Шар-головоломка Ур. 60160 Базовые параметры Базовая сила атаки 594"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_778ff5d0ab35_record",
+        "locale": "RU",
+        "candidate": "Заячья корзинка о",
+        "titleText": "Заячья корзинка о Ур. 30130 Базовые параметры Базовая сила атаки 299"
+      },
+      {
+        "recordId": "batch_001_ru_disk_detail_27c3d3e53a41_record",
+        "locale": "RU",
+        "candidate": "Сладковатая зайка",
+        "titleText": "Сладковатая зайка Ур. 60160 Базовые параметры Базовая сила атаки 713"
+      }
+    ],
+    "amplifierUnknownName": [
+      {
+        "recordId": "batch_001_ru_amplifier_detail_7ad19a136fec_record",
+        "locale": "RU",
+        "candidate": "Турбулентность: Топор",
+        "titleText": "Турбулентность: Топор Ур. 20120 Базовые параметры Базовая сила атаки 160"
+      },
+      {
+        "recordId": "batch_001_ru_amplifier_detail_c3b833707e1c_record",
+        "locale": "RU",
+        "candidate": "",
+        "titleText": "Lv. 60 КаЬоот the саппоп О Lv. 60/60 Вазе Stat"
+      },
+      {
+        "recordId": "batch_001_ru_amplifier_detail_45bb034c9257_record",
+        "locale": "RU",
+        "candidate": "Стальная лапа",
+        "titleText": "Стальная лапа Ур. 54160 Базовые параметры Базовая сила атаки 640"
+      },
+      {
+        "recordId": "batch_001_ru_amplifier_detail_8f00d4f501a8_record",
+        "locale": "RU",
+        "candidate": "Сладковатая зайка",
+        "titleText": "Сладковатая зайка УР. 60160 Базовые параметры"
+      }
+    ]
+  }
+}

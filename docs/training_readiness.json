@@ -1,27 +1,27 @@
 {
-  "generatedAt": "2026-03-13T21:33:07Z",
+  "generatedAt": "2026-03-14T12:07:45Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
     "scopedRecordCount": 6820,
-    "reviewedRecordCount": 3542,
+    "reviewedRecordCount": 6483,
     "reviewedHeadCounts": {
       "agent_icon": 610,
-      "equipment": 488,
+      "equipment": 3429,
       "uid_digit": 2444
     },
     "reviewedScreenRoleCounts": {
       "agent_detail": 506,
-      "amplifier_detail": 1,
-      "disk_detail": 6,
+      "amplifier_detail": 451,
+      "disk_detail": 2497,
       "equipment": 481,
       "roster": 104,
       "uid_panel": 224
     },
     "reviewedSplitCounts": {
-      "train": 2807,
-      "val": 322,
-      "test": 413,
+      "train": 5260,
+      "val": 596,
+      "test": 627,
       "unsplit": 0
     }
   },
@@ -31,9 +31,9 @@
       "sampleCount": 2220,
       "distinctLabelCount": 10,
       "splitCounts": {
-        "train": 1750,
-        "val": 190,
-        "test": 280,
+        "train": 1850,
+        "val": 170,
+        "test": 200,
         "unsplit": 0
       },
       "readyForCurrentTrainPath": true,
@@ -50,9 +50,9 @@
       "sampleCount": 987,
       "distinctLabelCount": 49,
       "splitCounts": {
-        "train": 790,
-        "val": 103,
-        "test": 94,
+        "train": 802,
+        "val": 94,
+        "test": 91,
         "unsplit": 0
       },
       "readyForCurrentTrainPath": false,
@@ -70,9 +70,9 @@
       "reviewedRecordCount": 224,
       "completeRecordCount": 224,
       "splitCounts": {
-        "train": 177,
-        "val": 19,
-        "test": 28,
+        "train": 187,
+        "val": 17,
+        "test": 20,
         "unsplit": 0
       }
     },
@@ -111,23 +111,23 @@
     },
     "amplifier_detail": {
       "name": "amplifier_detail",
-      "reviewedRecordCount": 1,
-      "completeRecordCount": 1,
+      "reviewedRecordCount": 451,
+      "completeRecordCount": 451,
       "splitCounts": {
-        "train": 0,
-        "val": 1,
-        "test": 0,
+        "train": 355,
+        "val": 51,
+        "test": 45,
         "unsplit": 0
       }
     },
     "disk_detail": {
       "name": "disk_detail",
-      "reviewedRecordCount": 6,
-      "completeRecordCount": 6,
+      "reviewedRecordCount": 2497,
+      "completeRecordCount": 2497,
       "splitCounts": {
-        "train": 4,
-        "val": 2,
-        "test": 0,
+        "train": 1985,
+        "val": 250,
+        "test": 262,
         "unsplit": 0
       }
     },
@@ -136,9 +136,9 @@
       "reviewedRecordCount": 481,
       "completeRecordCount": 480,
       "splitCounts": {
-        "train": 379,
-        "val": 51,
-        "test": 50,
+        "train": 390,
+        "val": 41,
+        "test": 49,
         "unsplit": 0
       }
     },
@@ -147,9 +147,9 @@
       "reviewedRecordCount": 104,
       "completeRecordCount": 104,
       "splitCounts": {
-        "train": 86,
-        "val": 7,
-        "test": 11,
+        "train": 81,
+        "val": 14,
+        "test": 9,
         "unsplit": 0
       }
     }

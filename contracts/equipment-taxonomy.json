@@ -28,8 +28,7 @@
         "discset_branch_and_blade_song",
         "discset_32700",
         "32700",
-        "Branch & Blade Song",
-        "Песнь о ветке и клинке"
+        "Branch & Blade Song"
       ],
       "source": {
         "catalog": "web.disc-sets.v1",
@@ -344,8 +343,7 @@
         "discset_woodpecker_electro",
         "discset_31000",
         "31000",
-        "Woodpecker Electro",
-        "Дятлокор-электро"
+        "Woodpecker Electro"
       ],
       "source": {
         "catalog": "web.disc-sets.v1",
@@ -370,13 +368,729 @@
   ],
   "amplifiers": [
     {
-      "amplifierId": "amp_deep_sea_visitor",
-      "displayName": "Deep Sea Visitor",
+      "amplifierId": "amp_a_thousand_eclipses",
+      "displayName": "A Thousand Eclipses",
       "aliases": [
-        "amp_deep_sea_visitor",
-        "Гость из глубин",
-        "Deep Sea Visitor",
-        "weapon_deep_sea_visitor"
+        "amp_a_thousand_eclipses",
+        "A Thousand Eclipses",
+        "weapon_a_thousand_eclipses",
+        "a_thousand_eclipses"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_artillery_rotor",
+      "displayName": "Artillery Rotor",
+      "aliases": [
+        "amp_artillery_rotor",
+        "Artillery Rotor",
+        "weapon_artillery_rotor",
+        "artillery_rotor"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_bashful_demon",
+      "displayName": "Bashful Demon",
+      "aliases": [
+        "amp_bashful_demon",
+        "Bashful Demon",
+        "weapon_bashful_demon",
+        "bashful_demon"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_bellicose_blaze",
+      "displayName": "Bellicose Blaze",
+      "aliases": [
+        "amp_bellicose_blaze",
+        "Bellicose Blaze",
+        "weapon_bellicose_blaze",
+        "bellicose_blaze"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_big_cylinder",
+      "displayName": "Big Cylinder",
+      "aliases": [
+        "amp_big_cylinder",
+        "Big Cylinder",
+        "weapon_big_cylinder",
+        "big_cylinder"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_box_cutter",
+      "displayName": "Box Cutter",
+      "aliases": [
+        "amp_box_cutter",
+        "Box Cutter",
+        "weapon_box_cutter",
+        "box_cutter"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_bunny_band",
+      "displayName": "Bunny Band",
+      "aliases": [
+        "amp_bunny_band",
+        "Bunny Band",
+        "weapon_bunny_band",
+        "bunny_band"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_cloudcleave_radiance",
+      "displayName": "Cloudcleave Radiance",
+      "aliases": [
+        "amp_cloudcleave_radiance",
+        "Cloudcleave Radiance",
+        "weapon_cloudcleave_radiance",
+        "cloudcleave_radiance"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_cordis_germina",
+      "displayName": "Cordis Germina",
+      "aliases": [
+        "amp_cordis_germina",
+        "Cordis Germina",
+        "weapon_cordis_germina",
+        "cordis_germina"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_dreamlit_hearth",
+      "displayName": "Dreamlit Hearth",
+      "aliases": [
+        "amp_dreamlit_hearth",
+        "Dreamlit Hearth",
+        "weapon_dreamlit_hearth",
+        "dreamlit_hearth"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_drill_rig_red_axis",
+      "displayName": "Drill Rig Red Axis",
+      "aliases": [
+        "amp_drill_rig_red_axis",
+        "Drill Rig - Red Axis",
+        "weapon_drill_rig_red_axis",
+        "drill_rig_red_axis",
+        "Drill Rig Red Axis"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_elegant_vanity",
+      "displayName": "Elegant Vanity",
+      "aliases": [
+        "amp_elegant_vanity",
+        "Elegant Vanity",
+        "weapon_elegant_vanity",
+        "elegant_vanity"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_flamemaker_shaker",
+      "displayName": "Flamemaker Shaker",
+      "aliases": [
+        "amp_flamemaker_shaker",
+        "Flamemaker Shaker",
+        "weapon_flamemaker_shaker",
+        "flamemaker_shaker"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_flight_of_fancy",
+      "displayName": "Flight Of Fancy",
+      "aliases": [
+        "amp_flight_of_fancy",
+        "Flight of Fancy",
+        "weapon_flight_of_fancy",
+        "flight_of_fancy",
+        "Flight Of Fancy"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_fusion_compiler",
+      "displayName": "Fusion Compiler",
+      "aliases": [
+        "amp_fusion_compiler",
+        "Fusion Compiler",
+        "weapon_fusion_compiler",
+        "fusion_compiler"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_gilded_blossom",
+      "displayName": "Gilded Blossom",
+      "aliases": [
+        "amp_gilded_blossom",
+        "Gilded Blossom",
+        "weapon_gilded_blossom",
+        "gilded_blossom"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_grill_o_wisp",
+      "displayName": "Grill O Wisp",
+      "aliases": [
+        "amp_grill_o_wisp",
+        "Grill O'Wisp",
+        "weapon_grill_o_wisp",
+        "grill_o_wisp",
+        "Grill O Wisp"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_haiistorm_shrine",
+      "displayName": "Haiistorm Shrine",
+      "aliases": [
+        "amp_haiistorm_shrine",
+        "HaiIstorm Shrine о о О",
+        "weapon_haiistorm_shrine",
+        "haiistorm_shrine",
+        "Haiistorm Shrine"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine",
+      "aliases": [
+        "amp_hailstorm_shrine",
+        "Hailstorm Shrine",
+        "weapon_hailstorm_shrine",
+        "hailstorm_shrine"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_heartstring_nocturne",
+      "displayName": "Heartstring Nocturne",
+      "aliases": [
+        "amp_heartstring_nocturne",
+        "Heartstring Nocturne",
+        "weapon_heartstring_nocturne",
+        "heartstring_nocturne"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_hellfire_gears",
+      "displayName": "Hellfire Gears",
+      "aliases": [
+        "amp_hellfire_gears",
+        "Hellfire Gears",
+        "weapon_hellfire_gears",
+        "hellfire_gears"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_housekeeper",
+      "displayName": "Housekeeper",
+      "aliases": [
+        "amp_housekeeper",
+        "Housekeeper",
+        "weapon_housekeeper",
+        "housekeeper"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_ice_jade_teapot",
+      "displayName": "Ice Jade Teapot",
+      "aliases": [
+        "amp_ice_jade_teapot",
+        "Ice-Jade Teapot",
+        "weapon_ice_jade_teapot",
+        "ice_jade_teapot",
+        "Ice Jade Teapot"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_ii",
+      "displayName": "Ii",
+      "aliases": [
+        "amp_ii",
+        "Аккумулятор демары II О",
+        "weapon_ii",
+        "ii",
+        "Аккумулятор демары II о",
+        "Ii"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_kaboom_the_cannon",
+      "displayName": "Kaboom The Cannon",
+      "aliases": [
+        "amp_kaboom_the_cannon",
+        "Kaboom the Cannon",
+        "weapon_kaboom_the_cannon",
+        "kaboom_the_cannon",
+        "Kaboom The Cannon"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_kraken_s_cradle",
+      "displayName": "Kraken S Cradle",
+      "aliases": [
+        "amp_kraken_s_cradle",
+        "Kraken's Cradle",
+        "weapon_kraken_s_cradle",
+        "kraken_s_cradle",
+        "Kraken S Cradle"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_marcato_desire",
+      "displayName": "Marcato Desire",
+      "aliases": [
+        "amp_marcato_desire",
+        "Marcato Desire",
+        "weapon_marcato_desire",
+        "marcato_desire"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_original_transmorpher",
+      "displayName": "Original Transmorpher",
+      "aliases": [
+        "amp_original_transmorpher",
+        "Original Transmorpher",
+        "weapon_original_transmorpher",
+        "original_transmorpher"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_peacekeeper_specialized",
+      "displayName": "Peacekeeper Specialized",
+      "aliases": [
+        "amp_peacekeeper_specialized",
+        "Peacekeeper - Specialized",
+        "weapon_peacekeeper_specialized",
+        "peacekeeper_specialized",
+        "Peacekeeper Specialized"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_practiced_perfection",
+      "displayName": "Practiced Perfection",
+      "aliases": [
+        "amp_practiced_perfection",
+        "Practiced Perfection",
+        "weapon_practiced_perfection",
+        "practiced_perfection"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_precious_fossilized_core",
+      "displayName": "Precious Fossilized Core",
+      "aliases": [
+        "amp_precious_fossilized_core",
+        "Precious Fossilized Core",
+        "weapon_precious_fossilized_core",
+        "precious_fossilized_core"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_puzzle_sphere",
+      "displayName": "Puzzle Sphere",
+      "aliases": [
+        "amp_puzzle_sphere",
+        "Puzzle Sphere",
+        "weapon_puzzle_sphere",
+        "puzzle_sphere"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_qingming_birdcage",
+      "displayName": "Qingming Birdcage",
+      "aliases": [
+        "amp_qingming_birdcage",
+        "Qingming Birdcage",
+        "weapon_qingming_birdcage",
+        "qingming_birdcage"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_rainforest_gourmet",
+      "displayName": "Rainforest Gourmet",
+      "aliases": [
+        "amp_rainforest_gourmet",
+        "Rainforest Gourmet",
+        "weapon_rainforest_gourmet",
+        "rainforest_gourmet"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_riot_suppressor_mark_vi",
+      "displayName": "Riot Suppressor Mark Vi",
+      "aliases": [
+        "amp_riot_suppressor_mark_vi",
+        "Riot Suppressor Mark VI",
+        "weapon_riot_suppressor_mark_vi",
+        "riot_suppressor_mark_vi",
+        "Riot Suppressor Mark Vi"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_roaring_fur_nace",
+      "displayName": "Roaring Fur Nace",
+      "aliases": [
+        "amp_roaring_fur_nace",
+        "Roaring Fur-nace",
+        "weapon_roaring_fur_nace",
+        "roaring_fur_nace",
+        "Roaring Fur Nace"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_roaring_ride",
+      "displayName": "Roaring Ride",
+      "aliases": [
+        "amp_roaring_ride",
+        "Roaring Ride",
+        "weapon_roaring_ride",
+        "roaring_ride"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_severed_innocence",
+      "displayName": "Severed Innocence",
+      "aliases": [
+        "amp_severed_innocence",
+        "Severed Innocence",
+        "weapon_severed_innocence",
+        "severed_innocence"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_sharpened_stinger",
+      "displayName": "Sharpened Stinger",
+      "aliases": [
+        "amp_sharpened_stinger",
+        "Sharpened Stinger",
+        "weapon_sharpened_stinger",
+        "sharpened_stinger"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_slice_of_time",
+      "displayName": "Slice Of Time",
+      "aliases": [
+        "amp_slice_of_time",
+        "Slice of Time",
+        "weapon_slice_of_time",
+        "slice_of_time",
+        "Slice Of Time"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_soul_in_steel",
+      "displayName": "Soul In Steel",
+      "aliases": [
+        "amp_soul_in_steel",
+        "Soul in Steel",
+        "weapon_soul_in_steel",
+        "soul_in_steel",
+        "Soul In Steel"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_spectral_gaze",
+      "displayName": "Spectral Gaze",
+      "aliases": [
+        "amp_spectral_gaze",
+        "Spectral Gaze",
+        "weapon_spectral_gaze",
+        "spectral_gaze"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_starlight_engine",
+      "displayName": "Starlight Engine",
+      "aliases": [
+        "amp_starlight_engine",
+        "Starlight Engine",
+        "weapon_starlight_engine",
+        "starlight_engine"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_starlight_engine_replica",
+      "displayName": "Starlight Engine Replica",
+      "aliases": [
+        "amp_starlight_engine_replica",
+        "Starlight Engine Replica",
+        "weapon_starlight_engine_replica",
+        "starlight_engine_replica"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_steam_oven",
+      "displayName": "Steam Oven",
+      "aliases": [
+        "amp_steam_oven",
+        "Steam Oven",
+        "weapon_steam_oven",
+        "steam_oven"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_sulfur",
+      "displayName": "Sulfur",
+      "aliases": [
+        "amp_sulfur",
+        "Sulfur",
+        "weapon_sulfur",
+        "sulfur"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_the_restrained",
+      "displayName": "The Restrained",
+      "aliases": [
+        "amp_the_restrained",
+        "The Restrained",
+        "weapon_the_restrained",
+        "the_restrained"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_the_vault",
+      "displayName": "The Vault",
+      "aliases": [
+        "amp_the_vault",
+        "The Vault",
+        "weapon_the_vault",
+        "the_vault"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_thoughtbop",
+      "displayName": "Thoughtbop",
+      "aliases": [
+        "amp_thoughtbop",
+        "Thoughtbop",
+        "weapon_thoughtbop",
+        "thoughtbop"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_tremor_trigram_vessel",
+      "displayName": "Tremor Trigram Vessel",
+      "aliases": [
+        "amp_tremor_trigram_vessel",
+        "Tremor Trigram Vessel",
+        "weapon_tremor_trigram_vessel",
+        "tremor_trigram_vessel"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_weeping_cradle",
+      "displayName": "Weeping Cradle",
+      "aliases": [
+        "amp_weeping_cradle",
+        "Weeping Cradle",
+        "weapon_weeping_cradle",
+        "weeping_cradle"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_weeping_gemini",
+      "displayName": "Weeping Gemini",
+      "aliases": [
+        "amp_weeping_gemini",
+        "Weeping Gemini",
+        "weapon_weeping_gemini",
+        "weeping_gemini"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_wrathful_vajra",
+      "displayName": "Wrathful Vajra",
+      "aliases": [
+        "amp_wrathful_vajra",
+        "Wrathful Vajra",
+        "weapon_wrathful_vajra",
+        "wrathful_vajra"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_yesterday_calls",
+      "displayName": "Yesterday Calls",
+      "aliases": [
+        "amp_yesterday_calls",
+        "Yesterday Calls",
+        "weapon_yesterday_calls",
+        "yesterday_calls"
+      ],
+      "source": {
+        "catalog": "dataset_preview"
+      }
+    },
+    {
+      "amplifierId": "amp_zanshin_herb_case",
+      "displayName": "Zanshin Herb Case",
+      "aliases": [
+        "amp_zanshin_herb_case",
+        "Zanshin Herb Case",
+        "weapon_zanshin_herb_case",
+        "zanshin_herb_case"
       ],
       "source": {
         "catalog": "dataset_preview"
