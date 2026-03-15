@@ -1,0 +1,177 @@
+{
+  "generatedAt": "2026-03-15T17:07:57Z",
+  "workflow": "account_import",
+  "reviewerId": "auto_review_agent_detail_mindscape",
+  "processedRecords": 505,
+  "appliedRecords": 105,
+  "skippedExisting": 1,
+  "skippedMissingAssets": 0,
+  "skippedNonReviewed": 0,
+  "skippedDerived": 1012,
+  "skippedParseFailed": 183,
+  "skippedUnsafe": 217,
+  "digitTemplates": {
+    "0": 2,
+    "5": 1,
+    "6": 3
+  },
+  "predictionCounts": {
+    "0/0": 5,
+    "0/6": 171,
+    "5/6": 9,
+    "6/0": 13,
+    "6/6": 124
+  },
+  "appliedCounts": {
+    "0/6": 103,
+    "5/6": 2
+  },
+  "safeRules": {
+    "0": {
+      "numerator_score_max": 0.08,
+      "numerator_margin_min": 0.03,
+      "denominator_score_max": 0.07,
+      "denominator_margin_min": 0.02
+    },
+    "5": {
+      "numerator_score_max": 0.03,
+      "numerator_margin_min": 0.02,
+      "denominator_score_max": 0.05,
+      "denominator_margin_min": 0.02
+    }
+  },
+  "examples": [
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_b7561f4cf926_record",
+      "focusAgentId": "agent_harumasa",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0267,
+      "numeratorMargin": 0.1083,
+      "denominatorScore": 0.0017,
+      "denominatorMargin": 0.0767,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_b7561f4cf926.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_f25209e9f461_record",
+      "focusAgentId": "agent_soldier_11",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0267,
+      "numeratorMargin": 0.1083,
+      "denominatorScore": 0.0017,
+      "denominatorMargin": 0.0767,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_f25209e9f461.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_cc59a88a3d8e_record",
+      "focusAgentId": "agent_alice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0333,
+      "numeratorMargin": 0.095,
+      "denominatorScore": 0.0683,
+      "denominatorMargin": 0.0467,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_cc59a88a3d8e.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_8ba49cc2b3b0_record",
+      "focusAgentId": "agent_alice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0333,
+      "numeratorMargin": 0.095,
+      "denominatorScore": 0.0683,
+      "denominatorMargin": 0.0467,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_8ba49cc2b3b0.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_ecced10b2ca1_record",
+      "focusAgentId": "agent_burnice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0267,
+      "numeratorMargin": 0.1083,
+      "denominatorScore": 0.0017,
+      "denominatorMargin": 0.0767,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_ecced10b2ca1.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_aa3eb6ec3f31_record",
+      "focusAgentId": "agent_burnice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0267,
+      "numeratorMargin": 0.1083,
+      "denominatorScore": 0.0017,
+      "denominatorMargin": 0.0767,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_aa3eb6ec3f31.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_421d70cf64af_record",
+      "focusAgentId": "agent_burnice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.07,
+      "numeratorMargin": 0.035,
+      "denominatorScore": 0.0383,
+      "denominatorMargin": 0.0733,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_421d70cf64af.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_06f5507b57fb_record",
+      "focusAgentId": "agent_burnice",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.07,
+      "numeratorMargin": 0.035,
+      "denominatorScore": 0.0383,
+      "denominatorMargin": 0.0733,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_06f5507b57fb.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_0da47661c8b6_record",
+      "focusAgentId": "agent_caesar",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.07,
+      "numeratorMargin": 0.035,
+      "denominatorScore": 0.0383,
+      "denominatorMargin": 0.0733,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_0da47661c8b6.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_9a5b491a2897_record",
+      "focusAgentId": "agent_caesar",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.07,
+      "numeratorMargin": 0.035,
+      "denominatorScore": 0.0383,
+      "denominatorMargin": 0.0733,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_9a5b491a2897.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_e744f7d6522a_record",
+      "focusAgentId": "agent_caesar",
+      "mindscape": 0,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.07,
+      "numeratorMargin": 0.035,
+      "denominatorScore": 0.0383,
+      "denominatorMargin": 0.0733,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_e744f7d6522a.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_afe921b6fc31_record",
+      "focusAgentId": "agent_corin",
+      "mindscape": 5,
+      "mindscapeCap": 6,
+      "numeratorScore": 0.0233,
+      "numeratorMargin": 0.025,
+      "denominatorScore": 0.015,
+      "denominatorMargin": 0.0217,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_afe921b6fc31.png"
+    }
+  ]
+}

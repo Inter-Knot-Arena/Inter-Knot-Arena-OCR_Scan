@@ -1,6 +1,6 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-15T16:30:55Z`
+- Generated at: `2026-03-15T17:08:18Z`
 - Workflow: `account_import`
 - Scoped records: `8794`
 - Reviewed truth records: `8457`
@@ -39,8 +39,8 @@
 ### agent_detail_mindscape
 
 - Reviewed records: `506`
-- Complete records: `1`
-- Splits: `train=1` `val=0` `test=0` `unsplit=0`
+- Complete records: `106`
+- Splits: `train=84` `val=13` `test=9` `unsplit=0`
 
 ### agent_detail_stats
 

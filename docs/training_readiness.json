@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-15T16:30:55Z",
+  "generatedAt": "2026-03-15T17:08:18Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
@@ -88,11 +88,11 @@
     "agent_detail_mindscape": {
       "name": "agent_detail_mindscape",
       "reviewedRecordCount": 506,
-      "completeRecordCount": 1,
+      "completeRecordCount": 106,
       "splitCounts": {
-        "train": 1,
-        "val": 0,
-        "test": 0,
+        "train": 84,
+        "val": 13,
+        "test": 9,
         "unsplit": 0
       }
     },
