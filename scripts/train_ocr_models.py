@@ -67,6 +67,18 @@ def _cuda_onnx_providers() -> list[str]:
     return ["CUDAExecutionProvider"]
 
 
+def _create_cuda_session(model_path: Path) -> ort.InferenceSession:
+    session = ort.InferenceSession(str(model_path), providers=_cuda_onnx_providers())
+    actual = list(session.get_providers())
+    if "CUDAExecutionProvider" not in actual:
+        actual_list = ", ".join(actual) or "none"
+        raise RuntimeError(
+            "CUDA-only OCR training requested CUDAExecutionProvider, but ONNX Runtime validated the model on a non-CUDA session. "
+            f"Actual providers: {actual_list}. Check CUDA/cuDNN/MSVC runtime dependencies."
+        )
+    return session
+
+
 def _normalize_split_name(raw: Any) -> str:
     value = str(raw or "").strip().lower()
     return value if value in {"train", "val", "test"} else ""
@@ -280,7 +292,7 @@ def _latency_stats(clf: LogisticRegression, sample: np.ndarray, iterations: int 
 def _onnx_latency_stats(model_path: Path, sample: np.ndarray, iterations: int = 120) -> Tuple[float, float]:
     if sample.size == 0 or not model_path.exists():
         return 0.0, 0.0
-    session = ort.InferenceSession(str(model_path), providers=_cuda_onnx_providers())
+    session = _create_cuda_session(model_path)
     input_name = session.get_inputs()[0].name
     latencies: List[float] = []
     count = min(iterations, max(20, sample.shape[0]))

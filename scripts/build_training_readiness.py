@@ -41,7 +41,10 @@ def _reviewed_labels(record: Dict[str, Any]) -> Dict[str, Any]:
 def _is_materialized_uid_digit(record: Dict[str, Any], labels: Dict[str, Any]) -> bool:
     if str(record.get("kind") or "").strip() == "derived_uid_digit":
         return True
-    return isinstance(labels.get("derivedFromRecordId"), str) and bool(str(labels.get("derivedFromRecordId")).strip())
+    head = str(labels.get("head") or record.get("head") or "").strip()
+    return head == "uid_digit" and isinstance(labels.get("derivedFromRecordId"), str) and bool(
+        str(labels.get("derivedFromRecordId")).strip()
+    )
 
 
 def _manifest_split_index(manifest: Dict[str, Any]) -> Dict[str, str]:

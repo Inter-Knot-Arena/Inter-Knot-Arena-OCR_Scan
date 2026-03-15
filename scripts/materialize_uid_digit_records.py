@@ -330,6 +330,8 @@ def main() -> int:
     for record in scoped_records:
         if not isinstance(record, dict):
             continue
+        if str(record.get("kind") or "").strip() == "derived_uid_digit":
+            continue
         labels = _reviewed_labels(record)
         parent_role = _parent_role(record, source_index)
         if parent_role == ROSTER_ROLE and not bool(args.allow_roster):

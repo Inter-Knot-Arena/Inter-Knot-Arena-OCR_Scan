@@ -26,6 +26,18 @@ def _provider_priority() -> list[str]:
     return ["CUDAExecutionProvider"]
 
 
+def _create_cuda_session(model_path: Path) -> ort.InferenceSession:
+    session = ort.InferenceSession(str(model_path), providers=_provider_priority())
+    actual = list(session.get_providers())
+    if "CUDAExecutionProvider" not in actual:
+        actual_list = ", ".join(actual) or "none"
+        raise RuntimeError(
+            "OCR runtime requested CUDAExecutionProvider, but ONNX Runtime created a non-CUDA session. "
+            f"Actual providers: {actual_list}. Check CUDA/cuDNN/MSVC runtime dependencies."
+        )
+    return session
+
+
 def _read_json(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as fh:
         payload = json.load(fh)
@@ -154,8 +166,7 @@ class OnnxClassifier:
                 if isinstance(class_id_value, (int, np.integer)):
                     self.class_id_map[int(class_id_value)] = label
 
-        providers = _provider_priority()
-        self.session = ort.InferenceSession(str(model_path), providers=providers)
+        self.session = _create_cuda_session(model_path)
         input_meta = self.session.get_inputs()[0]
         self.input_name = input_meta.name
         self.input_shape = tuple(input_meta.shape)
