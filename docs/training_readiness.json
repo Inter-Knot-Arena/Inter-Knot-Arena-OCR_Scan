@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-14T12:07:45Z",
+  "generatedAt": "2026-03-15T14:34:27Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
-    "scopedRecordCount": 6820,
-    "reviewedRecordCount": 6483,
+    "scopedRecordCount": 8794,
+    "reviewedRecordCount": 8457,
     "reviewedHeadCounts": {
-      "agent_icon": 610,
+      "agent_icon": 2584,
       "equipment": 3429,
       "uid_digit": 2444
     },
@@ -19,27 +19,27 @@
       "uid_panel": 224
     },
     "reviewedSplitCounts": {
-      "train": 5260,
-      "val": 596,
-      "test": 627,
+      "train": 6864,
+      "val": 784,
+      "test": 809,
       "unsplit": 0
     }
   },
   "trainHeads": {
     "uid_digit": {
       "name": "uid_digit",
-      "sampleCount": 2220,
+      "sampleCount": 2252,
       "distinctLabelCount": 10,
       "splitCounts": {
-        "train": 1850,
-        "val": 170,
-        "test": 200,
+        "train": 1870,
+        "val": 176,
+        "test": 206,
         "unsplit": 0
       },
       "readyForCurrentTrainPath": true,
       "blockers": [],
       "missingDigits": [],
-      "materializedUidDigitSampleCount": 2220,
+      "materializedUidDigitSampleCount": 2252,
       "reviewedUidPanelTruthCount": 224,
       "notes": [
         "Reviewed uid_panel source records hold full UID truth; trainable per-digit samples come from materialized uid_digit crops."
@@ -47,18 +47,16 @@
     },
     "agent_icon": {
       "name": "agent_icon",
-      "sampleCount": 987,
+      "sampleCount": 2480,
       "distinctLabelCount": 49,
       "splitCounts": {
-        "train": 802,
-        "val": 94,
-        "test": 91,
+        "train": 2016,
+        "val": 241,
+        "test": 223,
         "unsplit": 0
       },
-      "readyForCurrentTrainPath": false,
-      "blockers": [
-        "need_at_least_2000_reviewed_samples"
-      ],
+      "readyForCurrentTrainPath": true,
+      "blockers": [],
       "rosterAgentCount": 49,
       "reviewedCurrentAgentCount": 49,
       "missingReviewedAgents": []

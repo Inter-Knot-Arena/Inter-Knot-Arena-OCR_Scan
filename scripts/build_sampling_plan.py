@@ -77,6 +77,14 @@ def _extract_label(record: Dict[str, Any], *, suggested: bool) -> str:
     return ""
 
 
+def _countable_head(head: str, label: str) -> bool:
+    if not head:
+        return False
+    if head == "agent_icon":
+        return bool(label)
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build class-balance sampling plan from OCR dataset manifest.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
@@ -116,9 +124,9 @@ def main() -> int:
         suggested_head = _extract_head(record, suggested=True)
         reviewed_label = _extract_label(record, suggested=False) if is_reviewed else ""
         suggested_label = _extract_label(record, suggested=True)
-        if reviewed_head:
+        if _countable_head(reviewed_head, reviewed_label):
             reviewed_head_counts[reviewed_head] += 1
-        if suggested_head:
+        if _countable_head(suggested_head, suggested_label):
             suggested_head_counts[suggested_head] += 1
         if reviewed_label:
             reviewed_label_counts[reviewed_label] += 1

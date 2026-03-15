@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-03-13T20:03:59Z",
+  "generatedAt": "2026-03-15T14:35:34Z",
   "workflow": "account_import",
-  "eligibleRecordCount": 4610,
+  "eligibleRecordCount": 8794,
   "roleHeadCounts": {
     "agent_detail:agent_icon": 506,
     "amplifier_detail:equipment": 455,
@@ -12,11 +12,11 @@
   },
   "reviewedRoleHeadCounts": {
     "agent_detail:agent_icon": 506,
-    "amplifier_detail:equipment": 1,
-    "disk_detail:equipment": 6,
+    "amplifier_detail:equipment": 451,
+    "disk_detail:equipment": 2497,
     "equipment:equipment": 481,
     "roster:agent_icon": 104,
-    "uid_panel:uid_digit": 1
+    "uid_panel:uid_digit": 224
   },
   "targets": {
     "uidPanelFrames": 80,
@@ -27,7 +27,7 @@
   },
   "current": {
     "uidPanelFrames": 386,
-    "reviewedUidDigitSamples": 10,
+    "reviewedUidDigitSamples": 2220,
     "rosterCoveredAgents": 49,
     "rosterIconLabeledAgents": 0,
     "reviewedRosterIconLabeledAgents": 0,

@@ -1,27 +1,26 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-14T12:07:45Z`
+- Generated at: `2026-03-15T14:34:27Z`
 - Workflow: `account_import`
-- Scoped records: `6820`
-- Reviewed truth records: `6483`
+- Scoped records: `8794`
+- Reviewed truth records: `8457`
 
 ## Current Train Heads
 
 ### uid_digit (READY)
 
-- Samples: `2220`
+- Samples: `2252`
 - Distinct labels: `10`
-- Splits: `train=1850` `val=170` `test=200` `unsplit=0`
+- Splits: `train=1870` `val=176` `test=206` `unsplit=0`
 - Missing digits: `none`
-- Materialized digit samples: `2220`
+- Materialized digit samples: `2252`
 
-### agent_icon (BLOCKED)
+### agent_icon (READY)
 
-- Samples: `987`
+- Samples: `2480`
 - Distinct labels: `49`
-- Splits: `train=802` `val=94` `test=91` `unsplit=0`
+- Splits: `train=2016` `val=241` `test=223` `unsplit=0`
 - Reviewed current agents: `49/49`
-- Blockers: `need_at_least_2000_reviewed_samples`
 
 ## OCR Field Targets
 

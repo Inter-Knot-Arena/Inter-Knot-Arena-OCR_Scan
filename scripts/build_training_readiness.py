@@ -293,7 +293,7 @@ def main() -> int:
             _increment_split(uid_panel_full_uid_split_counts, split_name)
 
         agent_icon = _normalize_agent_icon_label(labels)
-        if agent_icon:
+        if head == "agent_icon" and agent_icon:
             agent_icon_labels.append(agent_icon)
             _increment_split(agent_icon_split_counts, split_name)
 

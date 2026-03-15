@@ -67,8 +67,13 @@ def _reviewed_uid_digit(record: Dict[str, Any]) -> str:
     return ""
 
 
-def _is_materialized_uid_digit(record: Dict[str, Any]) -> bool:
-    return str(record.get("kind") or "").strip() == "derived_uid_digit"
+def _is_derived_record(record: Dict[str, Any]) -> bool:
+    kind = str(record.get("kind") or "").strip()
+    if kind.startswith("derived_"):
+        return True
+    labels = _labels(record, "labels")
+    derived_from = str(labels.get("derivedFromRecordId") or record.get("derivedFromRecordId") or "").strip()
+    return bool(derived_from)
 
 
 def _owned_agent_ids(record: Dict[str, Any]) -> List[str]:
@@ -120,14 +125,16 @@ def main() -> int:
             continue
         head = record_head(record)
         role = record_screen_role(record, source_index)
-        is_materialized_uid_digit = _is_materialized_uid_digit(record)
-        if not is_materialized_uid_digit:
+        is_derived_record = _is_derived_record(record)
+        if not is_derived_record:
             role_head_counts[f"{role}:{head}"] += 1
         reviewed = _reviewed_labels(record)
-        if reviewed and not is_materialized_uid_digit:
+        if reviewed and not is_derived_record:
             reviewed_role_head_counts[f"{role}:{head}"] += 1
         if head == "uid_digit" and _reviewed_uid_digit(record):
             reviewed_uid_digit_samples += 1
+        if is_derived_record:
+            continue
         if head == "agent_icon":
             agent_id = _agent_icon_label(record, reviewed_only=False)
             reviewed_agent_id = _agent_icon_label(record, reviewed_only=True)
