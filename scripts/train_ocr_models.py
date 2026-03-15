@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import importlib.util
 import json
 import statistics
@@ -150,8 +151,20 @@ def _extract_label(payload: Dict[str, Any], head: str) -> str:
 def _preprocess(image: np.ndarray, head: str) -> np.ndarray:
     if head == "uid_digit":
         gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        resized = cv2.resize(gray, (16, 24), interpolation=cv2.INTER_AREA)
-        return resized.astype(np.float32).reshape(-1) / 255.0
+        mask = gray > 8
+        if np.any(mask):
+            ys, xs = np.where(mask)
+            gray = gray[int(np.min(ys)) : int(np.max(ys)) + 1, int(np.min(xs)) : int(np.max(xs)) + 1]
+        target_width, target_height = 16, 24
+        scale = min((target_width - 2) / max(gray.shape[1], 1), (target_height - 2) / max(gray.shape[0], 1))
+        resized_width = max(1, int(round(gray.shape[1] * scale)))
+        resized_height = max(1, int(round(gray.shape[0] * scale)))
+        resized = cv2.resize(gray, (resized_width, resized_height), interpolation=cv2.INTER_AREA)
+        canvas = np.zeros((target_height, target_width), dtype=np.uint8)
+        offset_x = (target_width - resized_width) // 2
+        offset_y = (target_height - resized_height) // 2
+        canvas[offset_y : offset_y + resized_height, offset_x : offset_x + resized_width] = resized
+        return canvas.astype(np.float32).reshape(-1) / 255.0
     if image.ndim == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     resized = cv2.resize(image, (32, 32), interpolation=cv2.INTER_AREA)
@@ -484,34 +497,89 @@ def _train_torch_classifier(
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA backend requested, but torch.cuda.is_available() is false.")
     device = torch.device(device_name)
+    torch.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
 
     input_channels = int(images.shape[1])
     num_classes = len(labels)
 
-    class TinyImageClassifier(nn.Module):
+    class UidDigitClassifier(nn.Module):
         def __init__(self, channels: int, classes: int) -> None:
             super().__init__()
             self.features = nn.Sequential(
-                nn.Conv2d(channels, 16, kernel_size=3, padding=1),
+                nn.Conv2d(channels, 32, kernel_size=3, padding=1),
+                nn.BatchNorm2d(32),
                 nn.ReLU(inplace=True),
                 nn.MaxPool2d(kernel_size=2),
-                nn.Conv2d(16, 32, kernel_size=3, padding=1),
+                nn.Conv2d(32, 64, kernel_size=3, padding=1),
+                nn.BatchNorm2d(64),
                 nn.ReLU(inplace=True),
                 nn.MaxPool2d(kernel_size=2),
-                nn.Conv2d(32, 48, kernel_size=3, padding=1),
+                nn.Conv2d(64, 96, kernel_size=3, padding=1),
+                nn.BatchNorm2d(96),
                 nn.ReLU(inplace=True),
-                nn.AdaptiveAvgPool2d((1, 1)),
             )
-            self.classifier = nn.Linear(48, classes)
+            self.classifier = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(96 * 6 * 4, 192),
+                nn.ReLU(inplace=True),
+                nn.Dropout(p=0.2),
+                nn.Linear(192, classes),
+            )
 
         def forward(self, inputs: torch.Tensor) -> torch.Tensor:
             features = self.features(inputs)
-            flattened = torch.flatten(features, 1)
-            return self.classifier(flattened)
+            return self.classifier(features)
 
-    model = TinyImageClassifier(channels=input_channels, classes=num_classes).to(device)
+    class AgentIconClassifier(nn.Module):
+        def __init__(self, channels: int, classes: int) -> None:
+            super().__init__()
+            self.features = nn.Sequential(
+                nn.Conv2d(channels, 32, kernel_size=3, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(32, 32, kernel_size=3, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=2),
+                nn.Conv2d(32, 64, kernel_size=3, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(64, 64, kernel_size=3, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=2),
+                nn.Conv2d(64, 128, kernel_size=3, padding=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(128, 128, kernel_size=3, padding=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+                nn.MaxPool2d(kernel_size=2),
+            )
+            self.classifier = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(128 * 4 * 4, 512),
+                nn.ReLU(inplace=True),
+                nn.Dropout(p=0.35),
+                nn.Linear(512, classes),
+            )
+
+        def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+            features = self.features(inputs)
+            return self.classifier(features)
+
+    if head == "uid_digit":
+        model = UidDigitClassifier(channels=input_channels, classes=num_classes).to(device)
+    else:
+        model = AgentIconClassifier(channels=input_channels, classes=num_classes).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=max(1e-5, float(learning_rate)))
-    criterion = nn.CrossEntropyLoss()
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, int(epochs)))
+
+    class_counts = np.bincount(y_train, minlength=num_classes).astype(np.float32)
+    class_weights = class_counts.sum() / np.maximum(class_counts, 1.0)
+    class_weights = class_weights / max(float(np.mean(class_weights)), 1e-6)
+    criterion = nn.CrossEntropyLoss(weight=torch.from_numpy(class_weights).to(device=device, dtype=torch.float32))
 
     train_loader = DataLoader(
         TensorDataset(torch.from_numpy(x_train), torch.from_numpy(y_train.astype(np.int64))),
@@ -520,6 +588,26 @@ def _train_torch_classifier(
         drop_last=False,
         pin_memory=device.type == "cuda",
     )
+    val_loader = DataLoader(
+        TensorDataset(torch.from_numpy(x_val), torch.from_numpy(y_val.astype(np.int64))),
+        batch_size=max(8, int(batch_size)),
+        shuffle=False,
+        drop_last=False,
+        pin_memory=device.type == "cuda",
+    )
+
+    def _predict_probabilities(loader: DataLoader) -> np.ndarray:
+        outputs: List[np.ndarray] = []
+        with torch.no_grad():
+            for batch_inputs, _ in loader:
+                batch_inputs = batch_inputs.to(device=device, dtype=torch.float32, non_blocking=device.type == "cuda")
+                logits = model(batch_inputs)
+                probs = torch.softmax(logits, dim=1).cpu().numpy().astype(np.float32)
+                outputs.append(probs)
+        return np.vstack(outputs) if outputs else np.empty((0, num_classes), dtype=np.float32)
+
+    best_val_score = float("-inf")
+    best_state = copy.deepcopy(model.state_dict())
 
     for _ in range(max(1, int(epochs))):
         model.train()
@@ -531,7 +619,17 @@ def _train_torch_classifier(
             loss = criterion(logits, batch_targets)
             loss.backward()
             optimizer.step()
+        scheduler.step()
 
+        model.eval()
+        val_probs = _predict_probabilities(val_loader)
+        val_preds = np.argmax(val_probs, axis=1) if val_probs.size else np.empty((0,), dtype=np.int64)
+        val_accuracy = float(accuracy_score(y_val, val_preds)) if val_preds.size else 0.0
+        if val_accuracy > best_val_score:
+            best_val_score = val_accuracy
+            best_state = copy.deepcopy(model.state_dict())
+
+    model.load_state_dict(best_state)
     model.eval()
     probabilities: List[np.ndarray] = []
     with torch.no_grad():
