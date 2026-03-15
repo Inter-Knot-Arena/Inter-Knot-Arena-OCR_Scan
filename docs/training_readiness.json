@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-15T17:08:18Z",
+  "generatedAt": "2026-03-15T17:43:18Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
@@ -99,11 +99,11 @@
     "agent_detail_stats": {
       "name": "agent_detail_stats",
       "reviewedRecordCount": 506,
-      "completeRecordCount": 1,
+      "completeRecordCount": 143,
       "splitCounts": {
-        "train": 1,
-        "val": 0,
-        "test": 0,
+        "train": 112,
+        "val": 17,
+        "test": 14,
         "unsplit": 0
       }
     },

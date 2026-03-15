@@ -1,0 +1,280 @@
+{
+  "generatedAt": "2026-03-15T17:42:57Z",
+  "workflow": "account_import",
+  "reviewerId": "auto_review_agent_detail_stats",
+  "processedRecords": 505,
+  "appliedRecords": 142,
+  "skippedExisting": 1,
+  "skippedMissingAssets": 0,
+  "skippedNonReviewed": 0,
+  "skippedDerived": 1012,
+  "skippedParseFailed": 363,
+  "digitTemplateCount": 10,
+  "maxDigitScore": 0.17,
+  "minDigitMargin": 0.01,
+  "localeCounts": {
+    "RU": 142
+  },
+  "sessionCounts": {
+    "batch_001_ru": 134,
+    "onedrive_dataset_20260309_agents_129_255": 8
+  },
+  "failureCounts": {
+    "anomaly_prof:confidence": 1,
+    "atk:confidence": 39,
+    "atk:range": 11,
+    "crit_dmg:confidence": 8,
+    "crit_rate:confidence": 55,
+    "def:confidence": 28,
+    "def:range": 3,
+    "energy_regen:confidence": 4,
+    "hp:confidence": 157,
+    "hp:no_block": 7,
+    "hp:range": 17,
+    "impact:confidence": 5,
+    "pen_ratio:confidence": 9,
+    "pen_ratio:range": 19
+  },
+  "examples": [
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_044e0392d303_record",
+      "focusAgentId": "agent_ben",
+      "locale": "RU",
+      "maxDigitScore": 0.1483,
+      "minDigitMargin": 0.01,
+      "stats": {
+        "hp_flat": 1552,
+        "attack_flat": 508,
+        "defense_flat": 149,
+        "impact": 95,
+        "crit_rate_pct": 5,
+        "crit_damage_pct": 50,
+        "anomaly_mastery": 86,
+        "anomaly_proficiency": 90,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_044e0392d303.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_59fde2c6a8d5_record",
+      "focusAgentId": "agent_billy",
+      "locale": "RU",
+      "maxDigitScore": 0.1167,
+      "minDigitMargin": 0.0217,
+      "stats": {
+        "hp_flat": 8715,
+        "attack_flat": 1786,
+        "defense_flat": 645,
+        "impact": 91,
+        "crit_rate_pct": 9.8,
+        "crit_damage_pct": 107.6,
+        "anomaly_mastery": 92,
+        "anomaly_proficiency": 136,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_59fde2c6a8d5.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_cf320b08ef7c_record",
+      "focusAgentId": "agent_jane_doe",
+      "locale": "RU",
+      "maxDigitScore": 0.1083,
+      "minDigitMargin": 0.055,
+      "stats": {
+        "hp_flat": 12184,
+        "attack_flat": 2817,
+        "defense_flat": 1052,
+        "impact": 86,
+        "crit_rate_pct": 17,
+        "crit_damage_pct": 64.4,
+        "anomaly_mastery": 148,
+        "anomaly_proficiency": 299,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_cf320b08ef7c.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_d89d8d52482f_record",
+      "focusAgentId": "agent_lucy",
+      "locale": "RU",
+      "maxDigitScore": 0.12,
+      "minDigitMargin": 0.035,
+      "stats": {
+        "hp_flat": 5501,
+        "attack_flat": 743,
+        "defense_flat": 490,
+        "impact": 88,
+        "crit_rate_pct": 6.6,
+        "crit_damage_pct": 50,
+        "anomaly_mastery": 94,
+        "anomaly_proficiency": 102,
+        "pen_ratio_pct": 0,
+        "energy_regen": 18.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_d89d8d52482f.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_14154a5aa6dc_record",
+      "focusAgentId": "agent_lycaon",
+      "locale": "RU",
+      "maxDigitScore": 0.1167,
+      "minDigitMargin": 0.0133,
+      "stats": {
+        "hp_flat": 10952,
+        "attack_flat": 2238,
+        "defense_flat": 995,
+        "impact": 186,
+        "crit_rate_pct": 38.6,
+        "crit_damage_pct": 64.4,
+        "anomaly_mastery": 91,
+        "anomaly_proficiency": 171,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_14154a5aa6dc.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_3ab951773686_record",
+      "focusAgentId": "agent_nicole",
+      "locale": "RU",
+      "maxDigitScore": 0.12,
+      "minDigitMargin": 0.035,
+      "stats": {
+        "hp_flat": 2792,
+        "attack_flat": 267,
+        "defense_flat": 213,
+        "impact": 88,
+        "crit_rate_pct": 5,
+        "crit_damage_pct": 50,
+        "anomaly_mastery": 90,
+        "anomaly_proficiency": 93,
+        "pen_ratio_pct": 8,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_3ab951773686.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_c5182fd54bfd_record",
+      "focusAgentId": "agent_piper",
+      "locale": "RU",
+      "maxDigitScore": 0.1167,
+      "minDigitMargin": 0.0117,
+      "stats": {
+        "hp_flat": 11508,
+        "attack_flat": 2280,
+        "defense_flat": 1282,
+        "impact": 86,
+        "crit_rate_pct": 12.2,
+        "crit_damage_pct": 59.6,
+        "anomaly_mastery": 150,
+        "anomaly_proficiency": 229,
+        "pen_ratio_pct": 21.1,
+        "energy_regen": 14.4
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_c5182fd54bfd.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_55574b8dfd1c_record",
+      "focusAgentId": "agent_soukaku",
+      "locale": "RU",
+      "maxDigitScore": 0.1217,
+      "minDigitMargin": 0.0533,
+      "stats": {
+        "hp_flat": 12118,
+        "attack_flat": 3074,
+        "defense_flat": 1086,
+        "impact": 86,
+        "crit_rate_pct": 12.2,
+        "crit_damage_pct": 88.4,
+        "anomaly_mastery": 93,
+        "anomaly_proficiency": 168,
+        "pen_ratio_pct": 0,
+        "energy_regen": 17.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_55574b8dfd1c.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_911229e9fd63_record",
+      "focusAgentId": "agent_alice",
+      "locale": "RU",
+      "maxDigitScore": 0.1167,
+      "minDigitMargin": 0.0267,
+      "stats": {
+        "hp_flat": 6791,
+        "attack_flat": 1443,
+        "defense_flat": 573,
+        "impact": 86,
+        "crit_rate_pct": 11.4,
+        "crit_damage_pct": 78.8,
+        "anomaly_mastery": 155,
+        "anomaly_proficiency": 195,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_911229e9fd63.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_8a247e206770_record",
+      "focusAgentId": "agent_alice",
+      "locale": "RU",
+      "maxDigitScore": 0.1417,
+      "minDigitMargin": 0.0133,
+      "stats": {
+        "hp_flat": 11124,
+        "attack_flat": 3217,
+        "defense_flat": 854,
+        "impact": 86,
+        "crit_rate_pct": 17,
+        "crit_damage_pct": 54.8,
+        "anomaly_mastery": 195,
+        "anomaly_proficiency": 309,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_8a247e206770.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_40c60f71ec25_record",
+      "focusAgentId": "agent_anby",
+      "locale": "RU",
+      "maxDigitScore": 0.1017,
+      "minDigitMargin": 0.0633,
+      "stats": {
+        "hp_flat": 13858,
+        "attack_flat": 2155,
+        "defense_flat": 1105,
+        "impact": 164,
+        "crit_rate_pct": 21.8,
+        "crit_damage_pct": 74,
+        "anomaly_mastery": 94,
+        "anomaly_proficiency": 120,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_40c60f71ec25.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_c328e4b94f22_record",
+      "focusAgentId": "agent_anby",
+      "locale": "RU",
+      "maxDigitScore": 0.1217,
+      "minDigitMargin": 0.045,
+      "stats": {
+        "hp_flat": 5419,
+        "attack_flat": 651,
+        "defense_flat": 440,
+        "impact": 134,
+        "crit_rate_pct": 13,
+        "crit_damage_pct": 50,
+        "anomaly_mastery": 94,
+        "anomaly_proficiency": 93,
+        "pen_ratio_pct": 0,
+        "energy_regen": 1.2
+      },
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_c328e4b94f22.png"
+    }
+  ]
+}
