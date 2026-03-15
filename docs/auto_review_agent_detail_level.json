@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-03-15T16:30:38Z",
+  "workflow": "account_import",
+  "reviewerId": "auto_review_agent_detail_level",
+  "processedRecords": 1517,
+  "appliedRecords": 321,
+  "skippedExisting": 1,
+  "skippedMissingAssets": 0,
+  "skippedNonReviewed": 0,
+  "skippedParseFailed": 1196,
+  "digitTemplates": {
+    "0": 5,
+    "1": 2,
+    "2": 3,
+    "3": 1,
+    "4": 3,
+    "5": 2,
+    "6": 6,
+    "7": 2,
+    "8": 1,
+    "9": 1
+  },
+  "examples": [
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_4de7a25d325f_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_4de7a25d325f.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_cf320b08ef7c_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_cf320b08ef7c.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_14154a5aa6dc_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_14154a5aa6dc.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_c5182fd54bfd_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_c5182fd54bfd.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_f25209e9f461_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_f25209e9f461.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_55574b8dfd1c_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_55574b8dfd1c.png"
+    },
+    {
+      "recordId": "onedrive_dataset_20260309_agents_129_255_agent_detail_96c90f09410e_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\onedrive_dataset_20260309_agents_129_255\\agent_detail\\onedrive_dataset_20260309_agents_129_255_agent_detail_96c90f09410e.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_8a247e206770_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_8a247e206770.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_cc59a88a3d8e_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_cc59a88a3d8e.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_8ba49cc2b3b0_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_8ba49cc2b3b0.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_40c60f71ec25_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_40c60f71ec25.png"
+    },
+    {
+      "recordId": "batch_001_ru_agent_detail_693512d9aa44_record",
+      "agentLevel": 60,
+      "agentLevelCap": 60,
+      "path": "D:\\IKA_DATA\\ocr\\raw\\manual_screens\\batch_001_ru\\agent_detail\\batch_001_ru_agent_detail_693512d9aa44.png"
+    }
+  ]
+}

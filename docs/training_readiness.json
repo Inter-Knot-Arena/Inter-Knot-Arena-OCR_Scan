@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-15T14:34:27Z",
+  "generatedAt": "2026-03-15T16:30:55Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
@@ -77,11 +77,11 @@
     "agent_detail_level": {
       "name": "agent_detail_level",
       "reviewedRecordCount": 506,
-      "completeRecordCount": 1,
+      "completeRecordCount": 322,
       "splitCounts": {
-        "train": 1,
-        "val": 0,
-        "test": 0,
+        "train": 254,
+        "val": 39,
+        "test": 29,
         "unsplit": 0
       }
     },
