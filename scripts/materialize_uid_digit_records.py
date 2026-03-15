@@ -319,6 +319,7 @@ def main() -> int:
     )
     derived_index = _existing_derived_index(records)
 
+    candidate_parent_ids: set[str] = set()
     parent_ids_to_replace: set[str] = set()
     new_records: List[Dict[str, Any]] = []
     processed = 0
@@ -330,12 +331,15 @@ def main() -> int:
         if not isinstance(record, dict):
             continue
         labels = _reviewed_labels(record)
-        if not labels:
-            continue
         parent_role = _parent_role(record, source_index)
         if parent_role == ROSTER_ROLE and not bool(args.allow_roster):
             continue
         if parent_role not in {UID_PANEL_ROLE, ROSTER_ROLE}:
+            continue
+        parent_record_id = str(record.get("id") or "")
+        if parent_record_id:
+            candidate_parent_ids.add(parent_record_id)
+        if not labels:
             continue
 
         uid_full = _normalize_uid_full(labels)
@@ -354,7 +358,6 @@ def main() -> int:
             skipped_mismatch += 1
             continue
 
-        parent_record_id = str(record.get("id") or "")
         if not parent_record_id:
             continue
         parent_ids_to_replace.add(parent_record_id)
@@ -378,7 +381,8 @@ def main() -> int:
             )
             materialized += 1
 
-    if not args.dry_run and parent_ids_to_replace:
+    removed_stale_derived = 0
+    if not args.dry_run and candidate_parent_ids:
         preserved: List[Dict[str, Any]] = []
         for record in records:
             if not isinstance(record, dict):
@@ -388,7 +392,8 @@ def main() -> int:
             derived_from = ""
             if isinstance(labels, dict):
                 derived_from = str(labels.get("derivedFromRecordId") or record.get("derivedFromRecordId") or "").strip()
-            if derived_from and derived_from in parent_ids_to_replace and str(record.get("kind") or "").strip() == "derived_uid_digit":
+            if derived_from and derived_from in candidate_parent_ids and str(record.get("kind") or "").strip() == "derived_uid_digit":
+                removed_stale_derived += 1
                 continue
             preserved.append(record)
         preserved.extend(new_records)
@@ -400,8 +405,10 @@ def main() -> int:
         "workflow": str(args.workflow),
         "processedParents": processed,
         "materializedDigits": materialized,
+        "candidateParents": len(candidate_parent_ids),
         "replacedParents": sorted(parent_ids_to_replace),
         "existingDerivedParents": sorted(derived_index.keys()),
+        "removedStaleDerivedRecords": removed_stale_derived,
         "skippedMissingAssets": skipped_missing,
         "skippedSegmentationMismatch": skipped_mismatch,
         "outputRoot": str(output_root),

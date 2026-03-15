@@ -32,6 +32,26 @@ def parse_ratio(raw: str) -> tuple[float, float, float]:
 
 
 def _group_key(record: Dict[str, Any]) -> str:
+    labels = record.get("labels")
+    labels = labels if isinstance(labels, dict) else {}
+    record_kind = str(record.get("kind") or "").strip()
+    screen_role = str((record.get("source") or {}).get("screenRole") or record.get("screenRole") or "").strip()
+
+    # Keep the same full UID in a single split, including materialized digit samples.
+    if record_kind == "derived_uid_digit" or screen_role == "uid_panel":
+        uid_value = labels.get("uid_full")
+        if isinstance(uid_value, str):
+            uid_digits = "".join(ch for ch in uid_value if ch.isdigit())
+            if len(uid_digits) == 10:
+                return f"uid_full::{uid_digits}"
+        uid_payload = labels.get("uid")
+        if isinstance(uid_payload, dict):
+            uid_value = uid_payload.get("value")
+            if isinstance(uid_value, str):
+                uid_digits = "".join(ch for ch in uid_value if ch.isdigit())
+                if len(uid_digits) == 10:
+                    return f"uid_full::{uid_digits}"
+
     source_id = str(record.get("sourceId") or "src_unknown")
     session_id = str(record.get("sessionId") or "")
     match_id = str(record.get("matchId") or "")

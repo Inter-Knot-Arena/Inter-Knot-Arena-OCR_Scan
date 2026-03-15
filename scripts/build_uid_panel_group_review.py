@@ -11,6 +11,8 @@ from typing import Any, Dict, Iterable, List, Tuple
 import cv2
 import numpy as np
 
+_UID_WIDGET_BOX = (0.02, 0.095, 0.19, 0.062)
+
 
 def _load_manifest(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -66,6 +68,17 @@ def _load_image(path: Path) -> np.ndarray | None:
     return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
 
 
+def _fractional_crop(image: np.ndarray, box: Tuple[float, float, float, float]) -> np.ndarray | None:
+    height, width = image.shape[:2]
+    x, y, w, h = box
+    x0 = max(0, min(int(round(width * x)), width - 1))
+    y0 = max(0, min(int(round(height * y)), height - 1))
+    x1 = max(x0 + 1, min(int(round(width * (x + w))), width))
+    y1 = max(y0 + 1, min(int(round(height * (y + h))), height))
+    crop = image[y0:y1, x0:x1]
+    return crop if crop.size else None
+
+
 def _sample_group(records: List[Dict[str, Any]], sample_size: int) -> List[Dict[str, Any]]:
     if len(records) <= sample_size:
         return records
@@ -86,6 +99,13 @@ def _thumbnail(image: np.ndarray, *, max_width: int, max_height: int) -> np.ndar
     return canvas
 
 
+def _uid_widget_thumbnail(image: np.ndarray, *, max_width: int, max_height: int) -> np.ndarray:
+    crop = _fractional_crop(image, _UID_WIDGET_BOX)
+    if crop is None:
+        crop = image
+    return _thumbnail(crop, max_width=max_width, max_height=max_height)
+
+
 def _draw_label(image: np.ndarray, text: str) -> np.ndarray:
     output = image.copy()
     cv2.rectangle(output, (0, 0), (output.shape[1], 28), (255, 255, 255), thickness=-1)
@@ -103,8 +123,8 @@ def _draw_label(image: np.ndarray, text: str) -> np.ndarray:
 
 
 def _contact_sheet(records: List[Dict[str, Any]], output_path: Path, current_uid: str) -> str:
-    tile_width = 360
-    tile_height = 240
+    tile_width = 520
+    tile_height = 140
     padding = 12
     title_height = 40
     thumbs: List[np.ndarray] = []
@@ -116,7 +136,7 @@ def _contact_sheet(records: List[Dict[str, Any]], output_path: Path, current_uid
             image = np.full((tile_height, tile_width, 3), 220, dtype=np.uint8)
             label = f"missing: {path.name}"
         else:
-            image = _thumbnail(image, max_width=tile_width, max_height=tile_height)
+            image = _uid_widget_thumbnail(image, max_width=tile_width, max_height=tile_height)
             label = path.name
         thumbs.append(_draw_label(image, label))
 
