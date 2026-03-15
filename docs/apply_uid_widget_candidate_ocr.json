@@ -1,0 +1,966 @@
+{
+  "generatedAt": "2026-03-15T23:30:20Z",
+  "manifest": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\dataset_manifest.json",
+  "recoveryReport": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\docs\\recover_uid_panel_truth.json",
+  "candidateOcrJsons": [
+    "D:\\IKA_DATA\\ocr\\review\\uid_widget_candidates_ocr_en.json",
+    "D:\\IKA_DATA\\ocr\\review\\uid_widget_candidates_ocr_ru.json"
+  ],
+  "appliedCount": 136,
+  "remainingUnresolvedCount": 0,
+  "rows": [
+    {
+      "id": "batch_001_ru_uid_panel_016f12fa33ef_record",
+      "currentUidFull": "1500563180",
+      "predictedUidFull": "1503737043",
+      "resolvedUidFull": "1503737043",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_039fe8145085_record",
+      "currentUidFull": "1503554929",
+      "predictedUidFull": "1505354929",
+      "resolvedUidFull": "1505354929",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_03a97a8415d8_record",
+      "currentUidFull": "1504749477",
+      "predictedUidFull": "1504749477",
+      "resolvedUidFull": "1504749477",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_04c6f38dfa33_record",
+      "currentUidFull": "1503247269",
+      "predictedUidFull": "1500813234",
+      "resolvedUidFull": "1500813234",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_060d3f1a8dbc_record",
+      "currentUidFull": "1500537731",
+      "predictedUidFull": "1500009605",
+      "resolvedUidFull": "1500009605",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_0cccb5976b26_record",
+      "currentUidFull": "1505907696",
+      "predictedUidFull": "1500611158",
+      "resolvedUidFull": "1500611158",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_1119f21f62ee_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1500812389",
+      "resolvedUidFull": "1500812389",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_14357b774ba1_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1500914616",
+      "resolvedUidFull": "1500914616",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_15c19e98d72a_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1506601930",
+      "resolvedUidFull": "1506601930",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_19cc30520a94_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507151122",
+      "resolvedUidFull": "1507151122",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_2356eb96013d_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507148591",
+      "resolvedUidFull": "1507148591",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_239a6d6d1d38_record",
+      "currentUidFull": "1503554929",
+      "predictedUidFull": "1506655982",
+      "resolvedUidFull": "1506655982",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_2560e9084135_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1506891116",
+      "resolvedUidFull": "1506891116",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_2837e1e4daab_record",
+      "currentUidFull": "1503554929",
+      "predictedUidFull": "1502956053",
+      "resolvedUidFull": "1502956053",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_2bf70ed1c507_record",
+      "currentUidFull": "1504749477",
+      "predictedUidFull": "1502991296",
+      "resolvedUidFull": "1502991296",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_2c4dbbf2c0bb_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507155083",
+      "resolvedUidFull": "1507155083",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_32f84afcc9d5_record",
+      "currentUidFull": "1502593876",
+      "predictedUidFull": "1506009424",
+      "resolvedUidFull": "1506009424",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_39e43e41ef5b_record",
+      "currentUidFull": "1500537731",
+      "predictedUidFull": "1501069737",
+      "resolvedUidFull": "1501069737",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_3fb6aad88961_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507138800",
+      "resolvedUidFull": "1507138800",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_4421a38cf185_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1503009575",
+      "resolvedUidFull": "1503009575",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_46dbfb20ae59_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507055691",
+      "resolvedUidFull": "1507055691",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_47fc8facc3f7_record",
+      "currentUidFull": "1502593876",
+      "predictedUidFull": "1505759303",
+      "resolvedUidFull": "1505759303",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_49fdcd926866_record",
+      "currentUidFull": "1500563180",
+      "predictedUidFull": "1500922397",
+      "resolvedUidFull": "1500922397",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_4f51d306bfe1_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1503244857",
+      "resolvedUidFull": "1503244857",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_4f65fdbc3fb1_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1500868976",
+      "resolvedUidFull": "1500868976",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_506e7869f43f_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1502392990",
+      "resolvedUidFull": "1502392990",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_51c104ffb564_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1500142306",
+      "resolvedUidFull": "1500142306",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_5388e7deb65a_record",
+      "currentUidFull": "1500563180",
+      "predictedUidFull": "1500124660",
+      "resolvedUidFull": "1500124660",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_53cda4b7bf77_record",
+      "currentUidFull": "1500930706",
+      "predictedUidFull": "1500751982",
+      "resolvedUidFull": "1500751982",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_57c0cb5d6f70_record",
+      "currentUidFull": "1500930706",
+      "predictedUidFull": "1500930706",
+      "resolvedUidFull": "1500930706",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_5a8d5eebb4d7_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507130281",
+      "resolvedUidFull": "1507130281",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_5a98abd7bd6d_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1502738869",
+      "resolvedUidFull": "1502738869",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_60dca3aa15bb_record",
+      "currentUidFull": "1506799816",
+      "predictedUidFull": "1502161821",
+      "resolvedUidFull": "1502161812",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_61f52ba9220c_record",
+      "currentUidFull": "1505907696",
+      "predictedUidFull": "1505907696",
+      "resolvedUidFull": "1505907696",
+      "resolution": "strong_majority"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_6965616684d4_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1501852840",
+      "resolvedUidFull": "1501852840",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_6a52422c0ba1_record",
+      "currentUidFull": "1502593876",
+      "predictedUidFull": "1502593876",
+      "resolvedUidFull": "1502593876",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_732916495227_record",
+      "currentUidFull": "1506535264",
+      "predictedUidFull": "1506535264",
+      "resolvedUidFull": "1506535264",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_74377566bc09_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1506661917",
+      "resolvedUidFull": "1506661917",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_7502de90b51a_record",
+      "currentUidFull": "1502593876",
+      "predictedUidFull": "1500102516",
+      "resolvedUidFull": "1500102516",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_758b78caaff7_record",
+      "currentUidFull": "1504749477",
+      "predictedUidFull": "1506723409",
+      "resolvedUidFull": "1506723409",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_75ff9d9ae741_record",
+      "currentUidFull": "1500853872",
+      "predictedUidFull": "1500853872",
+      "resolvedUidFull": "1500853872",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_7711be5756ff_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1506895473",
+      "resolvedUidFull": "1506895473",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_77d12d02d28c_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1500604019",
+      "resolvedUidFull": "1500604019",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_78501a6d000d_record",
+      "currentUidFull": "1505907696",
+      "predictedUidFull": "1501970686",
+      "resolvedUidFull": "1501970686",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_7e9a7eb6379c_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1500122001",
+      "resolvedUidFull": "1500122001",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_800cf9287f44_record",
+      "currentUidFull": "1500853872",
+      "predictedUidFull": "1503930946",
+      "resolvedUidFull": "1503930946",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_81a4a48106e6_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1506801499",
+      "resolvedUidFull": "1506801499",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_83ab4a909a9a_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1501773284",
+      "resolvedUidFull": "1501773284",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_843d855f8d01_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507131798",
+      "resolvedUidFull": "1507131798",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_85238b1fe643_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1503890431",
+      "resolvedUidFull": "1503890431",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_8769f34ea44d_record",
+      "currentUidFull": "1503247269",
+      "predictedUidFull": "1502324880",
+      "resolvedUidFull": "1502324880",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_8805449bfc26_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1501156915",
+      "resolvedUidFull": "1501156915",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_88fc9ceab736_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1506386487",
+      "resolvedUidFull": "1506386487",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_8ea56c56f9d3_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1504146819",
+      "resolvedUidFull": "1504146819",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_977e1afc5081_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507153282",
+      "resolvedUidFull": "1507153282",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_983da520534a_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1504008542",
+      "resolvedUidFull": "1504008542",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_9baea02f520b_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507119813",
+      "resolvedUidFull": "1507119813",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_9fef70c98344_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1504273440",
+      "resolvedUidFull": "1504273440",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_a0c895d5d7da_record",
+      "currentUidFull": "1500537731",
+      "predictedUidFull": "1500537731",
+      "resolvedUidFull": "1500537731",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_a869daf01d64_record",
+      "currentUidFull": "1506535264",
+      "predictedUidFull": "1501199887",
+      "resolvedUidFull": "1501199887",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_abe0eefc67e0_record",
+      "currentUidFull": "1500853872",
+      "predictedUidFull": "1503930946",
+      "resolvedUidFull": "1503930946",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_adab3734c3f3_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1501497145",
+      "resolvedUidFull": "1501497145",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_adbf6f28b846_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1506774112",
+      "resolvedUidFull": "1506774112",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b04157e7af04_record",
+      "currentUidFull": "1503247269",
+      "predictedUidFull": "1503247269",
+      "resolvedUidFull": "1503247269",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b10185f0d8b9_record",
+      "currentUidFull": "1504749477",
+      "predictedUidFull": "1506457126",
+      "resolvedUidFull": "1506457126",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b23031356222_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507151085",
+      "resolvedUidFull": "1507151085",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b41eccc4b11e_record",
+      "currentUidFull": "1500930706",
+      "predictedUidFull": "1503772190",
+      "resolvedUidFull": "1503772190",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b5f7ed8adc93_record",
+      "currentUidFull": "1505907696",
+      "predictedUidFull": "1504349546",
+      "resolvedUidFull": "1504349546",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_b5fbe68f9e42_record",
+      "currentUidFull": "1505907696",
+      "predictedUidFull": "1502548157",
+      "resolvedUidFull": "1502548157",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ba30395b9b79_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1506696829",
+      "resolvedUidFull": "1506696829",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_bddc9f61f085_record",
+      "currentUidFull": "1504717283",
+      "predictedUidFull": "1500960061",
+      "resolvedUidFull": "1500960062",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_c6a66ece46cd_record",
+      "currentUidFull": "1500853872",
+      "predictedUidFull": "1507130054",
+      "resolvedUidFull": "1507130054",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_cac2e01d920c_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1502304077",
+      "resolvedUidFull": "1502304077",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_cd6dd1ea891c_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1500491571",
+      "resolvedUidFull": "1500491571",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_cd83f836cdf4_record",
+      "currentUidFull": "1500563180",
+      "predictedUidFull": "1500563180",
+      "resolvedUidFull": "1500563180",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_d01f9a757cf8_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1501233733",
+      "resolvedUidFull": "1501233733",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_d0a634df6350_record",
+      "currentUidFull": "1503554929",
+      "predictedUidFull": "1507065720",
+      "resolvedUidFull": "1507065720",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_d1924a331c6e_record",
+      "currentUidFull": "1500853872",
+      "predictedUidFull": "1506960186",
+      "resolvedUidFull": "1506960186",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_d6061f04f0df_record",
+      "currentUidFull": "1503247269",
+      "predictedUidFull": "1501011344",
+      "resolvedUidFull": "1501011344",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_d9c5de9d0925_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1500243684",
+      "resolvedUidFull": "1500243684",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_db10175aa126_record",
+      "currentUidFull": "1506535264",
+      "predictedUidFull": "1504214601",
+      "resolvedUidFull": "1504214601",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ddc2939b1ba1_record",
+      "currentUidFull": "1500563180",
+      "predictedUidFull": "1504235600",
+      "resolvedUidFull": "1504235600",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ded4e387dc26_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1500395112",
+      "resolvedUidFull": "1500395112",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_e208a27a353a_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1501540068",
+      "resolvedUidFull": "1501540068",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_e74e773c1543_record",
+      "currentUidFull": "1500537731",
+      "predictedUidFull": "1501538958",
+      "resolvedUidFull": "1501538958",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_e91be2668fd5_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1501950958",
+      "resolvedUidFull": "1501950958",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_e99561221883_record",
+      "currentUidFull": "1500868976",
+      "predictedUidFull": "1502068768",
+      "resolvedUidFull": "1502068768",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ee9ec8535da3_record",
+      "currentUidFull": "1500491571",
+      "predictedUidFull": "1506854656",
+      "resolvedUidFull": "1506854656",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_f31e120430b0_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507123857",
+      "resolvedUidFull": "1507123857",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_f63dab129347_record",
+      "currentUidFull": "1500930706",
+      "predictedUidFull": "1505906060",
+      "resolvedUidFull": "1505906060",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_f6f477ce3a8a_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1500887753",
+      "resolvedUidFull": "1500887753",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_fdce398b1ac3_record",
+      "currentUidFull": "1501497145",
+      "predictedUidFull": "1505633430",
+      "resolvedUidFull": "1505633430",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ff5d01b684f8_record",
+      "currentUidFull": "1506535264",
+      "predictedUidFull": "1506649331",
+      "resolvedUidFull": "1506649331",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_001_ru_uid_panel_ff6dc6e5396e_record",
+      "currentUidFull": "1506601930",
+      "predictedUidFull": "1507153047",
+      "resolvedUidFull": "1507153047",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_0e378979258d_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1508111598",
+      "resolvedUidFull": "1503111596",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_13cd6a474175_record",
+      "currentUidFull": "1504907456",
+      "predictedUidFull": "1585397455",
+      "resolvedUidFull": "1506639746",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_1aae5a201d9b_record",
+      "currentUidFull": "1504717283",
+      "predictedUidFull": "1582288045",
+      "resolvedUidFull": "1500328804",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_1b6bf56a09b9_record",
+      "currentUidFull": "1504693880",
+      "predictedUidFull": "1507128484",
+      "resolvedUidFull": "1507133464",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_1fc599876287_record",
+      "currentUidFull": "1505804691",
+      "predictedUidFull": "1508888148",
+      "resolvedUidFull": "1503666146",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_34579493aac1_record",
+      "currentUidFull": "1507121495",
+      "predictedUidFull": "1505481859",
+      "resolvedUidFull": "1505461659",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_371693bdf54d_record",
+      "currentUidFull": "1506799816",
+      "predictedUidFull": "1504894142",
+      "resolvedUidFull": "1504694143",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_3fd7a257d955_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1505841219",
+      "resolvedUidFull": "1505641219",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_4ef7d055d207_record",
+      "currentUidFull": "1507121495",
+      "predictedUidFull": "1503849350",
+      "resolvedUidFull": "1503849360",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_57b40d56eb66_record",
+      "currentUidFull": "1507019484",
+      "predictedUidFull": "1505958805",
+      "resolvedUidFull": "1505953605",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_5b738c26c7ad_record",
+      "currentUidFull": "1507019484",
+      "predictedUidFull": "1504058488",
+      "resolvedUidFull": "1504058466",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_5f7a65228343_record",
+      "currentUidFull": "1505212923",
+      "predictedUidFull": "1504228858",
+      "resolvedUidFull": "1504323858",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_5f8a2dc71f20_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1582175125",
+      "resolvedUidFull": "1506317512",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_5ff36375be23_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1505975392",
+      "resolvedUidFull": "1505976392",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_6a8ab9ae0118_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1504858947",
+      "resolvedUidFull": "1504658947",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_6b396a08b63b_record",
+      "currentUidFull": "1501400540",
+      "predictedUidFull": "1501218884",
+      "resolvedUidFull": "1501318684",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_6c538746413a_record",
+      "currentUidFull": "1507149771",
+      "predictedUidFull": "1507157357",
+      "resolvedUidFull": "1507157367",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_76b03817e4a9_record",
+      "currentUidFull": "1505212923",
+      "predictedUidFull": "1591887415",
+      "resolvedUidFull": "1500166741",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_77c9de4041fb_record",
+      "currentUidFull": "1503354149",
+      "predictedUidFull": "1589084885",
+      "resolvedUidFull": "1506906438",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_86a0e2237dde_record",
+      "currentUidFull": "1504907456",
+      "predictedUidFull": "1582171025",
+      "resolvedUidFull": "1500217103",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_899f6af90237_record",
+      "currentUidFull": "1505804691",
+      "predictedUidFull": "1598248885",
+      "resolvedUidFull": "1500824686",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_8d8f866d9137_record",
+      "currentUidFull": "1500474507",
+      "predictedUidFull": "1504277172",
+      "resolvedUidFull": "1504377173",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_922451d4a4c3_record",
+      "currentUidFull": "1507121495",
+      "predictedUidFull": "1582118825",
+      "resolvedUidFull": "1500311862",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_9c7ad66e7308_record",
+      "currentUidFull": "1507149771",
+      "predictedUidFull": "",
+      "resolvedUidFull": "1506001242",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_a1cf09bfc6c1_record",
+      "currentUidFull": "1502030953",
+      "predictedUidFull": "1591942125",
+      "resolvedUidFull": "1500194212",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_a61fcb152afc_record",
+      "currentUidFull": "1506799816",
+      "predictedUidFull": "1582252875",
+      "resolvedUidFull": "1500335267",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_ac4a94129a19_record",
+      "currentUidFull": "1506799816",
+      "predictedUidFull": "",
+      "resolvedUidFull": "1500510053",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_b50ceba0bdc6_record",
+      "currentUidFull": "1507090216",
+      "predictedUidFull": "1501522073",
+      "resolvedUidFull": "1501622073",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_b6b5392d6fef_record",
+      "currentUidFull": "1504693880",
+      "predictedUidFull": "1598272195",
+      "resolvedUidFull": "1500627219",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_ba24c9581718_record",
+      "currentUidFull": "1504717283",
+      "predictedUidFull": "1582224815",
+      "resolvedUidFull": "1500332481",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_ba61450a8b0c_record",
+      "currentUidFull": "1501400540",
+      "predictedUidFull": "1504708828",
+      "resolvedUidFull": "1504708628",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_bbff7dc40ff8_record",
+      "currentUidFull": "1502030953",
+      "predictedUidFull": "1588227285",
+      "resolvedUidFull": "1506832728",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_be1d4d914f1f_record",
+      "currentUidFull": "1501400540",
+      "predictedUidFull": "1501891005",
+      "resolvedUidFull": "1501069100",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_c53a14294cc0_record",
+      "currentUidFull": "1503354149",
+      "predictedUidFull": "1588848885",
+      "resolvedUidFull": "1506884638",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_cbb803d2596b_record",
+      "currentUidFull": "1501400540",
+      "predictedUidFull": "1505537574",
+      "resolvedUidFull": "1505637674",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_ded8d27987af_record",
+      "currentUidFull": "1500198244",
+      "predictedUidFull": "1581981845",
+      "resolvedUidFull": "1506196184",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_e461b50a7a82_record",
+      "currentUidFull": "1507149771",
+      "predictedUidFull": "1507098259",
+      "resolvedUidFull": "1507096359",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_e74c09b5b782_record",
+      "currentUidFull": "1501400540",
+      "predictedUidFull": "1504854284",
+      "resolvedUidFull": "1504654264",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_e827d5edf77f_record",
+      "currentUidFull": "1504717283",
+      "predictedUidFull": "1505150854",
+      "resolvedUidFull": "1505150654",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_f50f7bcb17ff_record",
+      "currentUidFull": "1507019484",
+      "predictedUidFull": "1502882252",
+      "resolvedUidFull": "1502662352",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_f8b0da867791_record",
+      "currentUidFull": "1504693880",
+      "predictedUidFull": "1589088295",
+      "resolvedUidFull": "1506906629",
+      "resolution": "single_unique"
+    },
+    {
+      "id": "batch_en_001_uid_panel_fef4c827d68a_record",
+      "currentUidFull": "1507149771",
+      "predictedUidFull": "1582897515",
+      "resolvedUidFull": "1506369751",
+      "resolution": "single_unique"
+    }
+  ],
+  "dryRun": false
+}

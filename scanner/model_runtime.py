@@ -313,8 +313,20 @@ class ModelRegistry:
 
 def preprocess_digit(image: np.ndarray) -> np.ndarray:
     gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    resized = cv2.resize(gray, (16, 24), interpolation=cv2.INTER_AREA)
-    normalized = resized.astype(np.float32) / 255.0
+    mask = gray > 8
+    if np.any(mask):
+        ys, xs = np.where(mask)
+        gray = gray[int(np.min(ys)) : int(np.max(ys)) + 1, int(np.min(xs)) : int(np.max(xs)) + 1]
+    target_width, target_height = 16, 24
+    scale = min((target_width - 2) / max(gray.shape[1], 1), (target_height - 2) / max(gray.shape[0], 1))
+    resized_width = max(1, int(round(gray.shape[1] * scale)))
+    resized_height = max(1, int(round(gray.shape[0] * scale)))
+    resized = cv2.resize(gray, (resized_width, resized_height), interpolation=cv2.INTER_AREA)
+    canvas = np.zeros((target_height, target_width), dtype=np.uint8)
+    offset_x = (target_width - resized_width) // 2
+    offset_y = (target_height - resized_height) // 2
+    canvas[offset_y : offset_y + resized_height, offset_x : offset_x + resized_width] = resized
+    normalized = canvas.astype(np.float32) / 255.0
     return normalized
 
 
@@ -367,6 +379,42 @@ def segment_uid_digits(image: np.ndarray) -> List[np.ndarray]:
         crop = threshold[y0:y1, x0:x1]
         if crop.size:
             digits.append(crop)
+    if len(digits) == 10:
+        return digits
+
+    # Some runtime/materialized crops already isolate the full 10-digit band.
+    # In that case equal-width slicing is more reliable than component splitting.
+    height, width = threshold.shape[:2]
+    if height <= 40 and width >= 120 and (float(width) / float(max(height, 1))) >= 4.5:
+        ys, xs = np.nonzero(threshold)
+        if xs.size and ys.size:
+            x0 = int(xs.min())
+            x1 = int(xs.max()) + 1
+            y0 = int(ys.min())
+            y1 = int(ys.max()) + 1
+            band = threshold[y0:y1, x0:x1]
+            if band.size:
+                band_height, band_width = band.shape[:2]
+                slices: list[np.ndarray] = []
+                for digit_index in range(10):
+                    left = int(round(band_width * digit_index / 10.0))
+                    right = int(round(band_width * (digit_index + 1) / 10.0))
+                    right = max(right, left + 1)
+                    slice_crop = band[:, left:right]
+                    if slice_crop.size == 0:
+                        break
+                    inner_ys, inner_xs = np.nonzero(slice_crop)
+                    if inner_xs.size:
+                        sx0 = int(inner_xs.min())
+                        sx1 = int(inner_xs.max()) + 1
+                        sy0 = int(inner_ys.min())
+                        sy1 = int(inner_ys.max()) + 1
+                        slice_crop = slice_crop[sy0:sy1, sx0:sx1]
+                    if slice_crop.size == 0:
+                        break
+                    slices.append(slice_crop)
+                if len(slices) == 10:
+                    return slices
     return digits
 
 

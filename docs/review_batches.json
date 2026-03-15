@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-15T22:59:31Z",
+  "generatedAt": "2026-03-15T23:43:13Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "statusFilter": [
@@ -7,8 +7,8 @@
     "unlabeled"
   ],
   "batchSize": 150,
-  "batchCount": 4,
-  "queuedRecords": 473,
+  "batchCount": 3,
+  "queuedRecords": 338,
   "missingReviewedAgentIcons": [],
   "batches": [
     {
@@ -16,8 +16,8 @@
       "size": 150,
       "maxPriority": 82,
       "headCounts": {
-        "uid_digit": 45,
-        "agent_icon": 44,
+        "uid_digit": 44,
+        "agent_icon": 45,
         "equipment": 61
       },
       "focusAgentCounts": {
@@ -54,28 +54,19 @@
     {
       "batchId": "ocr-review-002",
       "size": 150,
-      "maxPriority": 82,
+      "maxPriority": 81,
       "headCounts": {
-        "agent_icon": 70,
-        "uid_digit": 80
+        "uid_digit": 81,
+        "agent_icon": 69
       },
       "focusAgentCounts": {}
     },
     {
       "batchId": "ocr-review-003",
-      "size": 150,
-      "maxPriority": 82,
-      "headCounts": {
-        "uid_digit": 150
-      },
-      "focusAgentCounts": {}
-    },
-    {
-      "batchId": "ocr-review-004",
-      "size": 23,
+      "size": 38,
       "maxPriority": 72,
       "headCounts": {
-        "uid_digit": 23
+        "uid_digit": 38
       },
       "focusAgentCounts": {}
     }

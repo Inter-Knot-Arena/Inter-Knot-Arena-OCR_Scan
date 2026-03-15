@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
@@ -18,7 +19,17 @@ _ASPECT_TOLERANCE = 0.2
 # Canonical layout boxes are stored as fractions so the same runtime path can
 # crop from any captured frame that maps to the supported layout family.
 _UID_PANEL_UID_BOX = (0.02, 0.095, 0.19, 0.062)
+_UID_PANEL_UID_BOXES = (
+    _UID_PANEL_UID_BOX,
+    (0.02, 0.155, 0.28, 0.10),
+    (0.02, 0.17, 0.24, 0.07),
+)
 _UID_PANEL_DIGITS_BOX = (0.355, 0.555, 0.37, 0.28)
+_UID_WIDGET_THRESHOLDS = (200, 180, 160, 140, 120, 100, 80, 60, 40)
+_UID_WIDGET_COMPONENT_MIN_HEIGHT = 10
+_UID_WIDGET_COMPONENT_MAX_WIDTH = 64
+_UID_WIDGET_COMPONENT_MIN_AREA = 8
+_UID_WIDGET_BAND_TOLERANCE = 18.0
 _ROSTER_AGENT_ICON_BOXES = (
     (0.612, 0.139, 0.272, 0.207),
     (0.612, 0.365, 0.272, 0.207),
@@ -127,14 +138,104 @@ def _fractional_crop(image: np.ndarray, box: tuple[float, float, float, float]) 
     return crop
 
 
+def _component_bands(
+    components: List[tuple[int, int, int, int, int, float]]
+) -> List[List[tuple[int, int, int, int, int, float]]]:
+    ordered = sorted(components, key=lambda item: item[5])
+    bands: List[List[tuple[int, int, int, int, int, float]]] = []
+    current: List[tuple[int, int, int, int, int, float]] = []
+    for component in ordered:
+        if not current or abs(component[5] - current[-1][5]) <= _UID_WIDGET_BAND_TOLERANCE:
+            current.append(component)
+            continue
+        bands.append(current)
+        current = [component]
+    if current:
+        bands.append(current)
+    return bands
+
+
+def _extract_uid_digit_band(widget_crop: np.ndarray) -> tuple[np.ndarray | None, float]:
+    gray = widget_crop if widget_crop.ndim == 2 else cv2.cvtColor(widget_crop, cv2.COLOR_BGR2GRAY)
+    best_band: np.ndarray | None = None
+    best_score: float | None = None
+
+    for threshold in _UID_WIDGET_THRESHOLDS:
+        mask = (gray >= threshold).astype(np.uint8)
+        component_count, _, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+        components: List[tuple[int, int, int, int, int, float]] = []
+        for component_index in range(1, component_count):
+            x, y, width, height, area = stats[component_index]
+            if area < _UID_WIDGET_COMPONENT_MIN_AREA:
+                continue
+            if height < _UID_WIDGET_COMPONENT_MIN_HEIGHT:
+                continue
+            if width > _UID_WIDGET_COMPONENT_MAX_WIDTH:
+                continue
+            components.append((int(x), int(y), int(width), int(height), int(area), float(y + height / 2.0)))
+        if len(components) < 10:
+            continue
+
+        for band in _component_bands(components):
+            band = sorted(band, key=lambda item: item[0])
+            if len(band) < 10:
+                continue
+            for start_index in range(0, len(band) - 9):
+                sequence = band[start_index : start_index + 10]
+                gaps = [sequence[idx + 1][0] - (sequence[idx][0] + sequence[idx][2]) for idx in range(9)]
+                widths = [item[2] for item in sequence]
+                heights = [item[3] for item in sequence]
+                if max(gaps) > 28 or min(gaps) < -2:
+                    continue
+                prefix_count = start_index
+                suffix_count = len(band) - (start_index + 10)
+                score = 0.0
+                score -= statistics.pstdev(gaps) * 4.0
+                score -= statistics.pstdev(widths) * 1.2
+                score -= statistics.pstdev(heights) * 1.0
+                score += sum(widths) * 0.15
+                if 3 <= prefix_count <= 5:
+                    score += 16.0
+                else:
+                    score -= abs(prefix_count - 4) * 4.0
+                if 0 <= suffix_count <= 2:
+                    score += 8.0
+                else:
+                    score -= abs(suffix_count - 1) * 3.0
+
+                x0 = max(0, min(item[0] for item in sequence) - 2)
+                y0 = max(0, min(item[1] for item in sequence) - 2)
+                x1 = min(widget_crop.shape[1], max(item[0] + item[2] for item in sequence) + 2)
+                y1 = min(widget_crop.shape[0], max(item[1] + item[3] for item in sequence) + 2)
+                band_crop = widget_crop[y0:y1, x0:x1]
+                if band_crop.size == 0:
+                    continue
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_band = band_crop.copy()
+
+    return best_band, float(best_score or 0.0)
+
+
 def crop_uid_region(image: np.ndarray, role: str) -> np.ndarray | None:
     normalized_role = _as_text(role)
     if normalized_role == UID_PANEL_ROLE:
-        widget_crop = _fractional_crop(image, _UID_PANEL_UID_BOX)
-        if widget_crop is None:
-            return None
-        digits_crop = _fractional_crop(widget_crop, _UID_PANEL_DIGITS_BOX)
-        return digits_crop if digits_crop is not None else widget_crop
+        best_crop: np.ndarray | None = None
+        best_score = float("-inf")
+        for box in _UID_PANEL_UID_BOXES:
+            widget_crop = _fractional_crop(image, box)
+            if widget_crop is None:
+                continue
+            digit_band, score = _extract_uid_digit_band(widget_crop)
+            if digit_band is not None and score > best_score:
+                best_score = score
+                best_crop = digit_band
+                continue
+            digits_crop = _fractional_crop(widget_crop, _UID_PANEL_DIGITS_BOX)
+            if digits_crop is not None and score > best_score:
+                best_score = score
+                best_crop = digits_crop
+        return best_crop
     return None
 
 
