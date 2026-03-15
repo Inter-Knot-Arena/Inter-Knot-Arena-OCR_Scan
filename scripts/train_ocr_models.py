@@ -28,6 +28,17 @@ from manifest_lib import hash_file_sha256
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 
 DEFAULT_MODEL_VERSION = "ocr-heads-v1.4"
+_CUDA_DLLS_PRELOADED = False
+
+
+def _preload_cuda_runtime_dlls() -> None:
+    global _CUDA_DLLS_PRELOADED
+    if _CUDA_DLLS_PRELOADED:
+        return
+    preload = getattr(ort, "preload_dlls", None)
+    if callable(preload):
+        preload()
+    _CUDA_DLLS_PRELOADED = True
 
 
 @dataclass(slots=True)
@@ -68,6 +79,7 @@ def _cuda_onnx_providers() -> list[str]:
 
 
 def _create_cuda_session(model_path: Path) -> ort.InferenceSession:
+    _preload_cuda_runtime_dlls()
     session = ort.InferenceSession(str(model_path), providers=_cuda_onnx_providers())
     actual = list(session.get_providers())
     if "CUDAExecutionProvider" not in actual:

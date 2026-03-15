@@ -13,6 +13,17 @@ import onnxruntime as ort
 
 MODEL_DIR = Path(__file__).resolve().parents[1] / "models"
 MODEL_MANIFEST_PATH = MODEL_DIR / "model_manifest.json"
+_CUDA_DLLS_PRELOADED = False
+
+
+def _preload_cuda_runtime_dlls() -> None:
+    global _CUDA_DLLS_PRELOADED
+    if _CUDA_DLLS_PRELOADED:
+        return
+    preload = getattr(ort, "preload_dlls", None)
+    if callable(preload):
+        preload()
+    _CUDA_DLLS_PRELOADED = True
 
 
 def _provider_priority() -> list[str]:
@@ -27,6 +38,7 @@ def _provider_priority() -> list[str]:
 
 
 def _create_cuda_session(model_path: Path) -> ort.InferenceSession:
+    _preload_cuda_runtime_dlls()
     session = ort.InferenceSession(str(model_path), providers=_provider_priority())
     actual = list(session.get_providers())
     if "CUDAExecutionProvider" not in actual:
