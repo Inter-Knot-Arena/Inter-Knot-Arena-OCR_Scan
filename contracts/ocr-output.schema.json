@@ -57,6 +57,11 @@
             },
             "additionalProperties": true
           },
+          "weaponPresent": { "type": "boolean" },
+          "discSlotOccupancy": {
+            "type": "object",
+            "additionalProperties": { "type": "boolean" }
+          },
           "discs": {
             "type": "array",
             "items": {

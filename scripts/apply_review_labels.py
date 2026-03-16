@@ -186,6 +186,15 @@ def _normalize_equipment_summary(raw: Any, fallback: Any = None) -> List[Dict[st
     return output
 
 
+def _build_disc_slot_occupancy(summary: List[Dict[str, Any]]) -> Dict[str, bool]:
+    occupied_slots = {
+        str(int(entry["slot"]))
+        for entry in summary
+        if isinstance(entry, dict) and isinstance(entry.get("slot"), int)
+    }
+    return {str(slot): str(slot) in occupied_slots for slot in range(1, 7)}
+
+
 def _review_metadata(row: Dict[str, Any], reviewer_id: str) -> Dict[str, str]:
     return {
         "reviewer": _first_text(row.get("reviewer"), reviewer_id) or reviewer_id,
@@ -297,6 +306,7 @@ def _apply_amplifier_detail(labels: Dict[str, Any], row: Dict[str, Any]) -> None
     labels["amplifier_base_stat_value"] = base_stat_value
     labels["amplifier_advanced_stat_key"] = advanced_stat_key
     labels["amplifier_advanced_stat_value"] = advanced_stat_value
+    labels["weapon_present"] = True
     if owner_agent_id:
         labels["equipment_agent_id"] = owner_agent_id
 
@@ -307,6 +317,7 @@ def _apply_amplifier_detail(labels: Dict[str, Any], row: Dict[str, Any]) -> None
         "baseStatValue": base_stat_value,
         "advancedStatKey": advanced_stat_key,
         "advancedStatValue": advanced_stat_value,
+        "weaponPresent": True,
     }
     if level is not None:
         weapon["level"] = level
@@ -378,17 +389,26 @@ def _apply_equipment_overview(labels: Dict[str, Any], row: Dict[str, Any]) -> No
     amplifier_name = _text(row.get("amplifier_name"))
     amplifier_id = _text(row.get("amplifier_id"))
     weapon: Dict[str, Any] = {}
+    weapon_present = bool(amplifier_name or amplifier_id)
     if amplifier_name or amplifier_id:
         normalized_id, normalized_name = normalize_name_and_id(amplifier_name, amplifier_id, kind="amplifier")
         labels["amplifier_id"] = normalized_id
         labels["amplifier_name"] = normalized_name
         weapon = {"weaponId": normalized_id, "displayName": normalized_name}
 
+    slot_occupancy = _build_disc_slot_occupancy(summary)
     labels["equipment_agent_id"] = owner_agent_id
     labels["equipment_disc_summary"] = summary
+    labels["weapon_present"] = weapon_present
+    labels["disc_slot_occupancy"] = slot_occupancy
     labels["label"] = owner_agent_id
 
-    overview: Dict[str, Any] = {"agentId": owner_agent_id, "discs": summary}
+    overview: Dict[str, Any] = {
+        "agentId": owner_agent_id,
+        "weaponPresent": weapon_present,
+        "discSlotOccupancy": slot_occupancy,
+        "discs": summary,
+    }
     if weapon:
         overview["weapon"] = weapon
     labels["equipmentOverview"] = overview

@@ -61,6 +61,8 @@ FIELDS = [
     "reviewed_disc_substats_json",
     "reviewed_equipment_agent_id",
     "reviewed_equipment_disc_summary_json",
+    "reviewed_weapon_present",
+    "reviewed_disc_slot_occupancy_json",
     "suggested_confidence",
 ]
 
@@ -246,6 +248,8 @@ def _row(item: Dict[str, Any], source_index: Dict[str, Dict[str, Any]], batch_id
         "reviewed_disc_substats_json": _json_value(reviewed, "disc_substats"),
         "reviewed_equipment_agent_id": _str_value(reviewed, "equipment_agent_id"),
         "reviewed_equipment_disc_summary_json": _json_value(reviewed, "equipment_disc_summary"),
+        "reviewed_weapon_present": _str_value(reviewed, "weapon_present"),
+        "reviewed_disc_slot_occupancy_json": _json_value(reviewed, "disc_slot_occupancy"),
         "suggested_confidence": f"{_confidence_value(suggested):.4f}" if suggested else "",
     }
 
