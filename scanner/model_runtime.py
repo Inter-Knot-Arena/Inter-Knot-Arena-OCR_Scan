@@ -469,6 +469,11 @@ def classify_uid_digits(digit_images: Iterable[np.ndarray]) -> Tuple[str, float]
     return uid, confidence
 
 
+def classify_uid_digit(image: np.ndarray) -> Prediction:
+    classifier = ModelRegistry.uid_classifier()
+    return classifier.predict(preprocess_digit_for_classifier(image, classifier))
+
+
 def classify_agent_icon(image: np.ndarray) -> Prediction:
     classifier = ModelRegistry.agent_classifier()
     return classifier.predict(preprocess_icon_for_classifier(image, classifier))

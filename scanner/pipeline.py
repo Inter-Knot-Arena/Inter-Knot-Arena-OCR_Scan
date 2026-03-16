@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List
 import cv2
 import numpy as np
 
+from .agent_detail_runtime import read_agent_detail
 from .model_runtime import (
     ModelRegistry,
     classify_agent_icon,
@@ -252,6 +253,86 @@ def _pixel_discs_from_captures(session_context: Dict[str, Any]) -> tuple[dict[st
     return output, reasons
 
 
+def _pixel_agent_details_from_captures(
+    session_context: Dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    reasons: list[str] = []
+    raw_captures = session_context.get("screenCaptures")
+    if not isinstance(raw_captures, list):
+        return {}, reasons
+
+    if not ModelRegistry.has_uid_model():
+        reasons.append("uid_model_missing_for_agent_detail")
+        return {}, reasons
+
+    detail_entries = [
+        entry
+        for entry in raw_captures
+        if isinstance(entry, dict) and _as_text(entry.get("role")) == "agent_detail" and _as_text(entry.get("path"))
+    ]
+    if not detail_entries:
+        return {}, reasons
+
+    by_agent: dict[str, dict[str, Any]] = {}
+    for index, entry in enumerate(detail_entries):
+        path_value = _as_text(entry.get("path"))
+        agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
+        if not path_value:
+            reasons.append(f"agent_detail_missing_path:{index}")
+            continue
+        if not agent_id:
+            reasons.append(f"agent_detail_missing_agent:{index}")
+            continue
+
+        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+        if image is None:
+            reasons.append(f"agent_detail_decode_failed:{agent_id}:{index}")
+            continue
+
+        reading = read_agent_detail(image)
+        candidate = {
+            "agentId": agent_id,
+            "level": reading.level,
+            "levelCap": reading.level_cap,
+            "levelConfidence": float(reading.level_confidence),
+            "mindscape": reading.mindscape,
+            "mindscapeCap": reading.mindscape_cap,
+            "mindscapeConfidence": float(reading.mindscape_confidence),
+            "stats": dict(reading.stats),
+            "statsConfidence": float(reading.stats_confidence),
+            "lowConfReasons": list(reading.low_conf_reasons),
+        }
+        if reading.level is None or reading.level_cap is None or reading.level_confidence < 0.80:
+            reasons.append(f"agent_detail_level_low_conf:{agent_id}")
+        if reading.mindscape is None or reading.mindscape_cap is None or reading.mindscape_confidence < 0.50:
+            reasons.append(f"agent_detail_mindscape_low_conf:{agent_id}")
+        reasons.extend(
+            f"{agent_id}:{value}"
+            for value in reading.low_conf_reasons
+            if not str(value).startswith("agent_detail_stats_")
+        )
+
+        existing = by_agent.get(agent_id)
+        if existing is None:
+            by_agent[agent_id] = candidate
+            continue
+
+        candidate_score = (
+            float(candidate["levelConfidence"])
+            + float(candidate["mindscapeConfidence"])
+            + float(candidate["statsConfidence"])
+        )
+        existing_score = (
+            float(existing["levelConfidence"])
+            + float(existing["mindscapeConfidence"])
+            + float(existing["statsConfidence"])
+        )
+        if candidate_score > existing_score:
+            by_agent[agent_id] = candidate
+
+    return by_agent, reasons
+
+
 def _merge_agents(
     parsed_agents: list[dict[str, Any]],
     icon_agents: list[dict[str, Any]],
@@ -374,6 +455,91 @@ def _enrich_agents_with_pixel_discs(
         )
         payload["weaponPresent"] = occupancy["weaponPresent"]
         payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        merged_agents.append(payload)
+        used = True
+
+    return merged_agents, used
+
+
+def _enrich_agents_with_agent_detail_pixels(
+    agents: list[dict[str, Any]],
+    pixel_agent_details: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], bool]:
+    if not pixel_agent_details:
+        return agents, False
+
+    merged_agents: list[dict[str, Any]] = []
+    seen_agents: set[str] = set()
+    used = False
+
+    for agent in agents:
+        payload = dict(agent)
+        agent_id = _as_text(payload.get("agentId"))
+        seen_agents.add(agent_id)
+        detail = pixel_agent_details.get(agent_id)
+        if not detail:
+            merged_agents.append(payload)
+            continue
+
+        confidence_by_field = dict(payload.get("confidenceByField") or {})
+        field_sources = dict(payload.get("fieldSources") or {})
+
+        if (
+            payload.get("level") is None
+            and detail.get("level") is not None
+            and detail.get("levelCap") is not None
+            and float(detail.get("levelConfidence") or 0.0) >= 0.80
+        ):
+            payload["level"] = detail.get("level")
+            payload["levelCap"] = detail.get("levelCap")
+            confidence_by_field["level"] = round(float(detail.get("levelConfidence") or 0.0), 4)
+            field_sources["level"] = "agent_detail_digit_ocr"
+            field_sources["levelCap"] = "agent_detail_digit_ocr"
+            used = True
+
+        if (
+            payload.get("mindscape") is None
+            and detail.get("mindscape") is not None
+            and detail.get("mindscapeCap") is not None
+            and float(detail.get("mindscapeConfidence") or 0.0) >= 0.50
+        ):
+            payload["mindscape"] = detail.get("mindscape")
+            payload["mindscapeCap"] = detail.get("mindscapeCap")
+            confidence_by_field["mindscape"] = round(float(detail.get("mindscapeConfidence") or 0.0), 4)
+            field_sources["mindscape"] = "agent_detail_digit_ocr"
+            field_sources["mindscapeCap"] = "agent_detail_digit_ocr"
+            used = True
+
+        payload["confidenceByField"] = confidence_by_field
+        payload["fieldSources"] = field_sources
+        merged_agents.append(payload)
+
+    for agent_id, detail in sorted(pixel_agent_details.items()):
+        if agent_id in seen_agents:
+            continue
+        payload = _default_agent_payload(agent_id, 0.96)
+        payload["fieldSources"]["agentId"] = "screen_capture_agent_id"
+        payload["confidenceByField"]["agentId"] = 0.96
+        if (
+            detail.get("level") is not None
+            and detail.get("levelCap") is not None
+            and float(detail.get("levelConfidence") or 0.0) >= 0.80
+        ):
+            payload["level"] = detail.get("level")
+            payload["levelCap"] = detail.get("levelCap")
+            payload["confidenceByField"]["level"] = round(float(detail.get("levelConfidence") or 0.0), 4)
+            payload["fieldSources"]["level"] = "agent_detail_digit_ocr"
+            payload["fieldSources"]["levelCap"] = "agent_detail_digit_ocr"
+        if (
+            detail.get("mindscape") is not None
+            and detail.get("mindscapeCap") is not None
+            and float(detail.get("mindscapeConfidence") or 0.0) >= 0.50
+        ):
+            payload["mindscape"] = detail.get("mindscape")
+            payload["mindscapeCap"] = detail.get("mindscapeCap")
+            payload["confidenceByField"]["mindscape"] = round(float(detail.get("mindscapeConfidence") or 0.0), 4)
+            payload["fieldSources"]["mindscape"] = "agent_detail_digit_ocr"
+            payload["fieldSources"]["mindscapeCap"] = "agent_detail_digit_ocr"
         merged_agents.append(payload)
         used = True
 
@@ -601,6 +767,8 @@ def scan_roster(
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
+    pixel_agent_details, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(session_context)
+    low_conf_reasons.extend(pixel_agent_detail_reasons)
     pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(session_context)
     low_conf_reasons.extend(pixel_disc_reasons)
 
@@ -614,6 +782,7 @@ def scan_roster(
         low_conf_reasons.append("agent_count_mismatch_between_icon_and_payload")
 
     agents = _merge_agents(parsed_agents, icon_agents)
+    agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(agents, pixel_agent_details)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
     if not agents:
         low_conf_reasons.append("agents_missing")
@@ -670,6 +839,7 @@ def scan_roster(
         "uidFromPixels": uid_source == "onnx_uid_digits",
         "agentIdsFromPixels": bool(icon_agents),
         "equipmentFromPixels": bool(used_pixel_discs),
+        "agentDetailsFromPixels": bool(used_pixel_agent_details),
         "fullRosterCoverage": False,
         "rawRosterCaptureAvailable": has_roster_capture,
     }
