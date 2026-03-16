@@ -9,6 +9,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scanner import ScanFailure, run_scan, scan_roster
 
 
+def _parse_screen_capture(value: str) -> dict[str, object]:
+    parts = [segment.strip() for segment in str(value or "").split("|")]
+    if len(parts) < 2 or not parts[0] or not parts[1]:
+        raise argparse.ArgumentTypeError(
+            "--screen-capture expects 'role|path|agentId|slotIndex|screenAlias'"
+        )
+    payload: dict[str, object] = {
+        "role": parts[0],
+        "path": parts[1],
+    }
+    if len(parts) >= 3 and parts[2]:
+        payload["agentId"] = parts[2]
+    if len(parts) >= 4 and parts[3]:
+        try:
+            payload["slotIndex"] = int(parts[3])
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError("screen-capture slotIndex must be an integer") from exc
+    if len(parts) >= 5 and parts[4]:
+        payload["screenAlias"] = parts[4]
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run OCR roster scan pipeline")
     parser.add_argument("--seed", default="default")
@@ -27,9 +49,17 @@ def main() -> int:
         default=[],
         help="Path to agent icon crop (repeatable)",
     )
+    parser.add_argument(
+        "--screen-capture",
+        action="append",
+        default=[],
+        type=_parse_screen_capture,
+        help="Additional runtime capture in format role|path|agentId|slotIndex|screenAlias",
+    )
     args = parser.parse_args()
 
     if args.input_lock:
+        screen_captures = list(args.screen_capture or [])
         context = {
             "sessionId": args.seed,
             "inputLockActive": True,
@@ -42,6 +72,7 @@ def main() -> int:
             "uidCandidates": ["uid=123456789"],
             "uidImagePath": args.uid_image or None,
             "agentIconPaths": [{"path": path} for path in args.agent_icon],
+            "screenCaptures": screen_captures,
             "agents": [
                 {
                     "agentId": "agent_anby",
@@ -66,6 +97,15 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=True, indent=2))
             return 0
         except ScanFailure as exc:
+            partial_result = getattr(exc, "partial_result", None)
+            if str(exc.code) == "LOW_CONFIDENCE" and isinstance(partial_result, dict):
+                recovered = dict(partial_result)
+                recovered["status"] = "degraded"
+                recovered["code"] = str(exc.code)
+                recovered["message"] = exc.message
+                recovered["lowConfReasons"] = list(exc.low_conf_reasons)
+                print(json.dumps(recovered, ensure_ascii=True, indent=2))
+                return 0
             print(
                 json.dumps(
                     {

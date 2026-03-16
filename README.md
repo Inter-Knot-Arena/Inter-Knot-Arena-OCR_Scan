@@ -25,7 +25,7 @@ See `contracts/ocr-output.schema.json`.
     - `LOW_CONFIDENCE`
     - `INPUT_LOCK_NOT_ACTIVE`
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
-- `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`) with CUDA-only runtime validation.
+- `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`, `disk_detail`) with CUDA-only runtime validation.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 
 ## Quick run
@@ -39,6 +39,12 @@ Strict mode with explicit lock + anchors:
 
 ```powershell
 python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1440p
+```
+
+Strict mode with richer runtime captures:
+
+```powershell
+python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|agent_ellen||detail_ellen" --screen-capture "disk_detail|D:\shots\disk_1.png|agent_ellen|1|disk1"
 ```
 
 Train synthetic baseline models:
