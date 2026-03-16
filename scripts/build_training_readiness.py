@@ -171,7 +171,7 @@ def _markdown_report(report: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Current Train Heads")
     lines.append("")
-    for key in ("uid_digit", "agent_icon"):
+    for key in ("uid_digit", "agent_icon", "disk_detail"):
         item = report["trainHeads"][key]
         status = "READY" if item["readyForCurrentTrainPath"] else "BLOCKED"
         lines.append(f"### {item['name']} ({status})")
@@ -190,6 +190,8 @@ def _markdown_report(report: Dict[str, Any]) -> str:
             )
             if item["missingReviewedAgents"]:
                 lines.append(f"- Missing reviewed agents: `{', '.join(item['missingReviewedAgents'])}`")
+        if key == "disk_detail":
+            lines.append(f"- Reviewed disc-set labels: `{item['distinctLabelCount']}`")
         if item["blockers"]:
             lines.append(f"- Blockers: `{'; '.join(item['blockers'])}`")
         lines.append("")
@@ -218,6 +220,7 @@ def main() -> int:
     parser.add_argument("--import-eligible-only", action="store_true", default=True)
     parser.add_argument("--uid-min-samples", type=int, default=2000)
     parser.add_argument("--agent-icon-min-samples", type=int, default=2000)
+    parser.add_argument("--disk-detail-min-samples", type=int, default=2000)
     args = parser.parse_args()
 
     manifest = ensure_manifest_defaults(load_manifest(Path(args.manifest).resolve()))
@@ -247,6 +250,8 @@ def main() -> int:
 
     agent_icon_labels: List[str] = []
     agent_icon_split_counts: Counter[str] = Counter()
+    disk_detail_labels: List[str] = []
+    disk_detail_head_splits: Counter[str] = Counter()
 
     agent_detail_level_total = 0
     agent_detail_level_splits: Counter[str] = Counter()
@@ -299,6 +304,12 @@ def main() -> int:
         if head == "agent_icon" and agent_icon:
             agent_icon_labels.append(agent_icon)
             _increment_split(agent_icon_split_counts, split_name)
+
+        if role == DISK_DETAIL_ROLE:
+            disc_set_id = str(labels.get("disc_set_id") or labels.get("label") or "").strip()
+            if disc_set_id:
+                disk_detail_labels.append(disc_set_id)
+                _increment_split(disk_detail_head_splits, split_name)
 
         if role == AGENT_DETAIL_ROLE:
             if _has_level_pair(labels, "agent_level", "agent_level_cap"):
@@ -368,6 +379,15 @@ def main() -> int:
         agent_icon_head["blockers"].append("missing_current_roster_agent_coverage")
         agent_icon_head["readyForCurrentTrainPath"] = False
 
+    disk_detail_head = _head_readiness(
+        name="disk_detail",
+        sample_labels=disk_detail_labels,
+        split_counts=disk_detail_head_splits,
+        min_samples=args.disk_detail_min_samples,
+        min_distinct_labels=2,
+        extra_blockers=[],
+    )
+
     report = {
         "generatedAt": utc_now(),
         "workflow": str(args.workflow),
@@ -382,6 +402,7 @@ def main() -> int:
         "trainHeads": {
             "uid_digit": uid_digit_head,
             "agent_icon": agent_icon_head,
+            "disk_detail": disk_detail_head,
         },
         "fieldTargets": {
             "uid_panel_full_uid": _field_target_summary(

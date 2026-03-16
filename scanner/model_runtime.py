@@ -281,6 +281,7 @@ class ModelRegistry:
     _lock = threading.Lock()
     _uid_classifier: OnnxClassifier | None = None
     _agent_classifier: OnnxClassifier | None = None
+    _disk_classifier: OnnxClassifier | None = None
 
     @classmethod
     def has_uid_model(cls) -> bool:
@@ -289,6 +290,10 @@ class ModelRegistry:
     @classmethod
     def has_agent_model(cls) -> bool:
         return (MODEL_DIR / "agent_icon.onnx").exists() and (MODEL_DIR / "agent_icon.labels.json").exists()
+
+    @classmethod
+    def has_disk_model(cls) -> bool:
+        return (MODEL_DIR / "disk_detail.onnx").exists() and (MODEL_DIR / "disk_detail.labels.json").exists()
 
     @classmethod
     def uid_classifier(cls) -> OnnxClassifier:
@@ -309,6 +314,16 @@ class ModelRegistry:
                     labels_path=MODEL_DIR / "agent_icon.labels.json",
                 )
             return cls._agent_classifier
+
+    @classmethod
+    def disk_classifier(cls) -> OnnxClassifier:
+        with cls._lock:
+            if cls._disk_classifier is None:
+                cls._disk_classifier = OnnxClassifier(
+                    model_path=MODEL_DIR / "disk_detail.onnx",
+                    labels_path=MODEL_DIR / "disk_detail.labels.json",
+                )
+            return cls._disk_classifier
 
 
 def preprocess_digit(image: np.ndarray) -> np.ndarray:
@@ -456,4 +471,9 @@ def classify_uid_digits(digit_images: Iterable[np.ndarray]) -> Tuple[str, float]
 
 def classify_agent_icon(image: np.ndarray) -> Prediction:
     classifier = ModelRegistry.agent_classifier()
+    return classifier.predict(preprocess_icon_for_classifier(image, classifier))
+
+
+def classify_disk_detail(image: np.ndarray) -> Prediction:
+    classifier = ModelRegistry.disk_classifier()
     return classifier.predict(preprocess_icon_for_classifier(image, classifier))

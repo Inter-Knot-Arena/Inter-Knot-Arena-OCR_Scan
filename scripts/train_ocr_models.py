@@ -25,9 +25,10 @@ from skl2onnx.common.data_types import FloatTensorType
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from manifest_lib import hash_file_sha256
+from ocr_dataset_policy import DISK_DETAIL_ROLE, record_screen_role, source_index_from_manifest
 from roster_taxonomy import canonicalize_agent_label, current_agent_ids
 
-DEFAULT_MODEL_VERSION = "ocr-heads-v1.4"
+DEFAULT_MODEL_VERSION = "ocr-heads-v1.5"
 _CUDA_DLLS_PRELOADED = False
 
 
@@ -163,6 +164,11 @@ def _extract_label(payload: Dict[str, Any], head: str) -> str:
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
                 return canonicalize_agent_label(value.strip())
+    if head == "disk_detail":
+        for key in ("disc_set_id", "label"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
     for key in ("label", "agentId"):
         value = payload.get(key)
         if isinstance(value, str) and value.strip():
@@ -202,6 +208,7 @@ def _load_dataset(manifest_path: Path, head: str, label_source: str, split_sourc
     if not isinstance(records, list):
         raise ValueError("manifest.records must be an array")
     split_index = _build_manifest_split_index(manifest) if split_source == "manifest" else {}
+    source_index = source_index_from_manifest(manifest.get("sources", []))
 
     features: List[np.ndarray] = []
     labels: List[str] = []
@@ -216,7 +223,10 @@ def _load_dataset(manifest_path: Path, head: str, label_source: str, split_sourc
             skipped += 1
             continue
         record_head = _extract_head(record, payload)
-        if record_head and record_head != head:
+        if head == "disk_detail":
+            if record_screen_role(record, source_index) != DISK_DETAIL_ROLE:
+                continue
+        elif record_head and record_head != head:
             continue
         label = _extract_label(payload, head=head)
         if not label:
@@ -714,7 +724,7 @@ def _train_torch_classifier(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Train OCR UID and agent-icon heads from manifest data on CUDA only.")
+    parser = argparse.ArgumentParser(description="Train OCR heads from manifest data on CUDA only.")
     parser.add_argument("--manifest", default="dataset_manifest.json")
     parser.add_argument("--output-dir", default="models")
     parser.add_argument("--metrics-file", default="docs/model_metrics.json")
@@ -748,16 +758,25 @@ def main() -> int:
         label_source=args.label_source,
         split_source=args.split_source,
     )
+    disk_dataset = _load_dataset(
+        manifest_path=manifest_path,
+        head="disk_detail",
+        label_source=args.label_source,
+        split_source=args.split_source,
+    )
 
     _resolve_backend(args.backend, args.torch_device)
     uid_real = uid_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(uid_dataset.label_names) >= 2
     icon_real = icon_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(icon_dataset.label_names) >= 2
+    disk_real = disk_dataset.x.shape[0] >= max(20, args.min_real_samples) and len(disk_dataset.label_names) >= 2
 
     missing_real_heads: List[str] = []
     if not uid_real:
         missing_real_heads.append("uid_digit")
     if not icon_real:
         missing_real_heads.append("agent_icon")
+    if not disk_real:
+        missing_real_heads.append("disk_detail")
     if missing_real_heads:
         raise RuntimeError(
             "CUDA-only OCR training requires reviewed real datasets for every head. "
@@ -797,6 +816,22 @@ def main() -> int:
     icon_mode = "real"
     icon_trained_labels = list(icon_dataset.label_names)
 
+    disk_metrics = _train_torch_classifier(
+        x=disk_dataset.x,
+        y=disk_dataset.y,
+        labels=disk_dataset.label_names,
+        output_model_path=output_dir / "disk_detail.onnx",
+        output_labels_path=output_dir / "disk_detail.labels.json",
+        head="disk_detail",
+        sample_splits=disk_dataset.sample_splits,
+        split_source=disk_dataset.split_mode,
+        requested_device=args.torch_device,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.learning_rate,
+    )
+    disk_mode = "real"
+
     data_version = args.data_version
     if not data_version:
         with manifest_path.open("r", encoding="utf-8") as fh:
@@ -806,6 +841,7 @@ def main() -> int:
     artifacts = {
         "uid_digit.onnx": hash_file_sha256(output_dir / "uid_digit.onnx") if (output_dir / "uid_digit.onnx").exists() else "",
         "agent_icon.onnx": hash_file_sha256(output_dir / "agent_icon.onnx") if (output_dir / "agent_icon.onnx").exists() else "",
+        "disk_detail.onnx": hash_file_sha256(output_dir / "disk_detail.onnx") if (output_dir / "disk_detail.onnx").exists() else "",
     }
     model_manifest = {
         "version": args.model_version,
@@ -815,6 +851,7 @@ def main() -> int:
         "backends": {
             "uidDigit": str(uid_metrics.get("trainingBackend") or "unknown"),
             "agentIcon": str(icon_metrics.get("trainingBackend") or "unknown"),
+            "diskDetail": str(disk_metrics.get("trainingBackend") or "unknown"),
         },
     }
     with (output_dir / "model_manifest.json").open("w", encoding="utf-8") as fh:
@@ -842,6 +879,16 @@ def main() -> int:
             "rosterAgentCount": len(current_agent_ids()),
             "trainedAgentCount": sum(1 for label in icon_trained_labels if label in set(current_agent_ids())),
             "missingRosterAgents": [agent for agent in current_agent_ids() if agent not in set(icon_trained_labels)],
+        },
+        "disk_detail_model": {
+            **disk_metrics,
+            "dataVersion": data_version,
+            "trainedAt": model_manifest["trainedAt"],
+            "recordCount": int(disk_dataset.x.shape[0]),
+            "skippedRecords": disk_dataset.skipped_records,
+            "mode": disk_mode,
+            "labelSource": args.label_source,
+            "trainedDiscSetCount": len(disk_dataset.label_names),
         },
     }
     with metrics_path.open("w", encoding="utf-8") as fh:

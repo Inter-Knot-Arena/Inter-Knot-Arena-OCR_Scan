@@ -1,13 +1,15 @@
 {
-  "version": "ocr-heads-v1.4",
-  "trainedAt": "2026-03-15T23:41:47Z",
+  "version": "ocr-heads-v1.5",
+  "trainedAt": "2026-03-16T04:35:07Z",
   "dataVersion": "1.1.0",
   "artifacts": {
     "uid_digit.onnx": "e9e2fd0ef01529230c3bbec498031b232b6d88400fa57879014017fd9904e6c3",
-    "agent_icon.onnx": "335f624d8c004cba6241eb79cb37ad42dae098b7648ce3e1d328914802ea6dc2"
+    "agent_icon.onnx": "1360b92903da37c297fb39e5db2368e2106e97d5ab8bd7ac2e20c58b00c9514b",
+    "disk_detail.onnx": "baafd1b1a7fe616751ac81f3d23af42020fe6f66444bda106c45eae23f21a70f"
   },
   "backends": {
     "uidDigit": "torch_cnn",
-    "agentIcon": "torch_cnn"
+    "agentIcon": "torch_cnn",
+    "diskDetail": "torch_cnn"
   }
 }

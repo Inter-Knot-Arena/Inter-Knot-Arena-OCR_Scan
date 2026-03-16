@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-15T23:43:10Z",
+  "generatedAt": "2026-03-16T04:31:00Z",
   "workflow": "account_import",
   "importEligibleOnly": true,
   "summary": {
@@ -60,6 +60,19 @@
       "rosterAgentCount": 49,
       "reviewedCurrentAgentCount": 49,
       "missingReviewedAgents": []
+    },
+    "disk_detail": {
+      "name": "disk_detail",
+      "sampleCount": 2497,
+      "distinctLabelCount": 24,
+      "splitCounts": {
+        "train": 1978,
+        "val": 255,
+        "test": 264,
+        "unsplit": 0
+      },
+      "readyForCurrentTrainPath": true,
+      "blockers": []
     }
   },
   "fieldTargets": {

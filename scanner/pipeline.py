@@ -10,7 +10,14 @@ from typing import Any, Dict, Iterable, List
 import cv2
 import numpy as np
 
-from .model_runtime import ModelRegistry, classify_agent_icon, classify_uid_digits, get_model_metadata, segment_uid_digits
+from .model_runtime import (
+    ModelRegistry,
+    classify_agent_icon,
+    classify_disk_detail,
+    classify_uid_digits,
+    get_model_metadata,
+    segment_uid_digits,
+)
 from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures, normalize_runtime_resolution
 
 SUPPORTED_LOCALES = {"RU", "EN"}
@@ -48,6 +55,22 @@ def _normalize_region(region_hint: str | None) -> str:
 
 def _digits_only(value: str) -> str:
     return "".join(ch for ch in value if ch.isdigit())
+
+
+def _as_text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _as_slot_index(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float) and float(value).is_integer():
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
@@ -170,6 +193,65 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
     return agents, reasons
 
 
+def _pixel_discs_from_captures(session_context: Dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
+    reasons: list[str] = []
+    raw_captures = session_context.get("screenCaptures")
+    if not isinstance(raw_captures, list):
+        return {}, reasons
+
+    disk_entries = [
+        entry
+        for entry in raw_captures
+        if isinstance(entry, dict) and _as_text(entry.get("role")) == "disk_detail" and _as_text(entry.get("path"))
+    ]
+    if not disk_entries:
+        return {}, reasons
+
+    if not ModelRegistry.has_disk_model():
+        reasons.append("disk_model_missing")
+        return {}, reasons
+
+    by_agent_slot: dict[str, dict[int, dict[str, Any]]] = {}
+    for index, entry in enumerate(disk_entries):
+        path_value = _as_text(entry.get("path"))
+        agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
+        slot_index = _as_slot_index(entry.get("slotIndex"))
+        if not path_value:
+            reasons.append(f"disk_detail_missing_path:{index}")
+            continue
+        if not agent_id:
+            reasons.append(f"disk_detail_missing_agent:{index}")
+            continue
+        if slot_index is None or slot_index < 1 or slot_index > 6:
+            reasons.append(f"disk_detail_missing_slot:{agent_id}:{index}")
+            continue
+
+        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+        if image is None:
+            reasons.append(f"disk_detail_decode_failed:{agent_id}:{slot_index}")
+            continue
+
+        prediction = classify_disk_detail(image)
+        if prediction.confidence < 0.72:
+            reasons.append(f"disk_detail_low_conf:{agent_id}:{slot_index}:{prediction.label}")
+
+        agent_slots = by_agent_slot.setdefault(agent_id, {})
+        candidate = {
+            "slot": slot_index,
+            "setId": prediction.label,
+            "agentId": agent_id,
+            "_confidence": float(prediction.confidence),
+        }
+        existing = agent_slots.get(slot_index)
+        if existing is None or float(candidate["_confidence"]) > float(existing["_confidence"]):
+            agent_slots[slot_index] = candidate
+
+    output: dict[str, list[dict[str, Any]]] = {}
+    for agent_id, slot_map in by_agent_slot.items():
+        output[agent_id] = [slot_map[slot] for slot in sorted(slot_map)]
+    return output, reasons
+
+
 def _merge_agents(
     parsed_agents: list[dict[str, Any]],
     icon_agents: list[dict[str, Any]],
@@ -209,6 +291,93 @@ def _merge_agents(
         merged.append(merged_payload)
 
     return merged
+
+
+def _enrich_agents_with_pixel_discs(
+    agents: list[dict[str, Any]],
+    pixel_discs_by_agent: dict[str, list[dict[str, Any]]],
+) -> tuple[list[dict[str, Any]], bool]:
+    if not pixel_discs_by_agent:
+        return agents, False
+
+    merged_agents: list[dict[str, Any]] = []
+    seen_agents: set[str] = set()
+    used = False
+
+    for agent in agents:
+        agent_id = _as_text(agent.get("agentId"))
+        seen_agents.add(agent_id)
+        pixel_discs = list(pixel_discs_by_agent.get(agent_id) or [])
+        if not pixel_discs:
+            merged_agents.append(agent)
+            continue
+
+        payload = dict(agent)
+        existing_discs_raw = payload.get("discs")
+        existing_discs = list(existing_discs_raw) if isinstance(existing_discs_raw, list) else []
+        existing_slots = {
+            _as_slot_index(disc.get("slot")) for disc in existing_discs if isinstance(disc, dict)
+        }
+        appended = [
+            {key: value for key, value in disc.items() if not str(key).startswith("_")}
+            for disc in pixel_discs
+            if _as_slot_index(disc.get("slot")) not in existing_slots
+        ]
+        if not appended:
+            merged_agents.append(agent)
+            continue
+
+        payload["discs"] = sorted(existing_discs + appended, key=lambda disc: _as_slot_index(disc.get("slot")) or 0)
+        confidence_by_field = dict(payload.get("confidenceByField") or {})
+        field_sources = dict(payload.get("fieldSources") or {})
+        avg_confidence = sum(float(disc.get("_confidence", 0.0)) for disc in pixel_discs) / max(len(pixel_discs), 1)
+        previous_disc_source = _as_text(field_sources.get("discs"))
+        confidence_by_field["discs"] = round(max(float(confidence_by_field.get("discs", 0.0)), avg_confidence), 4)
+        confidence_by_field["occupancy"] = round(max(float(confidence_by_field.get("occupancy", 0.0)), avg_confidence), 4)
+        if previous_disc_source in {"", "missing"}:
+            field_sources["discs"] = "onnx_disk_detail"
+            field_sources["discSlotOccupancy"] = "derived_from_onnx_disk_detail"
+        else:
+            field_sources["discs"] = "merged_session_payload_and_onnx_disk_detail"
+            field_sources["discSlotOccupancy"] = "merged_session_payload_and_onnx_disk_detail"
+        occupancy = derive_equipment_occupancy(
+            weapon=payload.get("weapon") if isinstance(payload.get("weapon"), dict) else None,
+            discs=payload.get("discs") if isinstance(payload.get("discs"), list) else None,
+            explicit_weapon_present=payload.get("weaponPresent"),
+            explicit_slot_occupancy=payload.get("discSlotOccupancy"),
+        )
+        payload["weaponPresent"] = occupancy["weaponPresent"]
+        payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        payload["confidenceByField"] = confidence_by_field
+        payload["fieldSources"] = field_sources
+        merged_agents.append(payload)
+        used = True
+
+    for agent_id, pixel_discs in sorted(pixel_discs_by_agent.items()):
+        if agent_id in seen_agents:
+            continue
+        avg_confidence = sum(float(disc.get("_confidence", 0.0)) for disc in pixel_discs) / max(len(pixel_discs), 1)
+        payload = _default_agent_payload(agent_id, avg_confidence)
+        payload["discs"] = [
+            {key: value for key, value in disc.items() if not str(key).startswith("_")}
+            for disc in pixel_discs
+        ]
+        payload["confidenceByField"]["discs"] = round(avg_confidence, 4)
+        payload["confidenceByField"]["occupancy"] = round(avg_confidence, 4)
+        payload["fieldSources"]["discs"] = "onnx_disk_detail"
+        payload["fieldSources"]["discSlotOccupancy"] = "derived_from_onnx_disk_detail"
+        occupancy = derive_equipment_occupancy(
+            weapon=payload.get("weapon") if isinstance(payload.get("weapon"), dict) else None,
+            discs=payload.get("discs") if isinstance(payload.get("discs"), list) else None,
+            explicit_weapon_present=payload.get("weaponPresent"),
+            explicit_slot_occupancy=payload.get("discSlotOccupancy"),
+        )
+        payload["weaponPresent"] = occupancy["weaponPresent"]
+        payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        merged_agents.append(payload)
+        used = True
+
+    return merged_agents, used
 
 
 def _extract_agents(
@@ -332,10 +501,16 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
     has_payload_equipment = False
     has_payload_occupancy = False
     has_derived_occupancy = False
+    has_onnx_disk_detail = False
+    has_merged_disk_detail = False
     for agent in agents:
         field_sources = agent.get("fieldSources")
         if not isinstance(field_sources, dict):
             continue
+        if field_sources.get("discs") == "onnx_disk_detail":
+            has_onnx_disk_detail = True
+        if field_sources.get("discs") == "merged_session_payload_and_onnx_disk_detail":
+            has_merged_disk_detail = True
         if field_sources.get("weapon") == "session_payload" or field_sources.get("discs") == "session_payload":
             has_payload_equipment = True
         if (
@@ -349,6 +524,10 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
         ):
             has_derived_occupancy = True
 
+    if has_merged_disk_detail:
+        return "merged_session_payload_and_onnx_disk_detail"
+    if has_onnx_disk_detail:
+        return "onnx_disk_detail"
     if has_payload_equipment:
         return "session_payload"
     if has_payload_occupancy:
@@ -422,6 +601,8 @@ def scan_roster(
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
+    pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(session_context)
+    low_conf_reasons.extend(pixel_disc_reasons)
 
     raw_agents = session_context.get("agents")
     if not isinstance(raw_agents, list):
@@ -433,6 +614,7 @@ def scan_roster(
         low_conf_reasons.append("agent_count_mismatch_between_icon_and_payload")
 
     agents = _merge_agents(parsed_agents, icon_agents)
+    agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
     if not agents:
         low_conf_reasons.append("agents_missing")
 
@@ -460,7 +642,11 @@ def scan_roster(
         isinstance(capture, dict) and str(capture.get("role", "")).strip() == "roster"
         for capture in screen_captures
     )
-    has_direct_crops = bool(session_context.get("uidImagePath")) or bool(session_context.get("agentIconPaths"))
+    has_direct_crops = (
+        bool(session_context.get("uidImagePath"))
+        or bool(session_context.get("agentIconPaths"))
+        or bool(pixel_discs_by_agent)
+    )
     field_sources = {
         "uid": uid_source,
         "region": (
@@ -483,7 +669,7 @@ def scan_roster(
     capabilities = {
         "uidFromPixels": uid_source == "onnx_uid_digits",
         "agentIdsFromPixels": bool(icon_agents),
-        "equipmentFromPixels": False,
+        "equipmentFromPixels": bool(used_pixel_discs),
         "fullRosterCoverage": False,
         "rawRosterCaptureAvailable": has_roster_capture,
     }

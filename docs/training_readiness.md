@@ -1,6 +1,6 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-15T23:43:10Z`
+- Generated at: `2026-03-16T04:31:00Z`
 - Workflow: `account_import`
 - Scoped records: `8804`
 - Reviewed truth records: `8466`
@@ -21,6 +21,13 @@
 - Distinct labels: `49`
 - Splits: `train=2024` `val=235` `test=221` `unsplit=0`
 - Reviewed current agents: `49/49`
+
+### disk_detail (READY)
+
+- Samples: `2497`
+- Distinct labels: `24`
+- Splits: `train=1978` `val=255` `test=264` `unsplit=0`
+- Reviewed disc-set labels: `24`
 
 ## OCR Field Targets
 
