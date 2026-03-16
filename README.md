@@ -44,7 +44,7 @@ python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --ancho
 Strict mode with richer runtime captures:
 
 ```powershell
-python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|agent_ellen||detail_ellen" --screen-capture "disk_detail|D:\shots\disk_1.png|agent_ellen|1|disk1"
+python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|||1|detail_slot_1" --screen-capture "disk_detail|D:\shots\disk_1.png||1|1|disk1_slot1"
 ```
 
 Train synthetic baseline models:

@@ -74,6 +74,25 @@ def _as_slot_index(value: Any) -> int | None:
     return None
 
 
+def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[int, str]:
+    mapping: dict[int, str] = {}
+    for index, agent in enumerate(agents, start=1):
+        agent_id = _as_text(agent.get("agentId"))
+        if agent_id:
+            mapping[index] = agent_id
+    return mapping
+
+
+def _resolve_capture_agent_id(entry: dict[str, Any], agent_ids_by_slot: dict[int, str]) -> str:
+    direct_agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
+    if direct_agent_id:
+        return direct_agent_id
+    agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+    if agent_slot_index is None:
+        return ""
+    return _as_text(agent_ids_by_slot.get(agent_slot_index))
+
+
 def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
     reasons: list[str] = []
     uid_path_raw = session_context.get("uidImagePath")
@@ -194,7 +213,10 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
     return agents, reasons
 
 
-def _pixel_discs_from_captures(session_context: Dict[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
+def _pixel_discs_from_captures(
+    session_context: Dict[str, Any],
+    agent_ids_by_slot: dict[int, str],
+) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
     if not isinstance(raw_captures, list):
@@ -215,13 +237,18 @@ def _pixel_discs_from_captures(session_context: Dict[str, Any]) -> tuple[dict[st
     by_agent_slot: dict[str, dict[int, dict[str, Any]]] = {}
     for index, entry in enumerate(disk_entries):
         path_value = _as_text(entry.get("path"))
-        agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
+        agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
         slot_index = _as_slot_index(entry.get("slotIndex"))
         if not path_value:
             reasons.append(f"disk_detail_missing_path:{index}")
             continue
         if not agent_id:
-            reasons.append(f"disk_detail_missing_agent:{index}")
+            agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+            reasons.append(
+                f"disk_detail_missing_agent:{index}"
+                if agent_slot_index is None
+                else f"disk_detail_missing_agent_for_slot:{agent_slot_index}:{index}"
+            )
             continue
         if slot_index is None or slot_index < 1 or slot_index > 6:
             reasons.append(f"disk_detail_missing_slot:{agent_id}:{index}")
@@ -255,6 +282,7 @@ def _pixel_discs_from_captures(session_context: Dict[str, Any]) -> tuple[dict[st
 
 def _pixel_agent_details_from_captures(
     session_context: Dict[str, Any],
+    agent_ids_by_slot: dict[int, str],
 ) -> tuple[dict[str, dict[str, Any]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
@@ -276,12 +304,17 @@ def _pixel_agent_details_from_captures(
     by_agent: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(detail_entries):
         path_value = _as_text(entry.get("path"))
-        agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
+        agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
         if not path_value:
             reasons.append(f"agent_detail_missing_path:{index}")
             continue
         if not agent_id:
-            reasons.append(f"agent_detail_missing_agent:{index}")
+            agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+            reasons.append(
+                f"agent_detail_missing_agent:{index}"
+                if agent_slot_index is None
+                else f"agent_detail_missing_agent_for_slot:{agent_slot_index}:{index}"
+            )
             continue
 
         image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
@@ -767,10 +800,6 @@ def scan_roster(
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
-    pixel_agent_details, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(session_context)
-    low_conf_reasons.extend(pixel_agent_detail_reasons)
-    pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(session_context)
-    low_conf_reasons.extend(pixel_disc_reasons)
 
     raw_agents = session_context.get("agents")
     if not isinstance(raw_agents, list):
@@ -782,6 +811,17 @@ def scan_roster(
         low_conf_reasons.append("agent_count_mismatch_between_icon_and_payload")
 
     agents = _merge_agents(parsed_agents, icon_agents)
+    agent_ids_by_slot = _agent_ids_by_slot(agents)
+    pixel_agent_details, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(
+        session_context,
+        agent_ids_by_slot,
+    )
+    low_conf_reasons.extend(pixel_agent_detail_reasons)
+    pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(
+        session_context,
+        agent_ids_by_slot,
+    )
+    low_conf_reasons.extend(pixel_disc_reasons)
     agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(agents, pixel_agent_details)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
     if not agents:
@@ -814,6 +854,7 @@ def scan_roster(
     has_direct_crops = (
         bool(session_context.get("uidImagePath"))
         or bool(session_context.get("agentIconPaths"))
+        or bool(pixel_agent_details)
         or bool(pixel_discs_by_agent)
     )
     field_sources = {
