@@ -13,7 +13,7 @@ def _parse_screen_capture(value: str) -> dict[str, object]:
     parts = [segment.strip() for segment in str(value or "").split("|")]
     if len(parts) < 2 or not parts[0] or not parts[1]:
         raise argparse.ArgumentTypeError(
-            "--screen-capture expects 'role|path|agentId|slotIndex|agentSlotIndex|screenAlias'"
+            "--screen-capture expects 'role|path|agentId|slotIndex|agentSlotIndex|screenAlias|pageIndex'"
         )
     payload: dict[str, object] = {
         "role": parts[0],
@@ -33,6 +33,11 @@ def _parse_screen_capture(value: str) -> dict[str, object]:
             raise argparse.ArgumentTypeError("screen-capture agentSlotIndex must be an integer") from exc
     if len(parts) >= 6 and parts[5]:
         payload["screenAlias"] = parts[5]
+    if len(parts) >= 7 and parts[6]:
+        try:
+            payload["pageIndex"] = int(parts[6])
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError("screen-capture pageIndex must be an integer") from exc
     return payload
 
 
@@ -59,7 +64,7 @@ def main() -> int:
         action="append",
         default=[],
         type=_parse_screen_capture,
-        help="Additional runtime capture in format role|path|agentId|slotIndex|agentSlotIndex|screenAlias",
+        help="Additional runtime capture in format role|path|agentId|slotIndex|agentSlotIndex|screenAlias|pageIndex",
     )
     args = parser.parse_args()
 

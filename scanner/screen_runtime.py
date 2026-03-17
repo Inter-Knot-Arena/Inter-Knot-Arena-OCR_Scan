@@ -55,6 +55,7 @@ class RuntimeCapture:
     agent_id: str
     slot_index: int | None = None
     agent_slot_index: int | None = None
+    page_index: int | None = None
 
 
 def _parse_resolution_height(value: str) -> int | None:
@@ -292,6 +293,8 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
             slot_index = int(slot_index_raw) if isinstance(slot_index_raw, int) else None
             agent_slot_index_raw = entry.get("agentSlotIndex")
             agent_slot_index = int(agent_slot_index_raw) if isinstance(agent_slot_index_raw, int) else None
+            page_index_raw = entry.get("pageIndex")
+            page_index = int(page_index_raw) if isinstance(page_index_raw, int) else None
             captures.append(
                 RuntimeCapture(
                     role=role,
@@ -300,6 +303,7 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
                     agent_id=_as_text(entry.get("agentId") or entry.get("focusAgentId")),
                     slot_index=slot_index,
                     agent_slot_index=agent_slot_index,
+                    page_index=page_index,
                 )
             )
 
@@ -408,6 +412,7 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
             "agentId": capture.agent_id,
             "slotIndex": capture.slot_index,
             "agentSlotIndex": capture.agent_slot_index,
+            "pageIndex": capture.page_index,
         }
         for capture in captures
     ]
