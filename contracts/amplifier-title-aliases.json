@@ -1,0 +1,803 @@
+{
+  "generatedFromManifest": "D:\\Inter-Knot Arena\\Inter-Knot Arena OCR_Scan\\dataset_manifest.json",
+  "reviewedAmplifierCount": 451,
+  "aliasCount": 131,
+  "conflictCount": 1,
+  "entries": [
+    {
+      "alias": "Тысяча затмений",
+      "normalizedAlias": "тысяча затмений",
+      "amplifierId": "amp_a_thousand_eclipses",
+      "displayName": "A Thousand Eclipses"
+    },
+    {
+      "alias": "Angel in the Shell",
+      "normalizedAlias": "angel in the shell",
+      "amplifierId": "amp_angel_in_the_shell",
+      "displayName": "Angel in the Shell"
+    },
+    {
+      "alias": "Артиллерийский ротор",
+      "normalizedAlias": "артиллерийский ротор",
+      "amplifierId": "amp_artillery_rotor",
+      "displayName": "Artillery Rotor"
+    },
+    {
+      "alias": "Bashful Demon",
+      "normalizedAlias": "bashful demon",
+      "amplifierId": "amp_bashful_demon",
+      "displayName": "Bashful Demon"
+    },
+    {
+      "alias": "Застенчивый монстр",
+      "normalizedAlias": "застенчивый монстр",
+      "amplifierId": "amp_bashful_demon",
+      "displayName": "Bashful Demon"
+    },
+    {
+      "alias": "Bellicose Blaze",
+      "normalizedAlias": "bellicose blaze",
+      "amplifierId": "amp_bellicose_blaze",
+      "displayName": "Bellicose Blaze"
+    },
+    {
+      "alias": "Пламя брани",
+      "normalizedAlias": "пламя брани",
+      "amplifierId": "amp_bellicose_blaze",
+      "displayName": "Bellicose Blaze"
+    },
+    {
+      "alias": "Big Cylinder",
+      "normalizedAlias": "big cylinder",
+      "amplifierId": "amp_big_cylinder",
+      "displayName": "Big Cylinder"
+    },
+    {
+      "alias": "Большой цилиндр",
+      "normalizedAlias": "большой цилиндр",
+      "amplifierId": "amp_big_cylinder",
+      "displayName": "Big Cylinder"
+    },
+    {
+      "alias": "Пламенный венец",
+      "normalizedAlias": "пламенный венец",
+      "amplifierId": "amp_blazing_laurel",
+      "displayName": "Blazing Laurel"
+    },
+    {
+      "alias": "Box Cutter",
+      "normalizedAlias": "box cutter",
+      "amplifierId": "amp_box_cutter",
+      "displayName": "Box Cutter"
+    },
+    {
+      "alias": "Бумагорезка",
+      "normalizedAlias": "бумагорезка",
+      "amplifierId": "amp_box_cutter",
+      "displayName": "Box Cutter"
+    },
+    {
+      "alias": "Bunny Band",
+      "normalizedAlias": "bunny band",
+      "amplifierId": "amp_bunny_band",
+      "displayName": "Bunny Band"
+    },
+    {
+      "alias": "Заячья корзинка",
+      "normalizedAlias": "заячья корзинка",
+      "amplifierId": "amp_bunny_band",
+      "displayName": "Bunny Band"
+    },
+    {
+      "alias": "Cauldron of Clarity",
+      "normalizedAlias": "cauldron of clarity",
+      "amplifierId": "amp_cauldron_of_clarity_o",
+      "displayName": "Cauldron of Clarity O"
+    },
+    {
+      "alias": "Cloudcleave Radiance",
+      "normalizedAlias": "cloudcleave radiance",
+      "amplifierId": "amp_cloudcleave_radiance",
+      "displayName": "Cloudcleave Radiance"
+    },
+    {
+      "alias": "Проблеск в облаках",
+      "normalizedAlias": "проблеск в облаках",
+      "amplifierId": "amp_cloudcleave_radiance",
+      "displayName": "Cloudcleave Radiance"
+    },
+    {
+      "alias": "Рукотворное сердце",
+      "normalizedAlias": "рукотворное сердце",
+      "amplifierId": "amp_cordis_germina",
+      "displayName": "Cordis Germina"
+    },
+    {
+      "alias": "гость из глубин",
+      "normalizedAlias": "гость из глубин",
+      "amplifierId": "amp_deep_sea_visitor",
+      "displayName": "Гость из глубин"
+    },
+    {
+      "alias": "Deep Sea Visitor",
+      "normalizedAlias": "deep sea visitor",
+      "amplifierId": "amp_deep_sea_visitor_o",
+      "displayName": "Deep Sea Visitor O"
+    },
+    {
+      "alias": "Demara Battery Mark II",
+      "normalizedAlias": "demara battery mark ii",
+      "amplifierId": "amp_demara_battery_mark_ii",
+      "displayName": "Demara Battery Mark II"
+    },
+    {
+      "alias": "Очаг грёз",
+      "normalizedAlias": "очаг грёз",
+      "amplifierId": "amp_dreamlit_hearth",
+      "displayName": "Dreamlit Hearth"
+    },
+    {
+      "alias": "Drill Rig - Red Axis",
+      "normalizedAlias": "drill rig - red axis",
+      "amplifierId": "amp_drill_rig_red_axis",
+      "displayName": "Drill Rig - Red Axis"
+    },
+    {
+      "alias": "Бур — красная ось",
+      "normalizedAlias": "бур - красная ось",
+      "amplifierId": "amp_drill_rig_red_axis",
+      "displayName": "Drill Rig Red Axis"
+    },
+    {
+      "alias": "Electro-Lip Gloss",
+      "normalizedAlias": "electro-lip gloss",
+      "amplifierId": "amp_electro_lip_gloss",
+      "displayName": "Electro-Lip Gloss"
+    },
+    {
+      "alias": "Elegant Vanity",
+      "normalizedAlias": "elegant vanity",
+      "amplifierId": "amp_elegant_vanity",
+      "displayName": "Elegant Vanity"
+    },
+    {
+      "alias": "Стильная штучка",
+      "normalizedAlias": "стильная штучка",
+      "amplifierId": "amp_elegant_vanity",
+      "displayName": "Elegant Vanity"
+    },
+    {
+      "alias": "Flamemaker Shaker",
+      "normalizedAlias": "flamemaker shaker",
+      "amplifierId": "amp_flamemaker_shaker",
+      "displayName": "Flamemaker Shaker"
+    },
+    {
+      "alias": "Шейкер-огнемейкер",
+      "normalizedAlias": "шейкер-огнемейкер",
+      "amplifierId": "amp_flamemaker_shaker",
+      "displayName": "Flamemaker Shaker"
+    },
+    {
+      "alias": "Flight of Fancy",
+      "normalizedAlias": "flight of fancy",
+      "amplifierId": "amp_flight_of_fancy",
+      "displayName": "Flight of Fancy"
+    },
+    {
+      "alias": "Полёт среди грёз",
+      "normalizedAlias": "полёт среди грёз",
+      "amplifierId": "amp_flight_of_fancy",
+      "displayName": "Flight Of Fancy"
+    },
+    {
+      "alias": "Fusion Compiler",
+      "normalizedAlias": "fusion compiler",
+      "amplifierId": "amp_fusion_compiler",
+      "displayName": "Fusion Compiler"
+    },
+    {
+      "alias": "Встроенный компилятор",
+      "normalizedAlias": "встроенный компилятор",
+      "amplifierId": "amp_fusion_compiler",
+      "displayName": "Fusion Compiler"
+    },
+    {
+      "alias": "Gilded Blossom",
+      "normalizedAlias": "gilded blossom",
+      "amplifierId": "amp_gilded_blossom",
+      "displayName": "Gilded Blossom"
+    },
+    {
+      "alias": "Златоцвет",
+      "normalizedAlias": "златоцвет",
+      "amplifierId": "amp_gilded_blossom",
+      "displayName": "Gilded Blossom"
+    },
+    {
+      "alias": "Жарево заката",
+      "normalizedAlias": "жарево заката",
+      "amplifierId": "amp_grill_o_wisp",
+      "displayName": "Grill O Wisp"
+    },
+    {
+      "alias": "Grill OVWisp",
+      "normalizedAlias": "grill ovwisp",
+      "amplifierId": "amp_grill_o_wisp_o",
+      "displayName": "Grill O'Wisp o"
+    },
+    {
+      "alias": "HaiIstorm Shrine О Lv.m/60 Вазе АТК",
+      "normalizedAlias": "haiistorm shrine о lv.m 60 вазе атк",
+      "amplifierId": "amp_haiistorm_shrine",
+      "displayName": "Haiistorm Shrine"
+    },
+    {
+      "alias": "Hailstorm Shrine",
+      "normalizedAlias": "hailstorm shrine",
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine"
+    },
+    {
+      "alias": "Храм вьюги",
+      "normalizedAlias": "храм вьюги",
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine"
+    },
+    {
+      "alias": "Half-Sugar Bunny",
+      "normalizedAlias": "half-sugar bunny",
+      "amplifierId": "amp_half_sugar_bunny_o",
+      "displayName": "Half-Sugar Bunny O"
+    },
+    {
+      "alias": "Heartstring Nocturne",
+      "normalizedAlias": "heartstring nocturne",
+      "amplifierId": "amp_heartstring_nocturne",
+      "displayName": "Heartstring Nocturne"
+    },
+    {
+      "alias": "Струны ночи",
+      "normalizedAlias": "струны ночи",
+      "amplifierId": "amp_heartstring_nocturne",
+      "displayName": "Heartstring Nocturne"
+    },
+    {
+      "alias": "Hellfire Gears",
+      "normalizedAlias": "hellfire gears",
+      "amplifierId": "amp_hellfire_gears",
+      "displayName": "Hellfire Gears"
+    },
+    {
+      "alias": "Шестерни адского пламени",
+      "normalizedAlias": "шестерни адского пламени",
+      "amplifierId": "amp_hellfire_gears",
+      "displayName": "Hellfire Gears"
+    },
+    {
+      "alias": "Housekeeper",
+      "normalizedAlias": "housekeeper",
+      "amplifierId": "amp_housekeeper",
+      "displayName": "Housekeeper"
+    },
+    {
+      "alias": "Домработница",
+      "normalizedAlias": "домработница",
+      "amplifierId": "amp_housekeeper",
+      "displayName": "Housekeeper"
+    },
+    {
+      "alias": "Ревербератор I",
+      "normalizedAlias": "ревербератор i",
+      "amplifierId": "amp_i",
+      "displayName": "Ревербератор I о"
+    },
+    {
+      "alias": "Ice-Jade Teapot",
+      "normalizedAlias": "ice-jade teapot",
+      "amplifierId": "amp_ice_jade_teapot",
+      "displayName": "Ice-Jade Teapot"
+    },
+    {
+      "alias": "Чайник нефритовой чистоты",
+      "normalizedAlias": "чайник нефритовой чистоты",
+      "amplifierId": "amp_ice_jade_teapot",
+      "displayName": "Ice Jade Teapot"
+    },
+    {
+      "alias": "t Identity]",
+      "normalizedAlias": "t identity]",
+      "amplifierId": "amp_identity_base",
+      "displayName": "Identity Base"
+    },
+    {
+      "alias": "Identity I Inflection",
+      "normalizedAlias": "identity i inflection",
+      "amplifierId": "amp_identity_inflection",
+      "displayName": "Identity Inflection"
+    },
+    {
+      "alias": "Аккумулятор демары II",
+      "normalizedAlias": "аккумулятор демары ii",
+      "amplifierId": "amp_ii",
+      "displayName": "Ii"
+    },
+    {
+      "alias": "МЕИ«! Аккумулятор демары II",
+      "normalizedAlias": "меи«! аккумулятор демары ii",
+      "amplifierId": "amp_ii",
+      "displayName": "Ii"
+    },
+    {
+      "alias": "Kaboom the Cannon",
+      "normalizedAlias": "kaboom the cannon",
+      "amplifierId": "amp_kaboom_the_cannon",
+      "displayName": "Kaboom the Cannon"
+    },
+    {
+      "alias": "Бум-пушка",
+      "normalizedAlias": "бум-пушка",
+      "amplifierId": "amp_kaboom_the_cannon",
+      "displayName": "Kaboom The Cannon"
+    },
+    {
+      "alias": "Колыбель кракена",
+      "normalizedAlias": "колыбель кракена",
+      "amplifierId": "amp_kraken_s_cradle",
+      "displayName": "Kraken S Cradle"
+    },
+    {
+      "alias": "[Lunarl Pleniluna",
+      "normalizedAlias": "lunarl pleniluna",
+      "amplifierId": "amp_lunar_pleniluna",
+      "displayName": "Lunar Pleniluna"
+    },
+    {
+      "alias": "Магнитная буря: Альфа",
+      "normalizedAlias": "магнитная буря: альфа",
+      "amplifierId": "amp_magnetic_storm_alpha",
+      "displayName": "Magnetic Storm Alpha"
+    },
+    {
+      "alias": "Magnetic Storm I Bravo",
+      "normalizedAlias": "magnetic storm i bravo",
+      "amplifierId": "amp_magnetic_storm_i_bravo",
+      "displayName": "Magnetic Storm I Bravo"
+    },
+    {
+      "alias": "Marcato Desire",
+      "normalizedAlias": "marcato desire",
+      "amplifierId": "amp_marcato_desire",
+      "displayName": "Marcato Desire"
+    },
+    {
+      "alias": "Маркато-реверб",
+      "normalizedAlias": "маркато-реверб",
+      "amplifierId": "amp_marcato_desire",
+      "displayName": "Marcato Desire"
+    },
+    {
+      "alias": "Metanukimorphosis",
+      "normalizedAlias": "metanukimorphosis",
+      "amplifierId": "amp_metanukimorphosis",
+      "displayName": "Metanukimorphosis"
+    },
+    {
+      "alias": "Семь уловок тануки",
+      "normalizedAlias": "семь уловок тануки",
+      "amplifierId": "amp_metanukimorphosis",
+      "displayName": "Metanukimorphosis"
+    },
+    {
+      "alias": "Original Transmorpher",
+      "normalizedAlias": "original transmorpher",
+      "amplifierId": "amp_original_transmorpher",
+      "displayName": "Original Transmorpher"
+    },
+    {
+      "alias": "Оригинальный трансформатор",
+      "normalizedAlias": "оригинальный трансформатор",
+      "amplifierId": "amp_original_transmorpher",
+      "displayName": "Original Transmorpher"
+    },
+    {
+      "alias": "peacekeeper - Specialized",
+      "normalizedAlias": "peacekeeper - specialized",
+      "amplifierId": "amp_peacekeeper_specialized",
+      "displayName": "peacekeeper - Specialized"
+    },
+    {
+      "alias": "Миротворец — специализированный",
+      "normalizedAlias": "миротворец - специализированный",
+      "amplifierId": "amp_peacekeeper_specialized",
+      "displayName": "Peacekeeper Specialized"
+    },
+    {
+      "alias": "Practiced Perfection",
+      "normalizedAlias": "practiced perfection",
+      "amplifierId": "amp_practiced_perfection",
+      "displayName": "Practiced Perfection"
+    },
+    {
+      "alias": "Всесторонняя отточенность",
+      "normalizedAlias": "всесторонняя отточенность",
+      "amplifierId": "amp_practiced_perfection",
+      "displayName": "Practiced Perfection"
+    },
+    {
+      "alias": "Precious Fossilized Core",
+      "normalizedAlias": "precious fossilized core",
+      "amplifierId": "amp_precious_fossilized_core",
+      "displayName": "Precious Fossilized Core"
+    },
+    {
+      "alias": "драгоценная окаменелость",
+      "normalizedAlias": "драгоценная окаменелость",
+      "amplifierId": "amp_precious_fossilized_core",
+      "displayName": "Precious Fossilized Core"
+    },
+    {
+      "alias": "Puzzle Sphere",
+      "normalizedAlias": "puzzle sphere",
+      "amplifierId": "amp_puzzle_sphere",
+      "displayName": "Puzzle Sphere"
+    },
+    {
+      "alias": "Шар-головоломка",
+      "normalizedAlias": "шар-головоломка",
+      "amplifierId": "amp_puzzle_sphere",
+      "displayName": "Puzzle Sphere"
+    },
+    {
+      "alias": "Qingming Birdcage",
+      "normalizedAlias": "qingming birdcage",
+      "amplifierId": "amp_qingming_birdcage",
+      "displayName": "Qingming Birdcage"
+    },
+    {
+      "alias": "Клетка Небесной птицы",
+      "normalizedAlias": "клетка небесной птицы",
+      "amplifierId": "amp_qingming_birdcage",
+      "displayName": "Qingming Birdcage"
+    },
+    {
+      "alias": "Rainforest Gourmet",
+      "normalizedAlias": "rainforest gourmet",
+      "amplifierId": "amp_rainforest_gourmet",
+      "displayName": "Rainforest Gourmet"
+    },
+    {
+      "alias": "Тропический гурман",
+      "normalizedAlias": "тропический гурман",
+      "amplifierId": "amp_rainforest_gourmet",
+      "displayName": "Rainforest Gourmet"
+    },
+    {
+      "alias": "t Reverb] Mark I",
+      "normalizedAlias": "t reverb] mark i",
+      "amplifierId": "amp_reverb_mark_i",
+      "displayName": "Reverb] Mark I"
+    },
+    {
+      "alias": "Riot Suppressor Mark VI",
+      "normalizedAlias": "riot suppressor mark vi",
+      "amplifierId": "amp_riot_suppressor_mark_vi",
+      "displayName": "Riot Suppressor Mark VI"
+    },
+    {
+      "alias": "Усмиритель беспорядков VI",
+      "normalizedAlias": "усмиритель беспорядков vi",
+      "amplifierId": "amp_riot_suppressor_mark_vi",
+      "displayName": "Riot Suppressor Mark Vi"
+    },
+    {
+      "alias": "Roaring Fur-nace",
+      "normalizedAlias": "roaring fur-nace",
+      "amplifierId": "amp_roaring_fur_nace",
+      "displayName": "Roaring Fur-nace"
+    },
+    {
+      "alias": "Вместилище фурчаний",
+      "normalizedAlias": "вместилище фурчаний",
+      "amplifierId": "amp_roaring_fur_nace",
+      "displayName": "Roaring Fur Nace"
+    },
+    {
+      "alias": "Roaring Ride",
+      "normalizedAlias": "roaring ride",
+      "amplifierId": "amp_roaring_ride",
+      "displayName": "Roaring Ride"
+    },
+    {
+      "alias": "Ревущая тачка",
+      "normalizedAlias": "ревущая тачка",
+      "amplifierId": "amp_roaring_ride",
+      "displayName": "Roaring Ride"
+    },
+    {
+      "alias": "Severed Innocence",
+      "normalizedAlias": "severed innocence",
+      "amplifierId": "amp_severed_innocence",
+      "displayName": "Severed Innocence"
+    },
+    {
+      "alias": "Чистота утраты",
+      "normalizedAlias": "чистота утраты",
+      "amplifierId": "amp_severed_innocence",
+      "displayName": "Severed Innocence"
+    },
+    {
+      "alias": "Sharpened Stinger",
+      "normalizedAlias": "sharpened stinger",
+      "amplifierId": "amp_sharpened_stinger",
+      "displayName": "Sharpened Stinger"
+    },
+    {
+      "alias": "Заострённые шипы",
+      "normalizedAlias": "заострённые шипы",
+      "amplifierId": "amp_sharpened_stinger",
+      "displayName": "Sharpened Stinger"
+    },
+    {
+      "alias": "Six Shooter",
+      "normalizedAlias": "six shooter",
+      "amplifierId": "amp_six_shooter_o",
+      "displayName": "Six Shooter o"
+    },
+    {
+      "alias": "Slice of Time",
+      "normalizedAlias": "slice of time",
+      "amplifierId": "amp_slice_of_time",
+      "displayName": "Slice of Time"
+    },
+    {
+      "alias": "Кадр на память",
+      "normalizedAlias": "кадр на память",
+      "amplifierId": "amp_slice_of_time",
+      "displayName": "Slice Of Time"
+    },
+    {
+      "alias": "Кадр на память Ур.2ОПО",
+      "normalizedAlias": "кадр на память ур.2опо",
+      "amplifierId": "amp_slice_of_time",
+      "displayName": "Slice Of Time"
+    },
+    {
+      "alias": "душа в доспехах",
+      "normalizedAlias": "душа в доспехах",
+      "amplifierId": "amp_soul_in_steel",
+      "displayName": "Soul In Steel"
+    },
+    {
+      "alias": "Spectral Gaze",
+      "normalizedAlias": "spectral gaze",
+      "amplifierId": "amp_spectral_gaze",
+      "displayName": "Spectral Gaze"
+    },
+    {
+      "alias": "Призрачный взор",
+      "normalizedAlias": "призрачный взор",
+      "amplifierId": "amp_spectral_gaze",
+      "displayName": "Spectral Gaze"
+    },
+    {
+      "alias": "Starlight Engine",
+      "normalizedAlias": "starlight engine",
+      "amplifierId": "amp_starlight_engine",
+      "displayName": "Starlight Engine"
+    },
+    {
+      "alias": "Звёздный двигатель",
+      "normalizedAlias": "звёздный двигатель",
+      "amplifierId": "amp_starlight_engine",
+      "displayName": "Starlight Engine"
+    },
+    {
+      "alias": "Starlight Engine Replica",
+      "normalizedAlias": "starlight engine replica",
+      "amplifierId": "amp_starlight_engine_replica",
+      "displayName": "Starlight Engine Replica"
+    },
+    {
+      "alias": "Реплика Звёздного двигателя",
+      "normalizedAlias": "реплика звёздного двигателя",
+      "amplifierId": "amp_starlight_engine_replica",
+      "displayName": "Starlight Engine Replica"
+    },
+    {
+      "alias": "Steam Oven",
+      "normalizedAlias": "steam oven",
+      "amplifierId": "amp_steam_oven",
+      "displayName": "Steam Oven"
+    },
+    {
+      "alias": "Пароварка",
+      "normalizedAlias": "пароварка",
+      "amplifierId": "amp_steam_oven",
+      "displayName": "Steam Oven"
+    },
+    {
+      "alias": "Steel Cushion",
+      "normalizedAlias": "steel cushion",
+      "amplifierId": "amp_steel_cushion_o",
+      "displayName": "Steel Cushion O"
+    },
+    {
+      "alias": "Street Superstar",
+      "normalizedAlias": "street superstar",
+      "amplifierId": "amp_street_superstar_o",
+      "displayName": "Street Superstar o"
+    },
+    {
+      "alias": "сера",
+      "normalizedAlias": "сера",
+      "amplifierId": "amp_sulfur",
+      "displayName": "Sulfur"
+    },
+    {
+      "alias": "сера О Ур.4ОДО",
+      "normalizedAlias": "сера о ур.4одо",
+      "amplifierId": "amp_sulfur",
+      "displayName": "Sulfur"
+    },
+    {
+      "alias": "The Brimstone",
+      "normalizedAlias": "the brimstone",
+      "amplifierId": "amp_the_brimstone",
+      "displayName": "The Brimstone"
+    },
+    {
+      "alias": "The Restrained",
+      "normalizedAlias": "the restrained",
+      "amplifierId": "amp_the_restrained",
+      "displayName": "The Restrained"
+    },
+    {
+      "alias": "Сдержанность",
+      "normalizedAlias": "сдержанность",
+      "amplifierId": "amp_the_restrained",
+      "displayName": "The Restrained"
+    },
+    {
+      "alias": "The Vault",
+      "normalizedAlias": "the vault",
+      "amplifierId": "amp_the_vault",
+      "displayName": "The Vault"
+    },
+    {
+      "alias": "Сундук сокровищ",
+      "normalizedAlias": "сундук сокровищ",
+      "amplifierId": "amp_the_vault",
+      "displayName": "The Vault"
+    },
+    {
+      "alias": "Thoughtbop",
+      "normalizedAlias": "thoughtbop",
+      "amplifierId": "amp_thoughtbop",
+      "displayName": "Thoughtbop"
+    },
+    {
+      "alias": "мысли в бит",
+      "normalizedAlias": "мысли в бит",
+      "amplifierId": "amp_thoughtbop",
+      "displayName": "Thoughtbop"
+    },
+    {
+      "alias": "Tremor Trigram VesseI О Lv.60/60",
+      "normalizedAlias": "tremor trigram vessei о 60",
+      "amplifierId": "amp_tremor_trigram_vessel",
+      "displayName": "Tremor Trigram Vessel"
+    },
+    {
+      "alias": "Tremor Trigram VesseI О Lv.60/60 Ваве",
+      "normalizedAlias": "tremor trigram vessei о 60 ваве",
+      "amplifierId": "amp_tremor_trigram_vessel",
+      "displayName": "Tremor Trigram Vessel"
+    },
+    {
+      "alias": "Tremor Trigram Vessel",
+      "normalizedAlias": "tremor trigram vessel",
+      "amplifierId": "amp_tremor_trigram_vessel",
+      "displayName": "Tremor Trigram Vessel"
+    },
+    {
+      "alias": "Треножник поднебесья",
+      "normalizedAlias": "треножник поднебесья",
+      "amplifierId": "amp_tremor_trigram_vessel",
+      "displayName": "Tremor Trigram Vessel"
+    },
+    {
+      "alias": "t Vortexl Revolver",
+      "normalizedAlias": "t vortexl revolver",
+      "amplifierId": "amp_vortex_revolver",
+      "displayName": "[Vortex] Revolver"
+    },
+    {
+      "alias": "Турбулентность: Револьвер",
+      "normalizedAlias": "турбулентность: револьвер",
+      "amplifierId": "amp_vortex_revolver",
+      "displayName": "[Vortex] Revolver"
+    },
+    {
+      "alias": "Weeping Cradle",
+      "normalizedAlias": "weeping cradle",
+      "amplifierId": "amp_weeping_cradle",
+      "displayName": "Weeping Cradle"
+    },
+    {
+      "alias": "Колыбель плача",
+      "normalizedAlias": "колыбель плача",
+      "amplifierId": "amp_weeping_cradle",
+      "displayName": "Weeping Cradle"
+    },
+    {
+      "alias": "Колыбель плача О Ур.4О14О",
+      "normalizedAlias": "колыбель плача о ур.4о14о",
+      "amplifierId": "amp_weeping_cradle",
+      "displayName": "Weeping Cradle"
+    },
+    {
+      "alias": "Weeping Gemini",
+      "normalizedAlias": "weeping gemini",
+      "amplifierId": "amp_weeping_gemini",
+      "displayName": "Weeping Gemini"
+    },
+    {
+      "alias": "Плачущие близнецы",
+      "normalizedAlias": "плачущие близнецы",
+      "amplifierId": "amp_weeping_gemini",
+      "displayName": "Weeping Gemini"
+    },
+    {
+      "alias": "Плачущие близнецы О Yp.40140",
+      "normalizedAlias": "плачущие близнецы о yp.40140",
+      "amplifierId": "amp_weeping_gemini",
+      "displayName": "Weeping Gemini"
+    },
+    {
+      "alias": "Wrathful Vajra",
+      "normalizedAlias": "wrathful vajra",
+      "amplifierId": "amp_wrathful_vajra",
+      "displayName": "Wrathful Vajra"
+    },
+    {
+      "alias": "Грозный страж",
+      "normalizedAlias": "грозный страж",
+      "amplifierId": "amp_wrathful_vajra",
+      "displayName": "Wrathful Vajra"
+    },
+    {
+      "alias": "Клыки ярости",
+      "normalizedAlias": "клыки ярости",
+      "amplifierId": "amp_wrathful_vajra",
+      "displayName": "Wrathful Vajra"
+    },
+    {
+      "alias": "Yesterday Calls",
+      "normalizedAlias": "yesterday calls",
+      "amplifierId": "amp_yesterday_calls",
+      "displayName": "Yesterday Calls"
+    },
+    {
+      "alias": "звонок из прошлого",
+      "normalizedAlias": "звонок из прошлого",
+      "amplifierId": "amp_yesterday_calls",
+      "displayName": "Yesterday Calls"
+    },
+    {
+      "alias": "Аптечка дзансин",
+      "normalizedAlias": "аптечка дзансин",
+      "amplifierId": "amp_zanshin_herb_case",
+      "displayName": "Zanshin Herb Case"
+    }
+  ],
+  "conflicts": [
+    {
+      "normalizedAlias": "бум-пушка",
+      "existingAmplifierId": "amp_kaboom_the_cannon",
+      "newAmplifierId": "amp_mew",
+      "existingAlias": "Бум-пушка",
+      "newAlias": "Бум-пушка"
+    }
+  ]
+}

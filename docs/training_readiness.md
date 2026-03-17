@@ -1,6 +1,6 @@
 # OCR Training Readiness
 
-- Generated at: `2026-03-16T18:19:31Z`
+- Generated at: `2026-03-17T04:02:54Z`
 - Workflow: `account_import`
 - Scoped records: `8804`
 - Reviewed truth records: `8466`
@@ -70,8 +70,8 @@
 ### equipment_overview
 
 - Reviewed records: `1443`
-- Complete records: `480`
-- Splits: `train=397` `val=38` `test=45` `unsplit=0`
+- Complete records: `481`
+- Splits: `train=397` `val=38` `test=46` `unsplit=0`
 
 ### roster_owned_agents
 
