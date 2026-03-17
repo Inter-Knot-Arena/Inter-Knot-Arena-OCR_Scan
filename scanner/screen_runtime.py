@@ -9,7 +9,14 @@ from typing import Any, Dict, Iterable, List, Mapping
 import cv2
 import numpy as np
 
-from ocr_dataset_policy import AGENT_DETAIL_ROLE, EQUIPMENT_ROLE, ROSTER_ROLE, UID_PANEL_ROLE
+from ocr_dataset_policy import (
+    AGENT_DETAIL_ROLE,
+    AMPLIFIER_DETAIL_ROLE,
+    DISK_DETAIL_ROLE,
+    EQUIPMENT_ROLE,
+    ROSTER_ROLE,
+    UID_PANEL_ROLE,
+)
 
 
 _CANONICAL_RESOLUTIONS = ("1080p", "1440p")
@@ -24,6 +31,11 @@ _UID_PANEL_UID_BOXES = (
     (0.02, 0.155, 0.28, 0.10),
     (0.02, 0.17, 0.24, 0.07),
 )
+_AGENT_DETAIL_UID_BOXES = (
+    (0.848, 0.929, 0.148, 0.069),
+    (0.842, 0.924, 0.158, 0.075),
+    (0.859, 0.938, 0.137, 0.058),
+)
 _UID_PANEL_DIGITS_BOX = (0.355, 0.555, 0.37, 0.28)
 _UID_WIDGET_THRESHOLDS = (200, 180, 160, 140, 120, 100, 80, 60, 40)
 _UID_WIDGET_COMPONENT_MIN_HEIGHT = 10
@@ -31,9 +43,9 @@ _UID_WIDGET_COMPONENT_MAX_WIDTH = 64
 _UID_WIDGET_COMPONENT_MIN_AREA = 8
 _UID_WIDGET_BAND_TOLERANCE = 18.0
 _ROSTER_AGENT_ICON_BOXES = (
-    (0.612, 0.139, 0.272, 0.207),
-    (0.612, 0.365, 0.272, 0.207),
-    (0.612, 0.591, 0.272, 0.207),
+    (0.527, 0.014, 0.160, 0.194),
+    (0.566, 0.222, 0.133, 0.208),
+    (0.605, 0.479, 0.141, 0.278),
 )
 _AGENT_IDENTITY_BOXES = {
     AGENT_DETAIL_ROLE: (
@@ -262,6 +274,21 @@ def crop_uid_region(image: np.ndarray, role: str) -> np.ndarray | None:
                 best_score = score
                 best_crop = digits_crop
         return best_crop
+    if normalized_role in {AGENT_DETAIL_ROLE, EQUIPMENT_ROLE}:
+        best_crop: np.ndarray | None = None
+        best_score = float("-inf")
+        for box in _AGENT_DETAIL_UID_BOXES:
+            widget_crop = _fractional_crop(image, box)
+            if widget_crop is None:
+                continue
+            digit_band, score = _extract_uid_digit_band(widget_crop)
+            if score > best_score:
+                best_score = score
+                best_crop = widget_crop.copy()
+            if digit_band is not None and score > best_score:
+                best_score = score
+                best_crop = widget_crop.copy()
+        return best_crop
     return None
 
 
@@ -339,7 +366,7 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
 
 
 def _derive_uid_from_capture(capture: RuntimeCapture, root: Path) -> str | None:
-    if capture.role != UID_PANEL_ROLE:
+    if capture.role not in {UID_PANEL_ROLE, AGENT_DETAIL_ROLE, EQUIPMENT_ROLE}:
         return None
     image = _load_image(capture.path)
     if image is None:
@@ -396,12 +423,21 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
 
     anchors_raw = normalized.get("anchors")
     anchors = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
+    capture_roles = {capture.role for capture in captures}
+    has_richer_agent_captures = bool(
+        capture_roles.intersection({AGENT_DETAIL_ROLE, EQUIPMENT_ROLE, AMPLIFIER_DETAIL_ROLE, DISK_DETAIL_ROLE})
+    )
     if _as_text(normalized.get("uidImagePath")):
+        anchors["profile"] = True
+    elif has_richer_agent_captures:
         anchors["profile"] = True
     icon_payload = normalized.get("agentIconPaths")
     if isinstance(icon_payload, list) and len(icon_payload) >= 2:
         anchors["agents"] = True
-        anchors.setdefault("equipment", True)
+        anchors["equipment"] = True
+    elif has_richer_agent_captures:
+        anchors["agents"] = True
+        anchors["equipment"] = True
     normalized["anchors"] = anchors
     normalized["runtimeResolution"] = normalized_resolution
     normalized["screenCaptures"] = [
