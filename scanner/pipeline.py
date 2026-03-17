@@ -140,13 +140,23 @@ def _resolve_capture_agent_id(
     direct_agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
     if direct_agent_id:
         return direct_agent_id, "screen_capture_agent_id", 0.99
+    classified_agent_id, classified_source, classified_confidence, classified_reason = _classify_capture_agent_id(entry)
     agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
     if agent_slot_index is not None:
         slot_agent_id = _as_text(agent_ids_by_slot.get(agent_slot_index))
+        if slot_agent_id and classified_agent_id:
+            if slot_agent_id == classified_agent_id:
+                return slot_agent_id, "visible_roster_slot_mapping_and_self_id", max(0.97, float(classified_confidence or 0.0))
+            if float(classified_confidence or 0.0) >= 0.88:
+                if reasons is not None:
+                    reasons.append(
+                        f"capture_agent_slot_override:{agent_slot_index}:{slot_agent_id}->{classified_agent_id}"
+                    )
+                return classified_agent_id, classified_source, classified_confidence
+            return slot_agent_id, "visible_roster_slot_mapping", 0.97
         if slot_agent_id:
             return slot_agent_id, "visible_roster_slot_mapping", 0.97
 
-    classified_agent_id, classified_source, classified_confidence, classified_reason = _classify_capture_agent_id(entry)
     if classified_reason and reasons is not None:
         reasons.append(classified_reason)
     if classified_agent_id:
@@ -154,36 +164,58 @@ def _resolve_capture_agent_id(
     return "", "", None
 
 
-def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
+def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, str | None, list[str]]:
     reasons: list[str] = []
     uid_path_raw = session_context.get("uidImagePath")
     if not isinstance(uid_path_raw, str) or not uid_path_raw.strip():
-        return None, None, reasons
+        return None, None, None, reasons
     uid_path = Path(uid_path_raw)
     if not uid_path.exists():
         reasons.append("uid_image_not_found")
-        return None, None, reasons
+        return None, None, None, reasons
 
     if not ModelRegistry.has_uid_model():
         reasons.append("uid_model_missing")
-        return None, None, reasons
+        return None, None, None, reasons
 
     image = cv2.imread(str(uid_path), cv2.IMREAD_COLOR)
     if image is None:
         reasons.append("uid_image_decode_failed")
-        return None, None, reasons
+        return None, None, None, reasons
+
+    def try_uid_widget_ocr() -> tuple[str | None, float | None]:
+        temp_root = Path(tempfile.gettempdir()) / "ika_uid_widget_runtime" / uid_path.stem
+        temp_root.mkdir(parents=True, exist_ok=True)
+        ocr_text = _as_text(
+            run_winrt_ocr_batch(
+                [{"id": "uid", "path": str(uid_path)}],
+                language_tag=language_tag_for_locale("EN"),
+                temp_root=temp_root,
+            ).get("uid")
+        )
+        digits = _digits_only(ocr_text)
+        if 6 <= len(digits) <= 12:
+            confidence = min(0.995, 0.90 + (len(digits) / 120.0))
+            return digits, round(confidence, 4)
+        return None, None
 
     digit_images = segment_uid_digits(image)
     if len(digit_images) < 6:
+        fallback_uid, fallback_confidence = try_uid_widget_ocr()
+        if fallback_uid:
+            return fallback_uid, fallback_confidence, "uid_widget_winrt_ocr", reasons
         reasons.append("uid_digit_segmentation_failed")
-        return None, None, reasons
+        return None, None, None, reasons
 
     uid, confidence = classify_uid_digits(digit_images)
     digits_only = _digits_only(uid)
     if not (6 <= len(digits_only) <= 12):
+        fallback_uid, fallback_confidence = try_uid_widget_ocr()
+        if fallback_uid:
+            return fallback_uid, fallback_confidence, "uid_widget_winrt_ocr", reasons
         reasons.append("uid_digit_length_invalid")
-        return None, None, reasons
-    return digits_only, confidence, reasons
+        return None, None, None, reasons
+    return digits_only, confidence, "onnx_uid_digits", reasons
 
 
 def _select_uid_from_candidates(candidates: Iterable[str]) -> tuple[str, float]:
@@ -398,6 +430,7 @@ def _pixel_agent_details_from_captures(
             "agentId": agent_id,
             "agentSource": agent_source,
             "agentConfidence": float(agent_confidence or 0.0),
+            "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
             "level": reading.level,
             "levelCap": reading.level_cap,
             "levelConfidence": float(reading.level_confidence),
@@ -771,21 +804,40 @@ def _enrich_agents_with_agent_detail_pixels(
     if not pixel_agent_details:
         return agents, False
 
+    details_by_slot = {
+        slot_index: detail
+        for detail in pixel_agent_details.values()
+        for slot_index in [_as_slot_index(detail.get("agentSlotIndex"))]
+        if slot_index is not None and slot_index > 0
+    }
     merged_agents: list[dict[str, Any]] = []
     seen_agents: set[str] = set()
     used = False
 
-    for agent in agents:
+    for slot_index, agent in enumerate(agents, start=1):
         payload = dict(agent)
         agent_id = _as_text(payload.get("agentId"))
-        seen_agents.add(agent_id)
-        detail = pixel_agent_details.get(agent_id)
+        detail = details_by_slot.get(slot_index) or pixel_agent_details.get(agent_id)
         if not detail:
+            if agent_id:
+                seen_agents.add(agent_id)
             merged_agents.append(payload)
             continue
 
         confidence_by_field = dict(payload.get("confidenceByField") or {})
         field_sources = dict(payload.get("fieldSources") or {})
+        detail_agent_id = _as_text(detail.get("agentId"))
+        if detail_agent_id and detail_agent_id != agent_id:
+            payload["agentId"] = detail_agent_id
+            confidence_by_field["agentId"] = round(
+                max(float(confidence_by_field.get("agentId", 0.0)), float(detail.get("agentConfidence", 0.0) or 0.0)),
+                4,
+            )
+            field_sources["agentId"] = _as_text(detail.get("agentSource")) or "agent_detail_portrait_agreement_onnx_agent_icon"
+            agent_id = detail_agent_id
+            used = True
+        if agent_id:
+            seen_agents.add(agent_id)
 
         if (
             payload.get("level") is None
@@ -1114,7 +1166,7 @@ def scan_roster(
         )
 
     low_conf_reasons: list[str] = []
-    uid_from_image, uid_conf_from_image, uid_reasons = _select_uid_from_image(session_context)
+    uid_from_image, uid_conf_from_image, uid_source_from_image, uid_reasons = _select_uid_from_image(session_context)
     low_conf_reasons.extend(uid_reasons)
     if uid_from_image and uid_conf_from_image is not None:
         uid = uid_from_image
@@ -1127,7 +1179,7 @@ def scan_roster(
 
     if not uid:
         low_conf_reasons.append("uid_missing")
-    uid_source = "onnx_uid_digits" if uid_from_image else ("uid_candidates" if uid else "missing")
+    uid_source = uid_source_from_image if uid_from_image else ("uid_candidates" if uid else "missing")
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
@@ -1207,8 +1259,16 @@ def scan_roster(
         ),
         "agents": (
             "merged_pixels_and_payload"
-            if parsed_agents and icon_agents
-            else ("onnx_agent_icon" if icon_agents else ("session_payload" if parsed_agents else "missing"))
+            if parsed_agents and (icon_agents or used_pixel_agent_details or used_pixel_weapons or used_pixel_discs)
+            else (
+                "onnx_agent_icon"
+                if icon_agents
+                else (
+                    "agent_detail_portrait_agreement_onnx_agent_icon"
+                    if used_pixel_agent_details
+                    else ("session_payload" if parsed_agents else "missing")
+                )
+            )
         ),
         "equipment": _top_level_equipment_source(agents),
         "capture": (
@@ -1219,7 +1279,7 @@ def scan_roster(
     }
     capabilities = {
         "uidFromPixels": uid_source == "onnx_uid_digits",
-        "agentIdsFromPixels": bool(icon_agents),
+        "agentIdsFromPixels": bool(icon_agents or used_pixel_agent_details or used_pixel_weapons or used_pixel_discs),
         "equipmentFromPixels": bool(used_pixel_weapons or used_pixel_discs),
         "agentDetailsFromPixels": bool(used_pixel_agent_details),
         "fullRosterCoverage": False,
