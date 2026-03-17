@@ -26,7 +26,12 @@ from .model_runtime import (
     get_model_metadata,
     segment_uid_digits,
 )
-from .screen_runtime import derive_equipment_occupancy, normalize_runtime_captures, normalize_runtime_resolution
+from .screen_runtime import (
+    crop_agent_identity_candidates,
+    derive_equipment_occupancy,
+    normalize_runtime_captures,
+    normalize_runtime_resolution,
+)
 
 SUPPORTED_LOCALES = {"RU", "EN"}
 SUPPORTED_REGIONS = {"NA", "EU", "ASIA", "SEA", "OTHER"}
@@ -90,14 +95,63 @@ def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[int, str]:
     return mapping
 
 
-def _resolve_capture_agent_id(entry: dict[str, Any], agent_ids_by_slot: dict[int, str]) -> str:
+def _classify_capture_agent_id(entry: dict[str, Any]) -> tuple[str, str, float | None, str]:
+    if not ModelRegistry.has_agent_model():
+        return "", "", None, "agent_model_missing_for_runtime_capture"
+
+    role = _as_text(entry.get("role"))
+    path_value = _as_text(entry.get("path"))
+    if role not in {"agent_detail", "equipment"} or not path_value:
+        return "", "", None, ""
+
+    image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+    if image is None:
+        return "", "", None, f"runtime_capture_agent_decode_failed:{role}"
+
+    predictions: list[tuple[str, float]] = []
+    for variant_name, crop in crop_agent_identity_candidates(image, role):
+        prediction = classify_agent_icon(crop)
+        predictions.append((prediction.label, float(prediction.confidence)))
+
+    if len(predictions) < 2:
+        return "", "", None, f"runtime_capture_agent_crop_missing:{role}"
+
+    labels = {label for label, _ in predictions}
+    if len(labels) != 1:
+        labels_text = ",".join(sorted(labels))
+        return "", "", None, f"runtime_capture_agent_disagree:{role}:{labels_text}"
+
+    min_confidence = min(confidence for _, confidence in predictions)
+    threshold = 0.78 if role == "agent_detail" else 0.82
+    agreed_label = predictions[0][0]
+    if min_confidence < threshold:
+        return "", "", None, f"runtime_capture_agent_low_conf:{role}:{agreed_label}"
+
+    source = f"{role}_portrait_agreement_onnx_agent_icon"
+    return agreed_label, source, min_confidence, ""
+
+
+def _resolve_capture_agent_id(
+    entry: dict[str, Any],
+    agent_ids_by_slot: dict[int, str],
+    *,
+    reasons: list[str] | None = None,
+) -> tuple[str, str, float | None]:
     direct_agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
     if direct_agent_id:
-        return direct_agent_id
+        return direct_agent_id, "screen_capture_agent_id", 0.99
     agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
-    if agent_slot_index is None:
-        return ""
-    return _as_text(agent_ids_by_slot.get(agent_slot_index))
+    if agent_slot_index is not None:
+        slot_agent_id = _as_text(agent_ids_by_slot.get(agent_slot_index))
+        if slot_agent_id:
+            return slot_agent_id, "visible_roster_slot_mapping", 0.97
+
+    classified_agent_id, classified_source, classified_confidence, classified_reason = _classify_capture_agent_id(entry)
+    if classified_reason and reasons is not None:
+        reasons.append(classified_reason)
+    if classified_agent_id:
+        return classified_agent_id, classified_source, classified_confidence
+    return "", "", None
 
 
 def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None, float | None, list[str]]:
@@ -244,7 +298,11 @@ def _pixel_discs_from_captures(
     by_agent_slot: dict[str, dict[int, dict[str, Any]]] = {}
     for index, entry in enumerate(disk_entries):
         path_value = _as_text(entry.get("path"))
-        agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
+        agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
+            entry,
+            agent_ids_by_slot,
+            reasons=reasons,
+        )
         slot_index = _as_slot_index(entry.get("slotIndex"))
         if not path_value:
             reasons.append(f"disk_detail_missing_path:{index}")
@@ -275,6 +333,8 @@ def _pixel_discs_from_captures(
             "slot": slot_index,
             "setId": prediction.label,
             "agentId": agent_id,
+            "agentSource": agent_source,
+            "agentConfidence": float(agent_confidence or 0.0),
             "_confidence": float(prediction.confidence),
         }
         existing = agent_slots.get(slot_index)
@@ -311,7 +371,11 @@ def _pixel_agent_details_from_captures(
     by_agent: dict[str, dict[str, Any]] = {}
     for index, entry in enumerate(detail_entries):
         path_value = _as_text(entry.get("path"))
-        agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
+        agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
+            entry,
+            agent_ids_by_slot,
+            reasons=reasons,
+        )
         if not path_value:
             reasons.append(f"agent_detail_missing_path:{index}")
             continue
@@ -332,6 +396,8 @@ def _pixel_agent_details_from_captures(
         reading = read_agent_detail(image)
         candidate = {
             "agentId": agent_id,
+            "agentSource": agent_source,
+            "agentConfidence": float(agent_confidence or 0.0),
             "level": reading.level,
             "levelCap": reading.level_cap,
             "levelConfidence": float(reading.level_confidence),
@@ -403,7 +469,11 @@ def _pixel_weapons_from_captures(
 
         for index, entry in enumerate(amplifier_entries):
             path_value = _as_text(entry.get("path"))
-            agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
+            agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
+                entry,
+                agent_ids_by_slot,
+                reasons=reasons,
+            )
             if not path_value:
                 reasons.append(f"amplifier_detail_missing_path:{index}")
                 continue
@@ -427,7 +497,12 @@ def _pixel_weapons_from_captures(
                 reasons.append(f"amplifier_detail_crop_failed:{agent_id}:{index}")
                 continue
             crops.append({"id": capture_id, "path": str(crop_path)})
-            by_capture_id[capture_id] = {"agentId": agent_id, "index": index}
+            by_capture_id[capture_id] = {
+                "agentId": agent_id,
+                "agentSource": agent_source,
+                "agentConfidence": float(agent_confidence or 0.0),
+                "index": index,
+            }
 
         if crops:
             ocr_results.update(run_winrt_ocr_batch(crops, language_tag=language_tag, temp_root=temp_root))
@@ -445,6 +520,8 @@ def _pixel_weapons_from_captures(
             continue
         candidate = {
             "agentId": agent_id,
+            "agentSource": _as_text(meta.get("agentSource")),
+            "agentConfidence": float(meta.get("agentConfidence", 0.0) or 0.0),
             "weaponId": prediction.weapon_id,
             "displayName": prediction.display_name,
             "weaponPresent": True,
@@ -563,7 +640,17 @@ def _enrich_agents_with_pixel_discs(
         if agent_id in seen_agents:
             continue
         avg_confidence = sum(float(disc.get("_confidence", 0.0)) for disc in pixel_discs) / max(len(pixel_discs), 1)
-        payload = _default_agent_payload(agent_id, avg_confidence)
+        agent_confidence = max(float(disc.get("agentConfidence", 0.0) or 0.0) for disc in pixel_discs)
+        agent_source = next(
+            (str(disc.get("agentSource") or "").strip() for disc in pixel_discs if str(disc.get("agentSource") or "").strip()),
+            "screen_capture_agent_id",
+        )
+        payload = _default_agent_payload(agent_id, max(avg_confidence, agent_confidence or 0.96))
+        payload["fieldSources"]["agentId"] = agent_source
+        payload["confidenceByField"]["agentId"] = round(
+            max(float(payload["confidenceByField"]["agentId"]), agent_confidence or 0.96),
+            4,
+        )
         payload["discs"] = [
             {key: value for key, value in disc.items() if not str(key).startswith("_")}
             for disc in pixel_discs
@@ -645,9 +732,14 @@ def _enrich_agents_with_pixel_weapons(
     for agent_id, pixel_weapon in sorted(pixel_weapons_by_agent.items()):
         if agent_id in seen_agents:
             continue
-        payload = _default_agent_payload(agent_id, 0.96)
-        payload["fieldSources"]["agentId"] = "screen_capture_agent_id"
-        payload["confidenceByField"]["agentId"] = 0.96
+        agent_source = _as_text(pixel_weapon.get("agentSource")) or "screen_capture_agent_id"
+        agent_confidence = float(pixel_weapon.get("agentConfidence", 0.0) or 0.0)
+        payload = _default_agent_payload(agent_id, max(agent_confidence, 0.96))
+        payload["fieldSources"]["agentId"] = agent_source
+        payload["confidenceByField"]["agentId"] = round(
+            max(float(payload["confidenceByField"]["agentId"]), agent_confidence or 0.96),
+            4,
+        )
         payload["weapon"] = {
             "weaponId": pixel_weapon.get("weaponId"),
             "displayName": pixel_weapon.get("displayName"),
@@ -736,9 +828,14 @@ def _enrich_agents_with_agent_detail_pixels(
     for agent_id, detail in sorted(pixel_agent_details.items()):
         if agent_id in seen_agents:
             continue
-        payload = _default_agent_payload(agent_id, 0.96)
-        payload["fieldSources"]["agentId"] = "screen_capture_agent_id"
-        payload["confidenceByField"]["agentId"] = 0.96
+        agent_source = _as_text(detail.get("agentSource")) or "screen_capture_agent_id"
+        agent_confidence = float(detail.get("agentConfidence", 0.0) or 0.0)
+        payload = _default_agent_payload(agent_id, max(agent_confidence, 0.96))
+        payload["fieldSources"]["agentId"] = agent_source
+        payload["confidenceByField"]["agentId"] = round(
+            max(float(payload["confidenceByField"]["agentId"]), agent_confidence or 0.96),
+            4,
+        )
         if (
             detail.get("level") is not None
             and detail.get("levelCap") is not None

@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Mapping
 import cv2
 import numpy as np
 
-from ocr_dataset_policy import ROSTER_ROLE, UID_PANEL_ROLE
+from ocr_dataset_policy import AGENT_DETAIL_ROLE, EQUIPMENT_ROLE, ROSTER_ROLE, UID_PANEL_ROLE
 
 
 _CANONICAL_RESOLUTIONS = ("1080p", "1440p")
@@ -35,6 +35,16 @@ _ROSTER_AGENT_ICON_BOXES = (
     (0.612, 0.365, 0.272, 0.207),
     (0.612, 0.591, 0.272, 0.207),
 )
+_AGENT_IDENTITY_BOXES = {
+    AGENT_DETAIL_ROLE: (
+        ("portrait_wide", (0.02, 0.08, 0.46, 0.84)),
+        ("portrait_tight", (0.10, 0.10, 0.32, 0.62)),
+    ),
+    EQUIPMENT_ROLE: (
+        ("portrait_wide", (0.02, 0.06, 0.48, 0.88)),
+        ("portrait_tight", (0.08, 0.08, 0.34, 0.66)),
+    ),
+}
 
 
 @dataclass(slots=True)
@@ -137,6 +147,20 @@ def _fractional_crop(image: np.ndarray, box: tuple[float, float, float, float]) 
     if crop.size == 0:
         return None
     return crop
+
+
+def crop_agent_identity_candidates(image: np.ndarray, role: str) -> list[tuple[str, np.ndarray]]:
+    normalized_role = _as_text(role)
+    variants = _AGENT_IDENTITY_BOXES.get(normalized_role)
+    if not variants:
+        return []
+    output: list[tuple[str, np.ndarray]] = []
+    for variant_name, box in variants:
+        crop = _fractional_crop(image, box)
+        if crop is None:
+            continue
+        output.append((variant_name, crop))
+    return output
 
 
 def _component_bands(
