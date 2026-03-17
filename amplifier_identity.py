@@ -115,9 +115,15 @@ def run_winrt_ocr_batch(crops: Sequence[Dict[str, str]], *, language_tag: str, t
         check=True,
     )
     payload = json.loads(output_path.read_text(encoding="utf-8-sig"))
+    if isinstance(payload, dict):
+        payload_items = [payload]
+    elif isinstance(payload, list):
+        payload_items = payload
+    else:
+        payload_items = []
     return {
         str(item.get("id") or ""): _text(item.get("text"))
-        for item in payload
+        for item in payload_items
         if isinstance(item, dict) and str(item.get("id") or "")
     }
 

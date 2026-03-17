@@ -26,6 +26,7 @@ See `contracts/ocr-output.schema.json`.
     - `INPUT_LOCK_NOT_ACTIVE`
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
 - `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`, `disk_detail`) with CUDA-only runtime validation.
+- `amplifier_detail` is resolved in runtime via title-crop OCR plus the reviewed alias contract in `contracts/amplifier-title-aliases.json`.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 
 ## Quick run
@@ -44,7 +45,7 @@ python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --ancho
 Strict mode with richer runtime captures:
 
 ```powershell
-python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|||1|detail_slot_1" --screen-capture "disk_detail|D:\shots\disk_1.png||1|1|disk1_slot1"
+python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|||1|detail_slot_1" --screen-capture "amplifier_detail|D:\shots\weapon.png|||1|weapon_slot1" --screen-capture "disk_detail|D:\shots\disk_1.png||1|1|disk1_slot1"
 ```
 
 Train synthetic baseline models:

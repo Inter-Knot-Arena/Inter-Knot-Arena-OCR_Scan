@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import tempfile
 import time
 from dataclasses import dataclass
 from enum import StrEnum
@@ -10,6 +11,12 @@ from typing import Any, Dict, Iterable, List
 import cv2
 import numpy as np
 
+from amplifier_identity import (
+    classify_amplifier_text,
+    crop_title_image,
+    language_tag_for_locale,
+    run_winrt_ocr_batch,
+)
 from .agent_detail_runtime import read_agent_detail
 from .model_runtime import (
     ModelRegistry,
@@ -366,6 +373,91 @@ def _pixel_agent_details_from_captures(
     return by_agent, reasons
 
 
+def _pixel_weapons_from_captures(
+    session_context: Dict[str, Any],
+    agent_ids_by_slot: dict[int, str],
+    locale: str,
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    reasons: list[str] = []
+    raw_captures = session_context.get("screenCaptures")
+    if not isinstance(raw_captures, list):
+        return {}, reasons
+
+    amplifier_entries = [
+        entry
+        for entry in raw_captures
+        if isinstance(entry, dict) and _as_text(entry.get("role")) == "amplifier_detail" and _as_text(entry.get("path"))
+    ]
+    if not amplifier_entries:
+        return {}, reasons
+
+    by_capture_id: dict[str, dict[str, Any]] = {}
+    ocr_results: dict[str, str] = {}
+    language_tag = language_tag_for_locale(locale)
+
+    with tempfile.TemporaryDirectory(prefix="amp_runtime_") as raw_tmp:
+        temp_root = Path(raw_tmp)
+        crop_dir = temp_root / "crops"
+        crop_dir.mkdir(parents=True, exist_ok=True)
+        crops: list[dict[str, str]] = []
+
+        for index, entry in enumerate(amplifier_entries):
+            path_value = _as_text(entry.get("path"))
+            agent_id = _resolve_capture_agent_id(entry, agent_ids_by_slot)
+            if not path_value:
+                reasons.append(f"amplifier_detail_missing_path:{index}")
+                continue
+            if not agent_id:
+                agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+                reasons.append(
+                    f"amplifier_detail_missing_agent:{index}"
+                    if agent_slot_index is None
+                    else f"amplifier_detail_missing_agent_for_slot:{agent_slot_index}:{index}"
+                )
+                continue
+            source_path = Path(path_value)
+            if not source_path.exists():
+                reasons.append(f"amplifier_detail_not_found:{agent_id}:{index}")
+                continue
+            capture_id = f"amplifier_{index}_{agent_id}"
+            crop_path = crop_dir / f"{capture_id}.png"
+            try:
+                crop_title_image(source_path, crop_path)
+            except Exception:
+                reasons.append(f"amplifier_detail_crop_failed:{agent_id}:{index}")
+                continue
+            crops.append({"id": capture_id, "path": str(crop_path)})
+            by_capture_id[capture_id] = {"agentId": agent_id, "index": index}
+
+        if crops:
+            ocr_results.update(run_winrt_ocr_batch(crops, language_tag=language_tag, temp_root=temp_root))
+
+    by_agent: dict[str, dict[str, Any]] = {}
+    for capture_id, meta in by_capture_id.items():
+        agent_id = _as_text(meta.get("agentId"))
+        raw_text = _as_text(ocr_results.get(capture_id))
+        prediction = classify_amplifier_text(raw_text)
+        if prediction is None:
+            reasons.append(f"amplifier_detail_unclassified:{agent_id}")
+            continue
+        if prediction.source_mode not in {"alias_contract", "alias_contract_fuzzy"}:
+            reasons.append(f"amplifier_detail_low_conf:{agent_id}:{prediction.source_mode}:{prediction.weapon_id}")
+            continue
+        candidate = {
+            "agentId": agent_id,
+            "weaponId": prediction.weapon_id,
+            "displayName": prediction.display_name,
+            "weaponPresent": True,
+            "_confidence": float(prediction.confidence),
+            "_source": str(prediction.source_mode),
+        }
+        existing = by_agent.get(agent_id)
+        if existing is None or float(candidate["_confidence"]) > float(existing.get("_confidence", 0.0)):
+            by_agent[agent_id] = candidate
+
+    return by_agent, reasons
+
+
 def _merge_agents(
     parsed_agents: list[dict[str, Any]],
     icon_agents: list[dict[str, Any]],
@@ -480,6 +572,92 @@ def _enrich_agents_with_pixel_discs(
         payload["confidenceByField"]["occupancy"] = round(avg_confidence, 4)
         payload["fieldSources"]["discs"] = "onnx_disk_detail"
         payload["fieldSources"]["discSlotOccupancy"] = "derived_from_onnx_disk_detail"
+        occupancy = derive_equipment_occupancy(
+            weapon=payload.get("weapon") if isinstance(payload.get("weapon"), dict) else None,
+            discs=payload.get("discs") if isinstance(payload.get("discs"), list) else None,
+            explicit_weapon_present=payload.get("weaponPresent"),
+            explicit_slot_occupancy=payload.get("discSlotOccupancy"),
+        )
+        payload["weaponPresent"] = occupancy["weaponPresent"]
+        payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        merged_agents.append(payload)
+        used = True
+
+    return merged_agents, used
+
+
+def _enrich_agents_with_pixel_weapons(
+    agents: list[dict[str, Any]],
+    pixel_weapons_by_agent: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], bool]:
+    if not pixel_weapons_by_agent:
+        return agents, False
+
+    merged_agents: list[dict[str, Any]] = []
+    seen_agents: set[str] = set()
+    used = False
+
+    for agent in agents:
+        payload = dict(agent)
+        agent_id = _as_text(payload.get("agentId"))
+        seen_agents.add(agent_id)
+        pixel_weapon = pixel_weapons_by_agent.get(agent_id)
+        if not pixel_weapon:
+            merged_agents.append(payload)
+            continue
+
+        confidence_by_field = dict(payload.get("confidenceByField") or {})
+        field_sources = dict(payload.get("fieldSources") or {})
+        existing_weapon = payload.get("weapon") if isinstance(payload.get("weapon"), dict) else {}
+        existing_weapon_id = _as_text(existing_weapon.get("weaponId")) if isinstance(existing_weapon, dict) else ""
+        previous_weapon_source = _as_text(field_sources.get("weapon"))
+        should_fill_weapon = not existing_weapon_id or previous_weapon_source in {"", "missing"}
+        if not should_fill_weapon:
+            merged_agents.append(payload)
+            continue
+
+        payload["weapon"] = {
+            "weaponId": pixel_weapon.get("weaponId"),
+            "displayName": pixel_weapon.get("displayName"),
+            "weaponPresent": True,
+            "agentId": agent_id,
+        }
+        payload["weaponPresent"] = True
+        confidence_by_field["weapon"] = round(
+            max(float(confidence_by_field.get("weapon", 0.0)), float(pixel_weapon.get("_confidence", 0.0))),
+            4,
+        )
+        field_sources["weapon"] = "amplifier_detail_title_ocr"
+        field_sources["weaponPresent"] = "derived_from_amplifier_detail_ocr"
+        occupancy = derive_equipment_occupancy(
+            weapon=payload.get("weapon") if isinstance(payload.get("weapon"), dict) else None,
+            discs=payload.get("discs") if isinstance(payload.get("discs"), list) else None,
+            explicit_weapon_present=payload.get("weaponPresent"),
+            explicit_slot_occupancy=payload.get("discSlotOccupancy"),
+        )
+        payload["weaponPresent"] = occupancy["weaponPresent"]
+        payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        payload["confidenceByField"] = confidence_by_field
+        payload["fieldSources"] = field_sources
+        merged_agents.append(payload)
+        used = True
+
+    for agent_id, pixel_weapon in sorted(pixel_weapons_by_agent.items()):
+        if agent_id in seen_agents:
+            continue
+        payload = _default_agent_payload(agent_id, 0.96)
+        payload["fieldSources"]["agentId"] = "screen_capture_agent_id"
+        payload["confidenceByField"]["agentId"] = 0.96
+        payload["weapon"] = {
+            "weaponId": pixel_weapon.get("weaponId"),
+            "displayName": pixel_weapon.get("displayName"),
+            "weaponPresent": True,
+            "agentId": agent_id,
+        }
+        payload["weaponPresent"] = True
+        payload["confidenceByField"]["weapon"] = round(float(pixel_weapon.get("_confidence", 0.0)), 4)
+        payload["fieldSources"]["weapon"] = "amplifier_detail_title_ocr"
+        payload["fieldSources"]["weaponPresent"] = "derived_from_amplifier_detail_ocr"
         occupancy = derive_equipment_occupancy(
             weapon=payload.get("weapon") if isinstance(payload.get("weapon"), dict) else None,
             discs=payload.get("discs") if isinstance(payload.get("discs"), list) else None,
@@ -702,6 +880,7 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
     has_derived_occupancy = False
     has_onnx_disk_detail = False
     has_merged_disk_detail = False
+    has_amplifier_detail_ocr = False
     for agent in agents:
         field_sources = agent.get("fieldSources")
         if not isinstance(field_sources, dict):
@@ -710,6 +889,8 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
             has_onnx_disk_detail = True
         if field_sources.get("discs") == "merged_session_payload_and_onnx_disk_detail":
             has_merged_disk_detail = True
+        if field_sources.get("weapon") == "amplifier_detail_title_ocr":
+            has_amplifier_detail_ocr = True
         if field_sources.get("weapon") == "session_payload" or field_sources.get("discs") == "session_payload":
             has_payload_equipment = True
         if (
@@ -725,8 +906,12 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
 
     if has_merged_disk_detail:
         return "merged_session_payload_and_onnx_disk_detail"
+    if has_onnx_disk_detail and has_amplifier_detail_ocr:
+        return "pixel_equipment_detail_ocr"
     if has_onnx_disk_detail:
         return "onnx_disk_detail"
+    if has_amplifier_detail_ocr:
+        return "amplifier_detail_title_ocr"
     if has_payload_equipment:
         return "session_payload"
     if has_payload_occupancy:
@@ -734,6 +919,43 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
     if has_derived_occupancy:
         return "derived_from_payload"
     return "missing"
+
+
+def _filter_resolved_low_conf_reasons(
+    agents: list[dict[str, Any]],
+    reasons: list[str],
+) -> list[str]:
+    if not reasons:
+        return []
+    by_agent: dict[str, dict[str, Any]] = {}
+    for agent in agents:
+        if not isinstance(agent, dict):
+            continue
+        agent_id = _as_text(agent.get("agentId"))
+        if agent_id:
+            by_agent[agent_id] = agent
+
+    filtered: list[str] = []
+    for reason in reasons:
+        if not isinstance(reason, str):
+            continue
+        matched = False
+        for suffix, predicate in (
+            (".weapon_missing", lambda agent: isinstance(agent.get("weapon"), dict) and _as_text(agent.get("weapon", {}).get("weaponId")) != ""),
+            (".discs_missing", lambda agent: isinstance(agent.get("discs"), list) and len(agent.get("discs") or []) > 0),
+            (".level_missing", lambda agent: agent.get("level") is not None and agent.get("levelCap") is not None),
+            (".mindscape_missing", lambda agent: agent.get("mindscape") is not None and agent.get("mindscapeCap") is not None),
+        ):
+            if not reason.endswith(suffix):
+                continue
+            agent_id = reason[: -len(suffix)]
+            agent = by_agent.get(agent_id)
+            if agent is not None and predicate(agent):
+                matched = True
+            break
+        if not matched:
+            filtered.append(reason)
+    return filtered
 
 
 def scan_roster(
@@ -817,15 +1039,24 @@ def scan_roster(
         agent_ids_by_slot,
     )
     low_conf_reasons.extend(pixel_agent_detail_reasons)
+    pixel_weapons_by_agent, pixel_weapon_reasons = _pixel_weapons_from_captures(
+        session_context,
+        agent_ids_by_slot,
+        normalized_locale,
+    )
+    low_conf_reasons.extend(pixel_weapon_reasons)
     pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(
         session_context,
         agent_ids_by_slot,
     )
     low_conf_reasons.extend(pixel_disc_reasons)
     agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(agents, pixel_agent_details)
+    agents, used_pixel_weapons = _enrich_agents_with_pixel_weapons(agents, pixel_weapons_by_agent)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
     if not agents:
         low_conf_reasons.append("agents_missing")
+    else:
+        low_conf_reasons = _filter_resolved_low_conf_reasons(agents, low_conf_reasons)
 
     region = _normalize_region(
         str(session_context.get("region") or session_context.get("regionHint") or "OTHER")
@@ -855,6 +1086,7 @@ def scan_roster(
         bool(session_context.get("uidImagePath"))
         or bool(session_context.get("agentIconPaths"))
         or bool(pixel_agent_details)
+        or bool(pixel_weapons_by_agent)
         or bool(pixel_discs_by_agent)
     )
     field_sources = {
@@ -879,7 +1111,7 @@ def scan_roster(
     capabilities = {
         "uidFromPixels": uid_source == "onnx_uid_digits",
         "agentIdsFromPixels": bool(icon_agents),
-        "equipmentFromPixels": bool(used_pixel_discs),
+        "equipmentFromPixels": bool(used_pixel_weapons or used_pixel_discs),
         "agentDetailsFromPixels": bool(used_pixel_agent_details),
         "fullRosterCoverage": False,
         "rawRosterCaptureAvailable": has_roster_capture,
