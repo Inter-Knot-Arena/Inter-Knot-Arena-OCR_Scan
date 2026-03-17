@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import statistics
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 
 import cv2
@@ -17,6 +20,8 @@ _CURRENT_THRESHOLDS = (170, 180, 190, 200)
 _CAP_THRESHOLDS = (15, 20, 25)
 _NUMERIC_THRESHOLDS = (50, 55, 60)
 _VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
+_DIGIT_TEMPLATE_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "contracts" / "agent-detail-digit-templates.json"
+_TEMPLATE_GLYPH_SIZE = (20, 30)
 _STAT_FIELDS: list[tuple[str, str]] = [
     ("hp", "atk"),
     ("def", "impact"),
@@ -49,6 +54,71 @@ class AgentDetailReading:
     stats: Dict[str, int | float]
     stats_confidence: float
     low_conf_reasons: List[str]
+
+
+@lru_cache(maxsize=1)
+def _digit_template_index() -> Dict[str, list[np.ndarray]]:
+    if not _DIGIT_TEMPLATE_CONTRACT_PATH.exists():
+        return {}
+    payload = json.loads(_DIGIT_TEMPLATE_CONTRACT_PATH.read_text(encoding="utf-8"))
+    raw_templates = payload.get("templates")
+    if not isinstance(raw_templates, dict):
+        return {}
+
+    index: Dict[str, list[np.ndarray]] = {}
+    for label, variants in raw_templates.items():
+        if not isinstance(variants, list):
+            continue
+        parsed_variants: list[np.ndarray] = []
+        for variant in variants:
+            if not isinstance(variant, list):
+                continue
+            rows = [str(row) for row in variant if isinstance(row, str)]
+            if not rows:
+                continue
+            matrix = np.array([[1.0 if char == "1" else 0.0 for char in row] for row in rows], dtype=np.float32)
+            parsed_variants.append(matrix)
+        if parsed_variants:
+            index[str(label)] = parsed_variants
+    return index
+
+
+def _normalize_template_glyph(image: np.ndarray) -> np.ndarray:
+    height, width = image.shape[:2]
+    scale = min((_TEMPLATE_GLYPH_SIZE[0] - 2) / max(width, 1), (_TEMPLATE_GLYPH_SIZE[1] - 2) / max(height, 1))
+    resized_width = max(1, int(round(width * scale)))
+    resized_height = max(1, int(round(height * scale)))
+    resized = cv2.resize(image, (resized_width, resized_height), interpolation=cv2.INTER_AREA)
+    canvas = np.zeros((_TEMPLATE_GLYPH_SIZE[1], _TEMPLATE_GLYPH_SIZE[0]), dtype=np.uint8)
+    offset_x = (_TEMPLATE_GLYPH_SIZE[0] - resized_width) // 2
+    offset_y = (_TEMPLATE_GLYPH_SIZE[1] - resized_height) // 2
+    canvas[offset_y : offset_y + resized_height, offset_x : offset_x + resized_width] = resized
+    return (canvas > 127).astype(np.float32)
+
+
+def _template_confidence(score: float, margin: float) -> float:
+    score_factor = max(0.0, 1.0 - (min(float(score), 0.25) / 0.25))
+    margin_factor = min(max(float(margin), 0.0), 0.12) / 0.12
+    return min(0.999, 0.72 + (0.18 * score_factor) + (0.10 * margin_factor))
+
+
+def _classify_template_digit(image: np.ndarray) -> tuple[str, float, float]:
+    templates = _digit_template_index()
+    if not templates:
+        return "", float("inf"), 0.0
+    sample = _normalize_template_glyph(image)
+    scores: list[tuple[float, str]] = []
+    for label, variants in templates.items():
+        if not variants:
+            continue
+        best_score = min(float(((sample - variant) ** 2).mean()) for variant in variants)
+        scores.append((best_score, label))
+    if not scores:
+        return "", float("inf"), 0.0
+    scores.sort(key=lambda item: item[0])
+    best_score, best_label = scores[0]
+    margin = float(scores[1][0] - best_score) if len(scores) > 1 else 1.0
+    return best_label, best_score, margin
 
 
 def _threshold_binary(image: np.ndarray, threshold: int, *, invert: bool) -> np.ndarray:
@@ -410,7 +480,11 @@ def _digit_tokens(block: np.ndarray) -> list[dict[str, Any]]:
     tokens: list[dict[str, Any]] = []
     for x0, y0, x1, y1 in merged_boxes:
         glyph = binary[y0:y1, x0:x1]
-        label, confidence = _classify_digit_component(glyph)
+        label, score, margin = _classify_template_digit(glyph)
+        if not label.isdigit():
+            label, confidence = _classify_digit_component(glyph)
+        else:
+            confidence = _template_confidence(score, margin)
         tokens.append(
             {
                 "x": int(x0),
@@ -419,6 +493,8 @@ def _digit_tokens(block: np.ndarray) -> list[dict[str, Any]]:
                 "height": int(y1 - y0),
                 "digit": label,
                 "confidence": confidence,
+                "score": float(score),
+                "margin": float(margin),
             }
         )
     return tokens

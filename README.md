@@ -27,6 +27,7 @@ See `contracts/ocr-output.schema.json`.
 - `scripts/run_scan.py` can run either deterministic demo mode (`run_scan`) or strict contract mode (`scan_roster`).
 - `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`, `disk_detail`) with CUDA-only runtime validation.
 - `amplifier_detail` is resolved in runtime via title-crop OCR plus the reviewed alias contract in `contracts/amplifier-title-aliases.json`.
+- `agent_detail` runtime uses `uid_digit` for level/mindscape digits and `contracts/agent-detail-digit-templates.json` for full stat-row parsing.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 
 ## Quick run

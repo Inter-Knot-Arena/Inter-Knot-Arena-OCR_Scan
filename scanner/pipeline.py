@@ -324,7 +324,7 @@ def _pixel_agent_details_from_captures(
             )
             continue
 
-        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_GRAYSCALE)
         if image is None:
             reasons.append(f"agent_detail_decode_failed:{agent_id}:{index}")
             continue
@@ -721,6 +721,14 @@ def _enrich_agents_with_agent_detail_pixels(
             field_sources["mindscapeCap"] = "agent_detail_digit_ocr"
             used = True
 
+        if (
+            not isinstance(payload.get("stats"), dict) or not payload.get("stats")
+        ) and isinstance(detail.get("stats"), dict) and detail.get("stats"):
+            payload["stats"] = dict(detail.get("stats") or {})
+            confidence_by_field["stats"] = round(float(detail.get("statsConfidence") or 0.0), 4)
+            field_sources["stats"] = "agent_detail_digit_templates"
+            used = True
+
         payload["confidenceByField"] = confidence_by_field
         payload["fieldSources"] = field_sources
         merged_agents.append(payload)
@@ -751,6 +759,10 @@ def _enrich_agents_with_agent_detail_pixels(
             payload["confidenceByField"]["mindscape"] = round(float(detail.get("mindscapeConfidence") or 0.0), 4)
             payload["fieldSources"]["mindscape"] = "agent_detail_digit_ocr"
             payload["fieldSources"]["mindscapeCap"] = "agent_detail_digit_ocr"
+        if isinstance(detail.get("stats"), dict) and detail.get("stats"):
+            payload["stats"] = dict(detail.get("stats") or {})
+            payload["confidenceByField"]["stats"] = round(float(detail.get("statsConfidence") or 0.0), 4)
+            payload["fieldSources"]["stats"] = "agent_detail_digit_templates"
         merged_agents.append(payload)
         used = True
 
