@@ -37,6 +37,19 @@ from .screen_runtime import (
 SUPPORTED_LOCALES = {"RU", "EN"}
 SUPPORTED_REGIONS = {"NA", "EU", "ASIA", "SEA", "OTHER"}
 DEFAULT_MODEL_VERSION = "ocr-hybrid-v1.2"
+_EQUIPMENT_WEAPON_CENTER = (0.694, 0.496)
+_EQUIPMENT_WEAPON_PATCH = (0.120, 0.205)
+_EQUIPMENT_DISC_SLOT_CENTERS = {
+    1: (0.632, 0.284),
+    2: (0.571, 0.487),
+    3: (0.632, 0.691),
+    4: (0.825, 0.691),
+    5: (0.866, 0.487),
+    6: (0.825, 0.284),
+}
+_EQUIPMENT_DISC_PATCH = (0.084, 0.138)
+_EQUIPMENT_OCCUPIED_SCORE_THRESHOLD = 0.58
+_EQUIPMENT_EMPTY_SCORE_THRESHOLD = 0.34
 
 
 class ScanFailureCode(StrEnum):
@@ -630,6 +643,198 @@ def _pixel_agent_details_from_captures(
     return by_agent, by_slot, reasons
 
 
+def _fractional_patch_from_center(
+    image: np.ndarray,
+    *,
+    center_x: float,
+    center_y: float,
+    width_fraction: float,
+    height_fraction: float,
+) -> np.ndarray | None:
+    height, width = image.shape[:2]
+    patch_width = max(1, int(round(width * width_fraction)))
+    patch_height = max(1, int(round(height * height_fraction)))
+    center_px = int(round(width * center_x))
+    center_py = int(round(height * center_y))
+    x0 = max(0, center_px - patch_width // 2)
+    y0 = max(0, center_py - patch_height // 2)
+    x1 = min(width, x0 + patch_width)
+    y1 = min(height, y0 + patch_height)
+    crop = image[y0:y1, x0:x1]
+    if crop.size == 0:
+        return None
+    return crop
+
+
+def _texture_score_for_occupancy(patch: np.ndarray) -> float:
+    if patch.ndim == 3:
+        gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = patch
+    if gray.size == 0:
+        return 0.0
+
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    contrast = min(1.0, float(np.std(blurred)) / 52.0)
+    laplacian_var = min(1.0, float(cv2.Laplacian(blurred, cv2.CV_32F).var()) / 900.0)
+    edges = cv2.Canny(blurred, 60, 140)
+    edge_density = min(1.0, float((edges > 0).mean()) / 0.12)
+
+    inner_margin_y = max(1, blurred.shape[0] // 5)
+    inner_margin_x = max(1, blurred.shape[1] // 5)
+    inner = blurred[inner_margin_y:-inner_margin_y, inner_margin_x:-inner_margin_x]
+    outer_mask = np.ones_like(blurred, dtype=bool)
+    if inner.size:
+        outer_mask[inner_margin_y:-inner_margin_y, inner_margin_x:-inner_margin_x] = False
+    outer = blurred[outer_mask]
+    inner_std = float(np.std(inner)) if inner.size else 0.0
+    outer_std = float(np.std(outer)) if outer.size else 0.0
+    structure_gain = min(1.0, max(0.0, inner_std - outer_std) / 28.0)
+
+    return round(
+        (0.30 * contrast)
+        + (0.35 * laplacian_var)
+        + (0.20 * edge_density)
+        + (0.15 * structure_gain),
+        4,
+    )
+
+
+def _presence_from_patch(
+    image: np.ndarray,
+    *,
+    center: tuple[float, float],
+    patch_size: tuple[float, float],
+) -> tuple[bool | None, float]:
+    patch = _fractional_patch_from_center(
+        image,
+        center_x=float(center[0]),
+        center_y=float(center[1]),
+        width_fraction=float(patch_size[0]),
+        height_fraction=float(patch_size[1]),
+    )
+    if patch is None:
+        return None, 0.0
+    score = _texture_score_for_occupancy(patch)
+    if score >= _EQUIPMENT_OCCUPIED_SCORE_THRESHOLD:
+        return True, score
+    if score <= _EQUIPMENT_EMPTY_SCORE_THRESHOLD:
+        return False, 1.0 - score
+    return None, score
+
+
+def _derive_equipment_overview_occupancy_from_image(
+    image: np.ndarray,
+) -> tuple[dict[str, Any], list[str]]:
+    reasons: list[str] = []
+    occupancy: dict[str, Any] = {}
+
+    weapon_present, weapon_confidence = _presence_from_patch(
+        image,
+        center=_EQUIPMENT_WEAPON_CENTER,
+        patch_size=_EQUIPMENT_WEAPON_PATCH,
+    )
+    if weapon_present is None:
+        reasons.append("equipment_overview_weapon_presence_ambiguous")
+    else:
+        occupancy["weaponPresent"] = weapon_present
+        occupancy["_weaponConfidence"] = round(float(weapon_confidence), 4)
+
+    disc_slot_occupancy: dict[str, bool] = {}
+    disc_confidences: list[float] = []
+    for slot_index, center in sorted(_EQUIPMENT_DISC_SLOT_CENTERS.items()):
+        present, confidence = _presence_from_patch(
+            image,
+            center=center,
+            patch_size=_EQUIPMENT_DISC_PATCH,
+        )
+        if present is None:
+            reasons.append(f"equipment_overview_slot_ambiguous:{slot_index}")
+            disc_slot_occupancy = {}
+            disc_confidences = []
+            break
+        disc_slot_occupancy[str(slot_index)] = present
+        disc_confidences.append(float(confidence))
+    if disc_slot_occupancy:
+        occupancy["discSlotOccupancy"] = disc_slot_occupancy
+        occupancy["_discConfidence"] = round(sum(disc_confidences) / len(disc_confidences), 4)
+
+    return occupancy, reasons
+
+
+def _pixel_equipment_occupancy_from_captures(
+    session_context: Dict[str, Any],
+    agent_ids_by_slot: dict[tuple[int | None, int], str],
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    reasons: list[str] = []
+    raw_captures = session_context.get("screenCaptures")
+    if not isinstance(raw_captures, list):
+        return {}, reasons
+
+    equipment_entries = [
+        entry
+        for entry in raw_captures
+        if isinstance(entry, dict) and _as_text(entry.get("role")) == "equipment" and _as_text(entry.get("path"))
+    ]
+    if not equipment_entries:
+        return {}, reasons
+
+    by_agent: dict[str, dict[str, Any]] = {}
+    for index, entry in enumerate(equipment_entries):
+        path_value = _as_text(entry.get("path"))
+        agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
+            entry,
+            agent_ids_by_slot,
+            reasons=reasons,
+            reject_slot_mismatch=True,
+        )
+        if not path_value:
+            reasons.append(f"equipment_overview_missing_path:{index}")
+            continue
+        if not agent_id:
+            agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+            reasons.append(
+                f"equipment_overview_missing_agent:{index}"
+                if agent_slot_index is None
+                else f"equipment_overview_missing_agent_for_slot:{agent_slot_index}:{index}"
+            )
+            continue
+
+        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+        if image is None:
+            reasons.append(f"equipment_overview_decode_failed:{agent_id}:{index}")
+            continue
+
+        occupancy, occupancy_reasons = _derive_equipment_overview_occupancy_from_image(image)
+        reasons.extend(f"{agent_id}:{reason}" for reason in occupancy_reasons)
+        if "weaponPresent" not in occupancy and "discSlotOccupancy" not in occupancy:
+            continue
+
+        candidate = {
+            "agentId": agent_id,
+            "agentSource": agent_source,
+            "agentConfidence": float(agent_confidence or 0.0),
+            "pageIndex": _normalize_page_index(entry.get("pageIndex")),
+            "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
+            "_confidence": max(
+                float(occupancy.get("_weaponConfidence", 0.0) or 0.0),
+                float(occupancy.get("_discConfidence", 0.0) or 0.0),
+            ),
+        }
+        if "weaponPresent" in occupancy:
+            candidate["weaponPresent"] = bool(occupancy["weaponPresent"])
+            candidate["_weaponConfidence"] = float(occupancy.get("_weaponConfidence", 0.0) or 0.0)
+        if "discSlotOccupancy" in occupancy:
+            candidate["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
+            candidate["_discConfidence"] = float(occupancy.get("_discConfidence", 0.0) or 0.0)
+
+        existing = by_agent.get(agent_id)
+        if existing is None or float(candidate["_confidence"]) > float(existing.get("_confidence", 0.0)):
+            by_agent[agent_id] = candidate
+
+    return by_agent, reasons
+
+
 def _pixel_weapons_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[tuple[int | None, int], str],
@@ -895,6 +1100,76 @@ def _enrich_agents_with_pixel_discs(
         )
         payload["weaponPresent"] = occupancy["weaponPresent"]
         payload["discSlotOccupancy"] = occupancy["discSlotOccupancy"]
+        merged_agents.append(payload)
+        used = True
+
+    return merged_agents, used
+
+
+def _enrich_agents_with_pixel_equipment_occupancy(
+    agents: list[dict[str, Any]],
+    pixel_equipment_occupancy_by_agent: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], bool]:
+    if not pixel_equipment_occupancy_by_agent:
+        return agents, False
+
+    merged_agents: list[dict[str, Any]] = []
+    seen_agents: set[str] = set()
+    used = False
+
+    for agent in agents:
+        payload = dict(agent)
+        agent_id = _as_text(payload.get("agentId"))
+        seen_agents.add(agent_id)
+        occupancy = pixel_equipment_occupancy_by_agent.get(agent_id)
+        if not occupancy:
+            merged_agents.append(payload)
+            continue
+
+        confidence_by_field = dict(payload.get("confidenceByField") or {})
+        field_sources = dict(payload.get("fieldSources") or {})
+        _copy_visible_slot_metadata(payload, occupancy)
+
+        if "weaponPresent" in occupancy:
+            payload["weaponPresent"] = bool(occupancy["weaponPresent"])
+            confidence_by_field["occupancy"] = round(
+                max(float(confidence_by_field.get("occupancy", 0.0)), float(occupancy.get("_weaponConfidence", 0.0) or 0.0)),
+                4,
+            )
+            field_sources["weaponPresent"] = "pixel_equipment_overview"
+            used = True
+        if "discSlotOccupancy" in occupancy:
+            payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
+            confidence_by_field["occupancy"] = round(
+                max(float(confidence_by_field.get("occupancy", 0.0)), float(occupancy.get("_discConfidence", 0.0) or 0.0)),
+                4,
+            )
+            field_sources["discSlotOccupancy"] = "pixel_equipment_overview"
+            used = True
+
+        payload["confidenceByField"] = confidence_by_field
+        payload["fieldSources"] = field_sources
+        merged_agents.append(payload)
+
+    for agent_id, occupancy in sorted(pixel_equipment_occupancy_by_agent.items()):
+        if agent_id in seen_agents:
+            continue
+        agent_source = _as_text(occupancy.get("agentSource")) or "screen_capture_agent_id"
+        agent_confidence = float(occupancy.get("agentConfidence", 0.0) or 0.0)
+        payload = _default_agent_payload(agent_id, max(agent_confidence, 0.96))
+        payload["fieldSources"]["agentId"] = agent_source
+        payload["confidenceByField"]["agentId"] = round(
+            max(float(payload["confidenceByField"]["agentId"]), agent_confidence or 0.96),
+            4,
+        )
+        _copy_visible_slot_metadata(payload, occupancy)
+        if "weaponPresent" in occupancy:
+            payload["weaponPresent"] = bool(occupancy["weaponPresent"])
+            payload["fieldSources"]["weaponPresent"] = "pixel_equipment_overview"
+        if "discSlotOccupancy" in occupancy:
+            payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
+            payload["fieldSources"]["discSlotOccupancy"] = "pixel_equipment_overview"
+        payload["confidenceByField"]["occupancy"] = round(float(occupancy.get("_confidence", 0.0) or 0.0), 4)
         merged_agents.append(payload)
         used = True
 
@@ -1241,6 +1516,7 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
     has_payload_equipment = False
     has_payload_occupancy = False
     has_derived_occupancy = False
+    has_pixel_occupancy = False
     has_onnx_disk_detail = False
     has_merged_disk_detail = False
     has_amplifier_detail_ocr = False
@@ -1262,6 +1538,11 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
         ):
             has_payload_occupancy = True
         if (
+            field_sources.get("weaponPresent") == "pixel_equipment_overview"
+            or field_sources.get("discSlotOccupancy") == "pixel_equipment_overview"
+        ):
+            has_pixel_occupancy = True
+        if (
             field_sources.get("weaponPresent") == "derived_from_weapon_payload"
             or field_sources.get("discSlotOccupancy") == "derived_from_discs_payload"
         ):
@@ -1275,6 +1556,8 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
         return "onnx_disk_detail"
     if has_amplifier_detail_ocr:
         return "amplifier_detail_title_ocr"
+    if has_pixel_occupancy:
+        return "pixel_equipment_overview"
     if has_payload_equipment:
         return "session_payload"
     if has_payload_occupancy:
@@ -1316,6 +1599,15 @@ def _filter_resolved_low_conf_reasons(
             if agent is not None and predicate(agent):
                 matched = True
             break
+        if not matched and reason.endswith(".weapon_missing"):
+            agent = by_agent.get(reason[: -len(".weapon_missing")])
+            if agent is not None and agent.get("weaponPresent") is False:
+                matched = True
+        if not matched and reason.endswith(".discs_missing"):
+            agent = by_agent.get(reason[: -len(".discs_missing")])
+            slot_occupancy = agent.get("discSlotOccupancy") if isinstance(agent, dict) else None
+            if isinstance(slot_occupancy, dict) and not any(bool(value) for value in slot_occupancy.values()):
+                matched = True
         if not matched:
             filtered.append(reason)
     return filtered
@@ -1450,6 +1742,11 @@ def scan_roster(
     )
     low_conf_reasons.extend(pixel_agent_detail_reasons)
     agent_ids_by_slot = _merge_agent_ids_by_slot_from_details(agent_ids_by_slot, pixel_agent_details_by_slot)
+    pixel_equipment_occupancy_by_agent, pixel_equipment_occupancy_reasons = _pixel_equipment_occupancy_from_captures(
+        session_context,
+        agent_ids_by_slot,
+    )
+    low_conf_reasons.extend(pixel_equipment_occupancy_reasons)
     pixel_weapons_by_agent, pixel_weapon_reasons = _pixel_weapons_from_captures(
         session_context,
         agent_ids_by_slot,
@@ -1465,6 +1762,10 @@ def scan_roster(
         agents,
         pixel_agent_details,
         pixel_agent_details_by_slot,
+    )
+    agents, used_pixel_occupancy = _enrich_agents_with_pixel_equipment_occupancy(
+        agents,
+        pixel_equipment_occupancy_by_agent,
     )
     agents, used_pixel_weapons = _enrich_agents_with_pixel_weapons(agents, pixel_weapons_by_agent)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
@@ -1520,7 +1821,7 @@ def scan_roster(
                 else (
                     "agent_detail_portrait_agreement_onnx_agent_icon"
                     if used_pixel_agent_details
-                    else ("session_payload" if parsed_agents else "missing")
+                    else ("session_payload" if parsed_agents else ("pixel_equipment_overview" if used_pixel_occupancy else "missing"))
                 )
             )
         ),
@@ -1533,8 +1834,9 @@ def scan_roster(
     }
     capabilities = {
         "uidFromPixels": uid_source == "onnx_uid_digits",
-        "agentIdsFromPixels": bool(icon_agents or used_pixel_agent_details or used_pixel_weapons or used_pixel_discs),
-        "equipmentFromPixels": bool(used_pixel_weapons or used_pixel_discs),
+        "agentIdsFromPixels": bool(icon_agents or used_pixel_agent_details or used_pixel_occupancy or used_pixel_weapons or used_pixel_discs),
+        "equipmentFromPixels": bool(used_pixel_occupancy or used_pixel_weapons or used_pixel_discs),
+        "equipmentOverviewFromPixels": bool(used_pixel_occupancy),
         "agentDetailsFromPixels": bool(used_pixel_agent_details),
         "fullRosterCoverage": _infer_full_roster_coverage(session_context),
         "rawRosterCaptureAvailable": has_roster_capture,

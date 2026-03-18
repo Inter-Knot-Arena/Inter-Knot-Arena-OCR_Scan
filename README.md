@@ -28,6 +28,7 @@ See `contracts/ocr-output.schema.json`.
 - `scanner/model_runtime.py` loads ONNX models (`uid_digit`, `agent_icon`, `disk_detail`) with CUDA-only runtime validation.
 - `amplifier_detail` is resolved in runtime via title-crop OCR plus the reviewed alias contract in `contracts/amplifier-title-aliases.json`.
 - `agent_detail` runtime uses `uid_digit` for level/mindscape digits and `contracts/agent-detail-digit-templates.json` for full stat-row parsing.
+- `equipment` overview runtime now contributes pixel `weaponPresent` and `discSlotOccupancy` when the overview capture is confident enough, even before individual amplifier/disk detail screens are parsed.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
 - Strict mode does not inject demo agents or `uidCandidates`: only explicit runtime captures/crops are trusted.
 - Multi-page roster captures are normalized into page-aware `agentSlotIndex` values, so downstream detail/equipment captures can bind to a stable roster identity.

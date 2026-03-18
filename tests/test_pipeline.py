@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+import numpy as np
+
 from scanner import pipeline
 
 
@@ -77,6 +79,52 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, 0, 1), "agent_anby")
         self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, 1, 1), "agent_nicole")
         self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, None, 1), "")
+
+    def test_equipment_overview_occupancy_detects_synthetic_slots(self) -> None:
+        image = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        rng = np.random.default_rng(42)
+
+        def fill_patch(center: tuple[float, float], patch_size: tuple[float, float]) -> None:
+            patch = pipeline._fractional_patch_from_center(
+                image,
+                center_x=center[0],
+                center_y=center[1],
+                width_fraction=patch_size[0] * 0.72,
+                height_fraction=patch_size[1] * 0.72,
+            )
+            self.assertIsNotNone(patch)
+            assert patch is not None
+            patch[:] = rng.integers(32, 255, size=patch.shape, dtype=np.uint8)
+
+        fill_patch(pipeline._EQUIPMENT_WEAPON_CENTER, pipeline._EQUIPMENT_WEAPON_PATCH)
+        fill_patch(pipeline._EQUIPMENT_DISC_SLOT_CENTERS[1], pipeline._EQUIPMENT_DISC_PATCH)
+        fill_patch(pipeline._EQUIPMENT_DISC_SLOT_CENTERS[3], pipeline._EQUIPMENT_DISC_PATCH)
+        fill_patch(pipeline._EQUIPMENT_DISC_SLOT_CENTERS[5], pipeline._EQUIPMENT_DISC_PATCH)
+
+        occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
+
+        self.assertEqual(reasons, [])
+        self.assertTrue(occupancy["weaponPresent"])
+        self.assertEqual(
+            occupancy["discSlotOccupancy"],
+            {"1": True, "2": False, "3": True, "4": False, "5": True, "6": False},
+        )
+
+    def test_filter_resolved_low_conf_reasons_respects_known_empty_equipment(self) -> None:
+        filtered = pipeline._filter_resolved_low_conf_reasons(
+            [
+                {
+                    "agentId": "agent_anby",
+                    "weaponPresent": False,
+                    "discSlotOccupancy": {str(slot): False for slot in range(1, 7)},
+                    "weapon": {},
+                    "discs": [],
+                }
+            ],
+            ["agent_anby.weapon_missing", "agent_anby.discs_missing"],
+        )
+
+        self.assertEqual(filtered, [])
 
 
 if __name__ == "__main__":
