@@ -97,13 +97,12 @@ def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[int, str]:
 
 def _merge_agent_ids_by_slot_from_details(
     slot_to_agent: dict[int, str],
-    pixel_agent_details: dict[str, dict[str, Any]],
+    pixel_agent_details_by_slot: dict[int, dict[str, Any]],
 ) -> dict[int, str]:
     merged = dict(slot_to_agent)
-    for detail in pixel_agent_details.values():
+    for slot_index, detail in pixel_agent_details_by_slot.items():
         if not isinstance(detail, dict):
             continue
-        slot_index = _as_slot_index(detail.get("agentSlotIndex"))
         agent_id = _as_text(detail.get("agentId"))
         if slot_index is None or slot_index <= 0 or not agent_id:
             continue
@@ -415,15 +414,15 @@ def _pixel_discs_from_captures(
 def _pixel_agent_details_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[int, str],
-) -> tuple[dict[str, dict[str, Any]], list[str]]:
+) -> tuple[dict[str, dict[str, Any]], dict[int, dict[str, Any]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
     if not isinstance(raw_captures, list):
-        return {}, reasons
+        return {}, {}, reasons
 
     if not ModelRegistry.has_uid_model():
         reasons.append("uid_model_missing_for_agent_detail")
-        return {}, reasons
+        return {}, {}, reasons
 
     detail_entries = [
         entry
@@ -431,9 +430,10 @@ def _pixel_agent_details_from_captures(
         if isinstance(entry, dict) and _as_text(entry.get("role")) == "agent_detail" and _as_text(entry.get("path"))
     ]
     if not detail_entries:
-        return {}, reasons
+        return {}, {}, reasons
 
     by_agent: dict[str, dict[str, Any]] = {}
+    by_slot: dict[int, dict[str, Any]] = {}
     for index, entry in enumerate(detail_entries):
         path_value = _as_text(entry.get("path"))
         agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
@@ -484,16 +484,27 @@ def _pixel_agent_details_from_captures(
             if not str(value).startswith("agent_detail_stats_")
         )
 
-        existing = by_agent.get(agent_id)
-        if existing is None:
-            by_agent[agent_id] = candidate
-            continue
-
         candidate_score = (
             float(candidate["levelConfidence"])
             + float(candidate["mindscapeConfidence"])
             + float(candidate["statsConfidence"])
         )
+        slot_index = _as_slot_index(candidate.get("agentSlotIndex"))
+        if slot_index is not None and slot_index > 0:
+            existing_for_slot = by_slot.get(slot_index)
+            existing_slot_score = (
+                float(existing_for_slot["levelConfidence"])
+                + float(existing_for_slot["mindscapeConfidence"])
+                + float(existing_for_slot["statsConfidence"])
+            ) if isinstance(existing_for_slot, dict) else -1.0
+            if existing_for_slot is None or candidate_score > existing_slot_score:
+                by_slot[slot_index] = candidate
+
+        existing = by_agent.get(agent_id)
+        if existing is None:
+            by_agent[agent_id] = candidate
+            continue
+
         existing_score = (
             float(existing["levelConfidence"])
             + float(existing["mindscapeConfidence"])
@@ -502,7 +513,7 @@ def _pixel_agent_details_from_captures(
         if candidate_score > existing_score:
             by_agent[agent_id] = candidate
 
-    return by_agent, reasons
+    return by_agent, by_slot, reasons
 
 
 def _pixel_weapons_from_captures(
@@ -1228,12 +1239,12 @@ def scan_roster(
 
     agents = _merge_agents(parsed_agents, icon_agents)
     agent_ids_by_slot = _agent_ids_by_slot(agents)
-    pixel_agent_details, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(
+    pixel_agent_details, pixel_agent_details_by_slot, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(
         session_context,
         agent_ids_by_slot,
     )
     low_conf_reasons.extend(pixel_agent_detail_reasons)
-    agent_ids_by_slot = _merge_agent_ids_by_slot_from_details(agent_ids_by_slot, pixel_agent_details)
+    agent_ids_by_slot = _merge_agent_ids_by_slot_from_details(agent_ids_by_slot, pixel_agent_details_by_slot)
     pixel_weapons_by_agent, pixel_weapon_reasons = _pixel_weapons_from_captures(
         session_context,
         agent_ids_by_slot,
