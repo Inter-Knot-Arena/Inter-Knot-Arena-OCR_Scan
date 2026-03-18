@@ -95,28 +95,89 @@ def _as_slot_index(value: Any) -> int | None:
     return None
 
 
-def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[int, str]:
-    mapping: dict[int, str] = {}
+def _visible_slot_key(page_index: Any, agent_slot_index: Any) -> tuple[int | None, int] | None:
+    slot_index = _as_slot_index(agent_slot_index)
+    if slot_index is None or slot_index <= 0:
+        return None
+    normalized_page_index = _as_slot_index(page_index)
+    if normalized_page_index is not None and normalized_page_index <= 0:
+        normalized_page_index = None
+    return normalized_page_index, slot_index
+
+
+def _agent_visible_slot_key(agent: dict[str, Any], fallback_slot_index: int | None = None) -> tuple[int | None, int] | None:
+    slot_key = _visible_slot_key(agent.get("_pageIndex"), agent.get("_agentSlotIndex"))
+    if slot_key is not None:
+        return slot_key
+    return _visible_slot_key(None, fallback_slot_index)
+
+
+def _copy_visible_slot_metadata(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for source_key, target_key in (
+        ("pageIndex", "_pageIndex"),
+        ("agentSlotIndex", "_agentSlotIndex"),
+        ("_pageIndex", "_pageIndex"),
+        ("_agentSlotIndex", "_agentSlotIndex"),
+    ):
+        value = source.get(source_key)
+        slot_index = _as_slot_index(value)
+        if slot_index is None or slot_index <= 0:
+            continue
+        target[target_key] = slot_index
+    screen_alias = _as_text(source.get("screenAlias") or source.get("_screenAlias"))
+    if screen_alias:
+        target["_screenAlias"] = screen_alias
+
+
+def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[tuple[int | None, int], str]:
+    mapping: dict[tuple[int | None, int], str] = {}
     for index, agent in enumerate(agents, start=1):
         agent_id = _as_text(agent.get("agentId"))
-        if agent_id:
-            mapping[index] = agent_id
+        slot_key = _agent_visible_slot_key(agent, index)
+        if agent_id and slot_key is not None:
+            mapping[slot_key] = agent_id
     return mapping
 
 
 def _merge_agent_ids_by_slot_from_details(
-    slot_to_agent: dict[int, str],
-    pixel_agent_details_by_slot: dict[int, dict[str, Any]],
-) -> dict[int, str]:
+    slot_to_agent: dict[tuple[int | None, int], str],
+    pixel_agent_details_by_slot: dict[tuple[int | None, int], dict[str, Any]],
+) -> dict[tuple[int | None, int], str]:
     merged = dict(slot_to_agent)
-    for slot_index, detail in pixel_agent_details_by_slot.items():
+    for slot_key, detail in pixel_agent_details_by_slot.items():
         if not isinstance(detail, dict):
             continue
         agent_id = _as_text(detail.get("agentId"))
-        if slot_index is None or slot_index <= 0 or not agent_id:
+        if slot_key is None or not agent_id:
             continue
-        merged[slot_index] = agent_id
+        merged[slot_key] = agent_id
     return merged
+
+
+def _lookup_agent_id_by_slot(
+    slot_to_agent: dict[tuple[int | None, int], str],
+    page_index: Any,
+    agent_slot_index: Any,
+) -> str:
+    slot_key = _visible_slot_key(page_index, agent_slot_index)
+    if slot_key is None:
+        return ""
+    direct = _as_text(slot_to_agent.get(slot_key))
+    if direct:
+        return direct
+    fallback = _as_text(slot_to_agent.get((None, slot_key[1])))
+    if fallback:
+        return fallback
+    candidate_ids = {
+        agent_id
+        for (candidate_page, candidate_slot), agent_id in slot_to_agent.items()
+        if candidate_slot == slot_key[1]
+        and (slot_key[0] is None or candidate_page is None)
+        and _as_text(agent_id)
+    }
+    if len(candidate_ids) == 1:
+        return next(iter(candidate_ids))
+    return ""
 
 
 def _classify_capture_agent_id(entry: dict[str, Any]) -> tuple[str, str, float | None, str]:
@@ -157,7 +218,7 @@ def _classify_capture_agent_id(entry: dict[str, Any]) -> tuple[str, str, float |
 
 def _resolve_capture_agent_id(
     entry: dict[str, Any],
-    agent_ids_by_slot: dict[int, str],
+    agent_ids_by_slot: dict[tuple[int | None, int], str],
     *,
     reasons: list[str] | None = None,
     reject_slot_mismatch: bool = False,
@@ -168,7 +229,11 @@ def _resolve_capture_agent_id(
     classified_agent_id, classified_source, classified_confidence, classified_reason = _classify_capture_agent_id(entry)
     agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
     if agent_slot_index is not None:
-        slot_agent_id = _as_text(agent_ids_by_slot.get(agent_slot_index))
+        slot_agent_id = _lookup_agent_id_by_slot(
+            agent_ids_by_slot,
+            entry.get("pageIndex"),
+            agent_slot_index,
+        )
         if slot_agent_id and classified_agent_id:
             if slot_agent_id == classified_agent_id:
                 return slot_agent_id, "visible_roster_slot_mapping_and_self_id", max(0.97, float(classified_confidence or 0.0))
@@ -288,6 +353,30 @@ def _normalized_fraction(value: float, min_v: float, max_v: float) -> float:
     return (value - min_v) / (max_v - min_v)
 
 
+def _has_meaningful_weapon_payload(weapon: Any) -> bool:
+    if not isinstance(weapon, dict):
+        return False
+    return any(
+        value not in (None, "", [], {})
+        for key, value in weapon.items()
+        if key not in {"agentId", "weaponPresent"}
+    )
+
+
+def _has_meaningful_disc_payload(discs: Any) -> bool:
+    if not isinstance(discs, list):
+        return False
+    return any(
+        isinstance(disc, dict)
+        and (
+            _as_slot_index(disc.get("slot")) is not None
+            or _as_text(disc.get("setId"))
+            or any(value not in (None, "", [], {}) for value in disc.values())
+        )
+        for disc in discs
+    )
+
+
 def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
     return {
         "agentId": agent_id,
@@ -300,11 +389,11 @@ def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
         "discs": [],
         "confidenceByField": {
             "agentId": round(confidence, 4),
-            "level": 0.62,
-            "mindscape": 0.62,
-            "weapon": 0.58,
-            "discs": 0.58,
-            "occupancy": 0.52,
+            "level": 0.24,
+            "mindscape": 0.24,
+            "weapon": 0.18,
+            "discs": 0.18,
+            "occupancy": 0.16,
         },
         "fieldSources": {
             "agentId": "onnx_agent_icon",
@@ -346,7 +435,10 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
             reasons.append(f"agent_icon_decode_failed:{index}")
             continue
         prediction = classify_agent_icon(image)
-        agents.append(_default_agent_payload(prediction.label, prediction.confidence))
+        payload = _default_agent_payload(prediction.label, prediction.confidence)
+        if isinstance(entry, dict):
+            _copy_visible_slot_metadata(payload, entry)
+        agents.append(payload)
         if prediction.confidence < 0.72:
             reasons.append(f"agent_icon_low_conf:{prediction.label}")
 
@@ -355,7 +447,7 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
 
 def _pixel_discs_from_captures(
     session_context: Dict[str, Any],
-    agent_ids_by_slot: dict[int, str],
+    agent_ids_by_slot: dict[tuple[int | None, int], str],
 ) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
@@ -429,8 +521,8 @@ def _pixel_discs_from_captures(
 
 def _pixel_agent_details_from_captures(
     session_context: Dict[str, Any],
-    agent_ids_by_slot: dict[int, str],
-) -> tuple[dict[str, dict[str, Any]], dict[int, dict[str, Any]], list[str]]:
+    agent_ids_by_slot: dict[tuple[int | None, int], str],
+) -> tuple[dict[str, dict[str, Any]], dict[tuple[int | None, int], dict[str, Any]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
     if not isinstance(raw_captures, list):
@@ -449,7 +541,7 @@ def _pixel_agent_details_from_captures(
         return {}, {}, reasons
 
     by_agent: dict[str, dict[str, Any]] = {}
-    by_slot: dict[int, dict[str, Any]] = {}
+    by_slot: dict[tuple[int | None, int], dict[str, Any]] = {}
     for index, entry in enumerate(detail_entries):
         path_value = _as_text(entry.get("path"))
         agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
@@ -480,6 +572,7 @@ def _pixel_agent_details_from_captures(
             "agentId": agent_id,
             "agentSource": agent_source,
             "agentConfidence": float(agent_confidence or 0.0),
+            "pageIndex": _as_slot_index(entry.get("pageIndex")),
             "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
             "level": reading.level,
             "levelCap": reading.level_cap,
@@ -506,16 +599,16 @@ def _pixel_agent_details_from_captures(
             + float(candidate["mindscapeConfidence"])
             + float(candidate["statsConfidence"])
         )
-        slot_index = _as_slot_index(candidate.get("agentSlotIndex"))
-        if slot_index is not None and slot_index > 0:
-            existing_for_slot = by_slot.get(slot_index)
+        slot_key = _visible_slot_key(candidate.get("pageIndex"), candidate.get("agentSlotIndex"))
+        if slot_key is not None:
+            existing_for_slot = by_slot.get(slot_key)
             existing_slot_score = (
                 float(existing_for_slot["levelConfidence"])
                 + float(existing_for_slot["mindscapeConfidence"])
                 + float(existing_for_slot["statsConfidence"])
             ) if isinstance(existing_for_slot, dict) else -1.0
             if existing_for_slot is None or candidate_score > existing_slot_score:
-                by_slot[slot_index] = candidate
+                by_slot[slot_key] = candidate
 
         existing = by_agent.get(agent_id)
         if existing is None:
@@ -535,7 +628,7 @@ def _pixel_agent_details_from_captures(
 
 def _pixel_weapons_from_captures(
     session_context: Dict[str, Any],
-    agent_ids_by_slot: dict[int, str],
+    agent_ids_by_slot: dict[tuple[int | None, int], str],
     locale: str,
 ) -> tuple[dict[str, dict[str, Any]], list[str]]:
     reasons: list[str] = []
@@ -633,33 +726,61 @@ def _pixel_weapons_from_captures(
 def _merge_agents(
     parsed_agents: list[dict[str, Any]],
     icon_agents: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[str]]:
+    reasons: list[str] = []
+
+    def dedupe_agents(
+        agents: list[dict[str, Any]],
+        *,
+        source: str,
+    ) -> list[dict[str, Any]]:
+        deduped: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for agent in agents:
+            agent_id = _as_text(agent.get("agentId"))
+            if not agent_id:
+                deduped.append(agent)
+                continue
+            if agent_id in seen_ids:
+                reasons.append(f"duplicate_agent_id_from_{source}:{agent_id}")
+                continue
+            seen_ids.add(agent_id)
+            deduped.append(agent)
+        return deduped
+
+    parsed_agents = dedupe_agents(parsed_agents, source="session_payload")
+    icon_agents = dedupe_agents(icon_agents, source="onnx_agent_icon")
+
     if not parsed_agents:
-        return icon_agents
+        return icon_agents, reasons
     if not icon_agents:
-        return parsed_agents
+        return parsed_agents, reasons
 
     merged: list[dict[str, Any]] = []
-    total = max(len(parsed_agents), len(icon_agents))
-    for index in range(total):
-        parsed = parsed_agents[index] if index < len(parsed_agents) else None
-        icon = icon_agents[index] if index < len(icon_agents) else None
-        if parsed is None:
-            if icon is not None:
-                merged.append(icon)
-            continue
-        if icon is None:
-            merged.append(parsed)
-            continue
+    parsed_by_id = {
+        _as_text(agent.get("agentId")): agent
+        for agent in parsed_agents
+        if _as_text(agent.get("agentId"))
+    }
+    used_parsed_ids: set[str] = set()
 
+    for icon in icon_agents:
+        icon_agent_id = _as_text(icon.get("agentId"))
+        parsed = parsed_by_id.get(icon_agent_id)
+        if parsed is None:
+            if icon_agent_id and parsed_by_id:
+                reasons.append(f"agent_icon_without_payload:{icon_agent_id}")
+            merged.append(icon)
+            continue
         merged_payload = dict(parsed)
         merged_confidence = dict(parsed.get("confidenceByField") or {})
         merged_field_sources = dict(parsed.get("fieldSources") or {})
         icon_confidence = icon.get("confidenceByField")
-        icon_agent_id = str(icon.get("agentId", "")).strip()
+        _copy_visible_slot_metadata(merged_payload, icon)
         if icon_agent_id:
             merged_payload["agentId"] = icon_agent_id
             merged_field_sources["agentId"] = "onnx_agent_icon"
+            used_parsed_ids.add(icon_agent_id)
         if isinstance(icon_confidence, dict):
             agent_conf = icon_confidence.get("agentId")
             if isinstance(agent_conf, (int, float)):
@@ -668,7 +789,15 @@ def _merge_agents(
         merged_payload["fieldSources"] = merged_field_sources
         merged.append(merged_payload)
 
-    return merged
+    for parsed in parsed_agents:
+        parsed_agent_id = _as_text(parsed.get("agentId"))
+        if parsed_agent_id and parsed_agent_id in used_parsed_ids:
+            continue
+        if parsed_agent_id:
+            reasons.append(f"agent_payload_not_visible_in_roster:{parsed_agent_id}")
+        merged.append(parsed)
+
+    return merged, reasons
 
 
 def _enrich_agents_with_pixel_discs(
@@ -1003,16 +1132,18 @@ def _extract_agents(
         level = float(level_raw) if isinstance(level_raw, (int, float)) else None
         level_cap_raw = raw.get("levelCap")
         level_cap = float(level_cap_raw) if isinstance(level_cap_raw, (int, float)) else None
-        level_conf = 0.84 if level is None else (0.88 + 0.12 * _normalized_fraction(level, 1.0, 60.0))
-        if level is None:
+        level_conf = 0.24 if level is None or level_cap is None else (0.88 + 0.12 * _normalized_fraction(level, 1.0, 60.0))
+        if level is None or level_cap is None:
             low_conf_reasons.append(f"{agent_id}.level_missing")
 
         mindscape_raw = raw.get("mindscape")
         mindscape = float(mindscape_raw) if isinstance(mindscape_raw, (int, float)) else None
         mindscape_cap_raw = raw.get("mindscapeCap")
         mindscape_cap = float(mindscape_cap_raw) if isinstance(mindscape_cap_raw, (int, float)) else None
-        mindscape_conf = 0.82 if mindscape is None else (0.88 + 0.1 * _normalized_fraction(mindscape, 0.0, 6.0))
-        if mindscape is None:
+        mindscape_conf = (
+            0.24 if mindscape is None or mindscape_cap is None else (0.88 + 0.1 * _normalized_fraction(mindscape, 0.0, 6.0))
+        )
+        if mindscape is None or mindscape_cap is None:
             low_conf_reasons.append(f"{agent_id}.mindscape_missing")
 
         stats = raw.get("stats")
@@ -1021,12 +1152,14 @@ def _extract_agents(
 
         weapon = raw.get("weapon")
         discs = raw.get("discs")
-        weapon_conf = 0.9 if isinstance(weapon, dict) else 0.78
-        disc_conf = 0.9 if isinstance(discs, list) else 0.76
-        if not isinstance(weapon, dict):
+        has_weapon = isinstance(weapon, dict) and bool(weapon)
+        has_discs = isinstance(discs, list) and bool(discs)
+        weapon_conf = 0.9 if has_weapon else 0.22
+        disc_conf = 0.9 if has_discs else 0.22
+        if not has_weapon:
             low_conf_reasons.append(f"{agent_id}.weapon_missing")
             weapon = {}
-        if not isinstance(discs, list):
+        if not has_discs:
             low_conf_reasons.append(f"{agent_id}.discs_missing")
             discs = []
 
@@ -1043,7 +1176,7 @@ def _extract_agents(
             explicit_weapon_present=raw.get("weaponPresent", occupancy_override.get("weaponPresent")),
             explicit_slot_occupancy=raw.get("discSlotOccupancy", occupancy_override.get("discSlotOccupancy")),
         )
-        occupancy_conf = 0.92 if occupancy_override else 0.84
+        occupancy_conf = 0.92 if occupancy_override else (0.76 if has_weapon or has_discs else 0.18)
 
         confidence_by_field = {
             "agentId": float(raw.get("agentConfidence", 0.99)),
@@ -1181,6 +1314,49 @@ def _filter_resolved_low_conf_reasons(
     return filtered
 
 
+def _infer_full_roster_coverage(session_context: Dict[str, Any]) -> bool:
+    raw_captures = session_context.get("screenCaptures")
+    if not isinstance(raw_captures, list):
+        return False
+
+    has_roster_capture = any(
+        isinstance(capture, dict) and _as_text(capture.get("role")) == "roster"
+        for capture in raw_captures
+    )
+    if not has_roster_capture:
+        return False
+
+    icon_payload = session_context.get("agentIconPaths")
+    if not isinstance(icon_payload, list) or not icon_payload:
+        return False
+
+    page_counts: dict[int, int] = {}
+    observed_page_capacity = 0
+    for entry in icon_payload:
+        if not isinstance(entry, dict):
+            continue
+        page_index = _as_slot_index(entry.get("pageIndex"))
+        if page_index is None:
+            continue
+        page_counts[page_index] = page_counts.get(page_index, 0) + 1
+        observed_page_capacity = max(
+            observed_page_capacity,
+            _as_slot_index(entry.get("rosterPageSlotIndex")) or 0,
+        )
+
+    if not page_counts:
+        return False
+
+    if observed_page_capacity <= 0:
+        observed_page_capacity = max(page_counts.values())
+    if observed_page_capacity <= 0:
+        return False
+
+    last_page = max(page_counts)
+    last_page_count = page_counts[last_page]
+    return 0 < last_page_count < observed_page_capacity
+
+
 def scan_roster(
     session_context: Dict[str, Any],
     calibration: Dict[str, Any] | None,
@@ -1199,7 +1375,7 @@ def scan_roster(
 
     normalized_locale = _normalize_locale(locale)
     normalized_resolution = normalize_runtime_resolution(session_context, resolution)
-    if not normalized_locale:
+    if not normalized_locale or not normalized_resolution:
         raise ScanFailure(
             ScanFailureCode.UNSUPPORTED_LAYOUT,
             "Unsupported locale or layout family.",
@@ -1234,14 +1410,12 @@ def scan_roster(
         uid = uid_from_image
         uid_confidence = uid_conf_from_image
     else:
-        uid_candidates = session_context.get("uidCandidates")
-        if not isinstance(uid_candidates, list):
-            uid_candidates = []
-        uid, uid_confidence = _select_uid_from_candidates((str(value) for value in uid_candidates))
+        uid = ""
+        uid_confidence = 0.0
 
     if not uid:
         low_conf_reasons.append("uid_missing")
-    uid_source = uid_source_from_image if uid_from_image else ("uid_candidates" if uid else "missing")
+    uid_source = uid_source_from_image if uid_from_image else "missing"
 
     icon_agents, icon_reasons = _agents_from_icons(session_context)
     low_conf_reasons.extend(icon_reasons)
@@ -1255,7 +1429,8 @@ def scan_roster(
     if parsed_agents and icon_agents and len(parsed_agents) != len(icon_agents):
         low_conf_reasons.append("agent_count_mismatch_between_icon_and_payload")
 
-    agents = _merge_agents(parsed_agents, icon_agents)
+    agents, merge_reasons = _merge_agents(parsed_agents, icon_agents)
+    low_conf_reasons.extend(merge_reasons)
     agent_ids_by_slot = _agent_ids_by_slot(agents)
     pixel_agent_details, pixel_agent_details_by_slot, pixel_agent_detail_reasons = _pixel_agent_details_from_captures(
         session_context,
@@ -1345,7 +1520,7 @@ def scan_roster(
         "agentIdsFromPixels": bool(icon_agents or used_pixel_agent_details or used_pixel_weapons or used_pixel_discs),
         "equipmentFromPixels": bool(used_pixel_weapons or used_pixel_discs),
         "agentDetailsFromPixels": bool(used_pixel_agent_details),
-        "fullRosterCoverage": False,
+        "fullRosterCoverage": _infer_full_roster_coverage(session_context),
         "rawRosterCaptureAvailable": has_roster_capture,
     }
 
@@ -1427,13 +1602,46 @@ def run_scan(seed: str, region: str, full_sync: bool) -> Dict[str, Any]:
     ]
 
     uid_sample = str(rng.randint(100000000, 999999999))
-    context = {
-        "sessionId": seed,
-        "inputLockActive": True,
-        "regionHint": region,
-        "anchors": {"profile": True, "agents": True, "equipment": True},
-        "uidCandidates": [uid_sample],
-        "agents": agents if full_sync else agents[:2],
+    metadata = get_model_metadata(DEFAULT_MODEL_VERSION)
+    visible_agents = agents if full_sync else agents[:2]
+    average_level_confidence = round(
+        sum(0.93 for _ in visible_agents) / max(len(visible_agents), 1),
+        4,
+    )
+    average_equipment_confidence = round(
+        sum(0.91 for _ in visible_agents) / max(len(visible_agents), 1),
+        4,
+    )
+    return {
+        "uid": uid_sample,
+        "region": _normalize_region(region),
+        "modelVersion": metadata["modelVersion"],
+        "dataVersion": metadata["dataVersion"],
+        "scanMeta": "demo_seeded_payload",
+        "confidenceByField": {
+            "uid": 0.995,
+            "region": 0.97 if _normalize_region(region) != "OTHER" else 0.83,
+            "agents": average_level_confidence,
+            "equipment": average_equipment_confidence,
+        },
+        "fieldSources": {
+            "uid": "demo_seed",
+            "region": "demo_seed",
+            "agents": "demo_seed",
+            "equipment": "demo_seed",
+            "capture": "demo_seed",
+        },
+        "capabilities": {
+            "uidFromPixels": False,
+            "agentIdsFromPixels": False,
+            "equipmentFromPixels": False,
+            "agentDetailsFromPixels": False,
+            "fullRosterCoverage": bool(full_sync),
+            "rawRosterCaptureAvailable": False,
+        },
+        "agents": visible_agents,
+        "lowConfReasons": [],
+        "timingMs": 0.0,
+        "resolution": "1080p",
+        "locale": "EN",
     }
-    calibration = {"requiredAnchors": ["profile", "agents", "equipment"]}
-    return scan_roster(context, calibration, locale="EN", resolution="1080p")

@@ -48,6 +48,7 @@ _ROSTER_AGENT_ICON_BOXES = (
     (0.566, 0.222, 0.133, 0.208),
     (0.605, 0.479, 0.141, 0.278),
 )
+_ROSTER_PAGE_CAPACITY = len(_ROSTER_AGENT_ICON_BOXES)
 _AGENT_IDENTITY_BOXES = {
     AGENT_DETAIL_ROLE: (
         ("portrait_wide", (0.02, 0.08, 0.46, 0.84)),
@@ -107,6 +108,30 @@ def _as_text(value: Any) -> str:
     return ""
 
 
+def _as_index(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float) and float(value).is_integer():
+        return int(value)
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _effective_page_index(page_index: int | None, fallback: int = 0) -> int:
+    if isinstance(page_index, int) and page_index >= 0:
+        return page_index
+    return fallback
+
+
+def _effective_agent_slot_index(agent_slot_index: int | None, page_index: int | None) -> int | None:
+    if agent_slot_index is None or agent_slot_index <= 0:
+        return None
+    return agent_slot_index
+
+
 def _load_image(path: Path) -> np.ndarray | None:
     if not path.exists():
         return None
@@ -128,34 +153,30 @@ def _capture_shape(session_context: Mapping[str, Any]) -> tuple[int, int] | None
             if image is not None:
                 height, width = image.shape[:2]
                 return width, height
-
-    for key in ("uidImagePath",):
-        path_value = _as_text(session_context.get(key))
-        if not path_value:
-            continue
-        image = _load_image(Path(path_value))
-        if image is not None:
-            height, width = image.shape[:2]
-            return width, height
     return None
 
 
 def normalize_runtime_resolution(session_context: Mapping[str, Any], resolution: str | None) -> str:
     explicit = str(resolution or "").strip().lower()
+    explicit_canonical = ""
     if explicit in _CANONICAL_RESOLUTIONS:
-        return explicit
+        explicit_canonical = explicit
 
     explicit_height = _parse_resolution_height(explicit)
     if explicit_height is not None:
-        return _canonical_resolution_for_height(explicit_height)
+        explicit_canonical = _canonical_resolution_for_height(explicit_height)
 
     capture_shape = _capture_shape(session_context)
     if capture_shape is not None:
         width, height = capture_shape
-        if _is_layout_aspect(width, height):
-            return _canonical_resolution_for_height(height)
+        if not _is_layout_aspect(width, height):
+            return ""
+        observed_canonical = _canonical_resolution_for_height(height)
+        if explicit_canonical and explicit_canonical != observed_canonical:
+            return ""
+        return explicit_canonical or observed_canonical
 
-    return "1080p"
+    return explicit_canonical
 
 
 def _fractional_crop(image: np.ndarray, box: tuple[float, float, float, float]) -> np.ndarray | None:
@@ -330,12 +351,9 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
             path_value = _as_text(entry.get("path"))
             if not role or not path_value:
                 continue
-            slot_index_raw = entry.get("slotIndex")
-            slot_index = int(slot_index_raw) if isinstance(slot_index_raw, int) else None
-            agent_slot_index_raw = entry.get("agentSlotIndex")
-            agent_slot_index = int(agent_slot_index_raw) if isinstance(agent_slot_index_raw, int) else None
-            page_index_raw = entry.get("pageIndex")
-            page_index = int(page_index_raw) if isinstance(page_index_raw, int) else None
+            slot_index = _as_index(entry.get("slotIndex"))
+            page_index = _as_index(entry.get("pageIndex"))
+            agent_slot_index = _effective_agent_slot_index(_as_index(entry.get("agentSlotIndex")), page_index)
             captures.append(
                 RuntimeCapture(
                     role=role,
@@ -364,16 +382,24 @@ def _collect_runtime_captures(session_context: Mapping[str, Any]) -> List[Runtim
         for index, entry in enumerate(raw_icons):
             if isinstance(entry, dict):
                 path_value = _as_text(entry.get("path"))
+                alias = _as_text(entry.get("screenAlias") or entry.get("alias") or f"legacy_agent_icon_{index + 1}")
+                page_index = _as_index(entry.get("pageIndex"))
+                agent_slot_index = _as_index(entry.get("agentSlotIndex"))
             else:
                 path_value = _as_text(entry)
+                alias = f"legacy_agent_icon_{index + 1}"
+                page_index = None
+                agent_slot_index = None
             if not path_value:
                 continue
             captures.append(
                 RuntimeCapture(
                     role="agent_icon_crop",
                     path=Path(path_value),
-                    alias=f"legacy_agent_icon_{index + 1}",
+                    alias=alias,
                     agent_id="",
+                    agent_slot_index=agent_slot_index,
+                    page_index=page_index,
                 )
             )
     return captures
@@ -391,21 +417,34 @@ def _derive_uid_from_capture(capture: RuntimeCapture, root: Path) -> str | None:
     return _save_crop(root, "uid_from_uid_panel.png", crop)
 
 
-def _derive_agent_icons_from_capture(capture: RuntimeCapture, root: Path) -> List[Dict[str, str]]:
+def _derive_agent_icons_from_capture(
+    capture: RuntimeCapture,
+    root: Path,
+    *,
+    page_index: int,
+) -> List[Dict[str, Any]]:
     if capture.role != ROSTER_ROLE:
         return []
     image = _load_image(capture.path)
     if image is None:
         return []
 
-    icons: List[Dict[str, str]] = []
+    icons: List[Dict[str, Any]] = []
     for index, box in enumerate(_ROSTER_AGENT_ICON_BOXES):
         crop = _fractional_crop(image, box)
         if crop is None:
             continue
-        path = _save_crop(root, f"agent_icon_{index + 1}.png", crop)
+        path = _save_crop(root, f"agent_icon_page_{page_index}_{index + 1}.png", crop)
         if path:
-            icons.append({"path": path, "screenAlias": capture.alias})
+            icons.append(
+                {
+                    "path": path,
+                    "screenAlias": capture.alias,
+                    "pageIndex": page_index,
+                    "agentSlotIndex": (page_index * _ROSTER_PAGE_CAPACITY) + index + 1,
+                    "rosterPageSlotIndex": index + 1,
+                }
+            )
     return icons
 
 
@@ -429,30 +468,41 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
     raw_icon_payload = normalized.get("agentIconPaths")
     has_agent_icons = isinstance(raw_icon_payload, list) and bool(raw_icon_payload)
     if not has_agent_icons:
-        for capture in captures:
-            icons = _derive_agent_icons_from_capture(capture, temp_root)
-            if icons:
-                normalized["agentIconPaths"] = icons
-                break
+        roster_captures = [
+            (index, capture)
+            for index, capture in enumerate(captures)
+            if capture.role == ROSTER_ROLE
+        ]
+        derived_icons: list[dict[str, Any]] = []
+        for derived_page_index, (_, capture) in enumerate(
+            sorted(
+                roster_captures,
+                key=lambda item: (
+                    _effective_page_index(item[1].page_index, item[0]),
+                    item[0],
+                ),
+            )
+        ):
+            effective_page_index = _effective_page_index(capture.page_index, derived_page_index)
+            derived_icons.extend(
+                _derive_agent_icons_from_capture(
+                    capture,
+                    temp_root,
+                    page_index=effective_page_index,
+                )
+            )
+        if derived_icons:
+            normalized["agentIconPaths"] = sorted(
+                derived_icons,
+                key=lambda entry: (
+                    _as_index(entry.get("pageIndex")) or 0,
+                    _as_index(entry.get("agentSlotIndex")) or 0,
+                    _as_text(entry.get("path")),
+                ),
+            )
 
     anchors_raw = normalized.get("anchors")
-    anchors = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
-    capture_roles = {capture.role for capture in captures}
-    has_richer_agent_captures = bool(
-        capture_roles.intersection({AGENT_DETAIL_ROLE, EQUIPMENT_ROLE, AMPLIFIER_DETAIL_ROLE, DISK_DETAIL_ROLE})
-    )
-    if _as_text(normalized.get("uidImagePath")):
-        anchors["profile"] = True
-    elif has_richer_agent_captures:
-        anchors["profile"] = True
-    icon_payload = normalized.get("agentIconPaths")
-    if isinstance(icon_payload, list) and len(icon_payload) >= 2:
-        anchors["agents"] = True
-        anchors["equipment"] = True
-    elif has_richer_agent_captures:
-        anchors["agents"] = True
-        anchors["equipment"] = True
-    normalized["anchors"] = anchors
+    normalized["anchors"] = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
     normalized["runtimeResolution"] = normalized_resolution
     normalized["screenCaptures"] = [
         {

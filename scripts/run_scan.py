@@ -41,6 +41,26 @@ def _parse_screen_capture(value: str) -> dict[str, object]:
     return payload
 
 
+def _build_strict_context(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "sessionId": args.seed,
+        "inputLockActive": True,
+        "regionHint": args.region,
+        "anchors": {
+            "profile": args.anchor_profile,
+            "agents": args.anchor_agents,
+            "equipment": args.anchor_equipment,
+        },
+        "uidImagePath": args.uid_image or None,
+        "agentIconPaths": [{"path": path} for path in args.agent_icon],
+        "screenCaptures": list(args.screen_capture or []),
+    }
+
+
+def _build_strict_calibration() -> dict[str, list[str]]:
+    return {"requiredAnchors": ["profile", "agents", "equipment"]}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run OCR roster scan pipeline")
     parser.add_argument("--seed", default="default")
@@ -69,34 +89,8 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.input_lock:
-        screen_captures = list(args.screen_capture or [])
-        context = {
-            "sessionId": args.seed,
-            "inputLockActive": True,
-            "regionHint": args.region,
-            "anchors": {
-                "profile": args.anchor_profile,
-                "agents": args.anchor_agents,
-                "equipment": args.anchor_equipment,
-            },
-            "uidCandidates": ["uid=123456789"],
-            "uidImagePath": args.uid_image or None,
-            "agentIconPaths": [{"path": path} for path in args.agent_icon],
-            "screenCaptures": screen_captures,
-            "agents": [
-                {
-                    "agentId": "agent_anby",
-                    "level": 60,
-                    "mindscape": 1,
-                    "weapon": {"weaponId": "amp_starlight_engine", "level": 60},
-                    "discs": [
-                        {"slot": 1, "setId": "set_woodpecker", "level": 15},
-                        {"slot": 2, "setId": "set_woodpecker", "level": 15},
-                    ],
-                }
-            ],
-        }
-        calibration = {"requiredAnchors": ["profile", "agents", "equipment"]}
+        context = _build_strict_context(args)
+        calibration = _build_strict_calibration()
         try:
             result = scan_roster(
                 session_context=context,
