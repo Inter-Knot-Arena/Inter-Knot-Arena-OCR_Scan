@@ -100,7 +100,7 @@ def _visible_slot_key(page_index: Any, agent_slot_index: Any) -> tuple[int | Non
     if slot_index is None or slot_index <= 0:
         return None
     normalized_page_index = _as_slot_index(page_index)
-    if normalized_page_index is not None and normalized_page_index <= 0:
+    if normalized_page_index is not None and normalized_page_index < 0:
         normalized_page_index = None
     return normalized_page_index, slot_index
 
@@ -120,10 +120,14 @@ def _copy_visible_slot_metadata(target: dict[str, Any], source: dict[str, Any]) 
         ("_agentSlotIndex", "_agentSlotIndex"),
     ):
         value = source.get(source_key)
-        slot_index = _as_slot_index(value)
-        if slot_index is None or slot_index <= 0:
+        normalized_index = _as_slot_index(value)
+        if normalized_index is None:
             continue
-        target[target_key] = slot_index
+        if target_key == "_pageIndex" and normalized_index < 0:
+            continue
+        if target_key == "_agentSlotIndex" and normalized_index <= 0:
+            continue
+        target[target_key] = normalized_index
     screen_alias = _as_text(source.get("screenAlias") or source.get("_screenAlias"))
     if screen_alias:
         target["_screenAlias"] = screen_alias
@@ -991,29 +995,30 @@ def _enrich_agents_with_pixel_weapons(
 def _enrich_agents_with_agent_detail_pixels(
     agents: list[dict[str, Any]],
     pixel_agent_details: dict[str, dict[str, Any]],
+    pixel_agent_details_by_slot: dict[tuple[int | None, int], dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], bool]:
-    if not pixel_agent_details:
+    if not pixel_agent_details and not pixel_agent_details_by_slot:
         return agents, False
 
-    details_by_slot = {
-        slot_index: detail
-        for detail in pixel_agent_details.values()
-        for slot_index in [_as_slot_index(detail.get("agentSlotIndex"))]
-        if slot_index is not None and slot_index > 0
-    }
     merged_agents: list[dict[str, Any]] = []
     seen_agents: set[str] = set()
     used = False
 
     for slot_index, agent in enumerate(agents, start=1):
         payload = dict(agent)
+        visible_slot_key = _agent_visible_slot_key(payload, slot_index)
         agent_id = _as_text(payload.get("agentId"))
-        detail = details_by_slot.get(slot_index) or pixel_agent_details.get(agent_id)
+        detail = (
+            pixel_agent_details_by_slot.get(visible_slot_key)
+            if visible_slot_key is not None
+            else None
+        ) or pixel_agent_details.get(agent_id)
         if not detail:
             if agent_id:
                 seen_agents.add(agent_id)
             merged_agents.append(payload)
             continue
+        _copy_visible_slot_metadata(payload, detail)
 
         confidence_by_field = dict(payload.get("confidenceByField") or {})
         field_sources = dict(payload.get("fieldSources") or {})
@@ -1079,6 +1084,7 @@ def _enrich_agents_with_agent_detail_pixels(
             max(float(payload["confidenceByField"]["agentId"]), agent_confidence or 0.96),
             4,
         )
+        _copy_visible_slot_metadata(payload, detail)
         if (
             detail.get("level") is not None
             and detail.get("levelCap") is not None
@@ -1152,8 +1158,8 @@ def _extract_agents(
 
         weapon = raw.get("weapon")
         discs = raw.get("discs")
-        has_weapon = isinstance(weapon, dict) and bool(weapon)
-        has_discs = isinstance(discs, list) and bool(discs)
+        has_weapon = _has_meaningful_weapon_payload(weapon)
+        has_discs = _has_meaningful_disc_payload(discs)
         weapon_conf = 0.9 if has_weapon else 0.22
         disc_conf = 0.9 if has_discs else 0.22
         if not has_weapon:
@@ -1207,22 +1213,23 @@ def _extract_agents(
             ),
         }
 
-        results.append(
-            {
-                "agentId": agent_id,
-                "level": level,
-                "levelCap": level_cap,
-                "mindscape": mindscape,
-                "mindscapeCap": mindscape_cap,
-                "stats": stats,
-                "weapon": weapon,
-                "discs": discs,
-                "weaponPresent": occupancy["weaponPresent"],
-                "discSlotOccupancy": occupancy["discSlotOccupancy"],
-                "confidenceByField": confidence_by_field,
-                "fieldSources": field_sources,
-            }
-        )
+        parsed_agent = {
+            "agentId": agent_id,
+            "level": level,
+            "levelCap": level_cap,
+            "mindscape": mindscape,
+            "mindscapeCap": mindscape_cap,
+            "stats": stats,
+            "weapon": weapon,
+            "discs": discs,
+            "weaponPresent": occupancy["weaponPresent"],
+            "discSlotOccupancy": occupancy["discSlotOccupancy"],
+            "confidenceByField": confidence_by_field,
+            "fieldSources": field_sources,
+        }
+        if isinstance(raw, dict):
+            _copy_visible_slot_metadata(parsed_agent, raw)
+        results.append(parsed_agent)
 
     if not results:
         low_conf_reasons.append("agents_empty_after_parse")
@@ -1315,6 +1322,11 @@ def _filter_resolved_low_conf_reasons(
 
 
 def _infer_full_roster_coverage(session_context: Dict[str, Any]) -> bool:
+    for key in ("fullRosterCoverage", "fullRosterTerminalSliceReached", "terminalSliceReached"):
+        value = session_context.get(key)
+        if isinstance(value, bool):
+            return value
+
     raw_captures = session_context.get("screenCaptures")
     if not isinstance(raw_captures, list):
         return False
@@ -1336,7 +1348,7 @@ def _infer_full_roster_coverage(session_context: Dict[str, Any]) -> bool:
         if not isinstance(entry, dict):
             continue
         page_index = _as_slot_index(entry.get("pageIndex"))
-        if page_index is None:
+        if page_index is None or page_index < 0:
             continue
         page_counts[page_index] = page_counts.get(page_index, 0) + 1
         observed_page_capacity = max(
@@ -1449,7 +1461,11 @@ def scan_roster(
         agent_ids_by_slot,
     )
     low_conf_reasons.extend(pixel_disc_reasons)
-    agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(agents, pixel_agent_details)
+    agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(
+        agents,
+        pixel_agent_details,
+        pixel_agent_details_by_slot,
+    )
     agents, used_pixel_weapons = _enrich_agents_with_pixel_weapons(agents, pixel_weapons_by_agent)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
     if not agents:

@@ -80,6 +80,13 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(pipeline._infer_full_roster_coverage(terminal_context))
         self.assertFalse(pipeline._infer_full_roster_coverage(non_terminal_context))
 
+    def test_visible_slot_key_preserves_first_page_index(self) -> None:
+        self.assertEqual(pipeline._visible_slot_key(0, 1), (0, 1))
+        payload: dict[str, object] = {}
+        pipeline._copy_visible_slot_metadata(payload, {"pageIndex": 0, "agentSlotIndex": 2})
+        self.assertEqual(payload["_pageIndex"], 0)
+        self.assertEqual(payload["_agentSlotIndex"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
