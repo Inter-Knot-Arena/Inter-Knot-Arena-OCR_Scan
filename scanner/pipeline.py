@@ -816,7 +816,7 @@ def _pixel_equipment_occupancy_from_captures(
             "agentId": agent_id,
             "agentSource": agent_source,
             "agentConfidence": float(agent_confidence or 0.0),
-            "pageIndex": _normalize_page_index(entry.get("pageIndex")),
+            "pageIndex": _as_slot_index(entry.get("pageIndex")),
             "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
             "_confidence": max(
                 float(occupancy.get("_weaponConfidence", 0.0) or 0.0),

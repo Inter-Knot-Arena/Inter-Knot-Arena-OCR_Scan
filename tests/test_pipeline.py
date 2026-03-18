@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -166,6 +167,38 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "amplifier_detail_ocr")
         self.assertEqual(merged_agents[0]["fieldSources"]["weaponPresent"], "derived_from_amplifier_detail_ocr")
         self.assertEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.995)
+
+    def test_pixel_equipment_occupancy_preserves_page_index_without_name_error(self) -> None:
+        occupancy = {
+            "weaponPresent": True,
+            "discSlotOccupancy": {str(slot): False for slot in range(1, 7)},
+            "_weaponConfidence": 0.91,
+            "_discConfidence": 0.87,
+        }
+
+        with (
+            patch.object(pipeline, "_resolve_capture_agent_id", return_value=("agent_anby", "screen_capture_agent_id", 0.99)),
+            patch.object(pipeline.cv2, "imread", return_value=np.zeros((32, 32, 3), dtype=np.uint8)),
+            patch.object(pipeline, "_derive_equipment_overview_occupancy_from_image", return_value=(occupancy, [])),
+        ):
+            by_agent, reasons = pipeline._pixel_equipment_occupancy_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "equipment",
+                            "path": "ignored.png",
+                            "pageIndex": 1,
+                            "agentSlotIndex": 2,
+                        }
+                    ]
+                },
+                {},
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertIn("agent_anby", by_agent)
+        self.assertEqual(by_agent["agent_anby"]["pageIndex"], 1)
+        self.assertEqual(by_agent["agent_anby"]["agentSlotIndex"], 2)
 
 
 if __name__ == "__main__":
