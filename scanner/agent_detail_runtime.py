@@ -362,6 +362,61 @@ def _extract_mindscape_numeric_crop(region: np.ndarray, label_box: tuple[int, in
     return crop if crop.size else None
 
 
+def _extract_mindscape_numeric_crop_fixed(region: np.ndarray) -> np.ndarray | None:
+    height, width = region.shape[:2]
+    x0 = max(0, int(round(width * 0.14)))
+    x1 = min(width, int(round(width * 0.34)))
+    y0 = max(0, int(round(height * 0.72)))
+    y1 = min(height, int(round(height * 0.91)))
+    crop = region[y0:y1, x0:x1]
+    return crop if crop.size else None
+
+
+def _parse_mindscape_numeric_crop(crop: np.ndarray) -> tuple[int | None, int | None, float, bool]:
+    best_value: int | None = None
+    best_confidence = 0.0
+    denominator_ok = False
+    for threshold in _NUMERIC_THRESHOLDS:
+        binary = (crop < threshold).astype(np.uint8) * 255
+        components = _connected_components(binary, area_min=40, height_min=18, width_min=8)
+        components = [
+            component
+            for component in components
+            if component[0] >= int(crop.shape[1] * 0.20)
+            and component[1] >= int(crop.shape[0] * 0.35)
+            and component[1] <= int(crop.shape[0] * 0.88)
+            and component[3] >= 24
+        ]
+        if len(components) != 3:
+            continue
+        numerator_text, numerator_confidence = _classify_components(binary, [components[0]])
+        denominator_text, denominator_confidence = _classify_components(binary, [components[2]])
+        if not numerator_text.isdigit():
+            continue
+        numerator_value = int(numerator_text)
+        if not 0 <= numerator_value <= 6:
+            continue
+        denominator_value = int(denominator_text) if denominator_text.isdigit() else None
+        structural_denominator_ok = (
+            components[2][0] > components[1][0] > components[0][0]
+            and components[2][2] >= 18
+            and components[2][3] >= 24
+        )
+        if denominator_value == 6:
+            denominator_ok = True
+        elif structural_denominator_ok:
+            denominator_ok = True
+            denominator_value = 6
+            denominator_confidence = max(float(denominator_confidence), 0.72)
+        if denominator_value != 6:
+            continue
+        confidence = float((numerator_confidence + denominator_confidence) / 2.0)
+        if confidence > best_confidence:
+            best_value = numerator_value
+            best_confidence = confidence
+    return best_value, 6 if best_value is not None else None, best_confidence, denominator_ok
+
+
 def _extract_mindscape(image: np.ndarray) -> tuple[int | None, int | None, float, list[str]]:
     reasons: list[str] = []
     region = _bottom_left_region(image)
@@ -374,41 +429,22 @@ def _extract_mindscape(image: np.ndarray) -> tuple[int | None, int | None, float
     if crop is None:
         return None, None, 0.0, ["agent_detail_mindscape_crop_missing"]
 
-    best_value: int | None = None
-    best_confidence = 0.0
-    denominator_ok = False
-    for threshold in _NUMERIC_THRESHOLDS:
-        binary = (crop < threshold).astype(np.uint8) * 255
-        components = _connected_components(binary, area_min=40, height_min=18, width_min=8)
-        components = [
-            component
-            for component in components
-            if component[0] >= int(crop.shape[1] * 0.30)
-            and component[1] >= int(crop.shape[0] * 0.10)
-            and component[1] <= int(crop.shape[0] * 0.75)
-        ]
-        if len(components) != 3:
-            continue
-        numerator_text, numerator_confidence = _classify_components(binary, [components[0]])
-        denominator_text, denominator_confidence = _classify_components(binary, [components[2]])
-        if not numerator_text.isdigit() or not denominator_text.isdigit():
-            continue
-        denominator_value = int(denominator_text)
-        if denominator_value == 6:
-            denominator_ok = True
-        if denominator_value != 6:
-            continue
-        numerator_value = int(numerator_text)
-        if 0 <= numerator_value <= 6:
-            confidence = float((numerator_confidence + denominator_confidence) / 2.0)
-            if confidence > best_confidence:
-                best_value = numerator_value
-                best_confidence = confidence
+    best_value, best_cap, best_confidence, denominator_ok = _parse_mindscape_numeric_crop(crop)
+    if best_value is None:
+        fixed_crop = _extract_mindscape_numeric_crop_fixed(region)
+        if fixed_crop is not None:
+            fixed_value, fixed_cap, fixed_confidence, fixed_denominator_ok = _parse_mindscape_numeric_crop(fixed_crop)
+            if fixed_denominator_ok:
+                denominator_ok = True
+            if fixed_value is not None and fixed_confidence > best_confidence:
+                best_value = fixed_value
+                best_cap = fixed_cap
+                best_confidence = fixed_confidence
     if best_value is None:
         reasons.append("agent_detail_mindscape_value_missing")
     if not denominator_ok:
         reasons.append("agent_detail_mindscape_denominator_invalid")
-    return best_value, 6 if best_value is not None else None, best_confidence, reasons
+    return best_value, best_cap, best_confidence, reasons
 
 
 def _extract_stat_value_block(

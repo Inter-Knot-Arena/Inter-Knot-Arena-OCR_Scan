@@ -95,6 +95,22 @@ def _agent_ids_by_slot(agents: list[dict[str, Any]]) -> dict[int, str]:
     return mapping
 
 
+def _merge_agent_ids_by_slot_from_details(
+    slot_to_agent: dict[int, str],
+    pixel_agent_details: dict[str, dict[str, Any]],
+) -> dict[int, str]:
+    merged = dict(slot_to_agent)
+    for detail in pixel_agent_details.values():
+        if not isinstance(detail, dict):
+            continue
+        slot_index = _as_slot_index(detail.get("agentSlotIndex"))
+        agent_id = _as_text(detail.get("agentId"))
+        if slot_index is None or slot_index <= 0 or not agent_id:
+            continue
+        merged[slot_index] = agent_id
+    return merged
+
+
 def _classify_capture_agent_id(entry: dict[str, Any]) -> tuple[str, str, float | None, str]:
     if not ModelRegistry.has_agent_model():
         return "", "", None, "agent_model_missing_for_runtime_capture"
@@ -186,17 +202,34 @@ def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None,
     def try_uid_widget_ocr() -> tuple[str | None, float | None]:
         temp_root = Path(tempfile.gettempdir()) / "ika_uid_widget_runtime" / uid_path.stem
         temp_root.mkdir(parents=True, exist_ok=True)
-        ocr_text = _as_text(
-            run_winrt_ocr_batch(
-                [{"id": "uid", "path": str(uid_path)}],
-                language_tag=language_tag_for_locale("EN"),
-                temp_root=temp_root,
-            ).get("uid")
-        )
-        digits = _digits_only(ocr_text)
-        if 6 <= len(digits) <= 12:
-            confidence = min(0.995, 0.90 + (len(digits) / 120.0))
-            return digits, round(confidence, 4)
+
+        def run_ocr(candidate_path: Path) -> tuple[str | None, float | None]:
+            ocr_text = _as_text(
+                run_winrt_ocr_batch(
+                    [{"id": "uid", "path": str(candidate_path)}],
+                    language_tag=language_tag_for_locale("EN"),
+                    temp_root=temp_root,
+                ).get("uid")
+            )
+            digits = _digits_only(ocr_text)
+            if 6 <= len(digits) <= 12:
+                confidence = min(0.995, 0.90 + (len(digits) / 120.0))
+                return digits, round(confidence, 4)
+            return None, None
+
+        direct_digits, direct_confidence = run_ocr(uid_path)
+        if direct_digits:
+            return direct_digits, direct_confidence
+
+        if image.shape[0] <= 40 or image.shape[1] <= 180:
+            for scale in (3, 4):
+                resized = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                resized_path = temp_root / f"uid_x{scale}.png"
+                if not cv2.imwrite(str(resized_path), resized):
+                    continue
+                scaled_digits, scaled_confidence = run_ocr(resized_path)
+                if scaled_digits:
+                    return scaled_digits, scaled_confidence
         return None, None
 
     digit_images = segment_uid_digits(image)
@@ -1200,6 +1233,7 @@ def scan_roster(
         agent_ids_by_slot,
     )
     low_conf_reasons.extend(pixel_agent_detail_reasons)
+    agent_ids_by_slot = _merge_agent_ids_by_slot_from_details(agent_ids_by_slot, pixel_agent_details)
     pixel_weapons_by_agent, pixel_weapon_reasons = _pixel_weapons_from_captures(
         session_context,
         agent_ids_by_slot,
