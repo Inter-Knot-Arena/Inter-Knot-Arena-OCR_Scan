@@ -505,7 +505,7 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
     anchors_raw = normalized.get("anchors")
     anchors = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
     capture_roles = {capture.role for capture in captures}
-    has_profile_capture = UID_PANEL_ROLE in capture_roles or bool(_as_text(session_context.get("uidImagePath")))
+    has_profile_capture = UID_PANEL_ROLE in capture_roles or bool(_as_text(normalized.get("uidImagePath")))
     has_roster_capture = ROSTER_ROLE in capture_roles
     has_agent_detail_capture = AGENT_DETAIL_ROLE in capture_roles
     has_equipment_capture = bool(capture_roles.intersection({EQUIPMENT_ROLE, AMPLIFIER_DETAIL_ROLE, DISK_DETAIL_ROLE}))

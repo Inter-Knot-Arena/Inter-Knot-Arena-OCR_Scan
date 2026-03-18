@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -51,6 +52,34 @@ class ScreenRuntimeTests(unittest.TestCase):
                 "1080p",
             )
             self.assertEqual(resolution, "")
+
+    def test_normalize_runtime_captures_sets_profile_anchor_from_derived_uid_crop(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            agent_detail = temp_root / "agent_detail.png"
+            equipment = temp_root / "equipment.png"
+            derived_uid = temp_root / "derived_uid.png"
+
+            image = np.zeros((1440, 2560, 3), dtype=np.uint8)
+            self.assertTrue(cv2.imwrite(str(agent_detail), image))
+            self.assertTrue(cv2.imwrite(str(equipment), image))
+            self.assertTrue(cv2.imwrite(str(derived_uid), np.zeros((32, 240, 3), dtype=np.uint8)))
+
+            with patch.object(screen_runtime, "_derive_uid_from_capture", return_value=str(derived_uid)):
+                normalized = screen_runtime.normalize_runtime_captures(
+                    {
+                        "sessionId": "derived-uid-normalization",
+                        "anchors": {"profile": False, "agents": False, "equipment": False},
+                        "screenCaptures": [
+                            {"role": "agent_detail", "path": str(agent_detail), "screenAlias": "detail"},
+                            {"role": "equipment", "path": str(equipment), "screenAlias": "equipment"},
+                        ],
+                    },
+                    "1440p",
+                )
+
+            self.assertEqual(normalized["uidImagePath"], str(derived_uid))
+            self.assertEqual(normalized["anchors"], {"profile": True, "agents": True, "equipment": True})
 
 
 if __name__ == "__main__":
