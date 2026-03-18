@@ -282,10 +282,11 @@ def crop_uid_region(image: np.ndarray, role: str) -> np.ndarray | None:
             if widget_crop is None:
                 continue
             digit_band, score = _extract_uid_digit_band(widget_crop)
-            if score > best_score:
-                best_score = score
-                best_crop = widget_crop.copy()
             if digit_band is not None and score > best_score:
+                best_score = score
+                best_crop = digit_band.copy()
+                continue
+            if score > best_score:
                 best_score = score
                 best_crop = widget_crop.copy()
         return best_crop
