@@ -443,8 +443,7 @@ def _derive_agent_icons_from_capture(
                     "path": path,
                     "screenAlias": capture.alias,
                     "pageIndex": page_index,
-                    "agentSlotIndex": (page_index * _ROSTER_PAGE_CAPACITY) + index + 1,
-                    "rosterPageSlotIndex": index + 1,
+                    "agentSlotIndex": index + 1,
                 }
             )
     return icons
@@ -504,7 +503,21 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
             )
 
     anchors_raw = normalized.get("anchors")
-    normalized["anchors"] = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
+    anchors = dict(anchors_raw) if isinstance(anchors_raw, dict) else {}
+    capture_roles = {capture.role for capture in captures}
+    has_profile_capture = UID_PANEL_ROLE in capture_roles or bool(_as_text(session_context.get("uidImagePath")))
+    has_roster_capture = ROSTER_ROLE in capture_roles
+    has_agent_detail_capture = AGENT_DETAIL_ROLE in capture_roles
+    has_equipment_capture = bool(capture_roles.intersection({EQUIPMENT_ROLE, AMPLIFIER_DETAIL_ROLE, DISK_DETAIL_ROLE}))
+    icon_payload = normalized.get("agentIconPaths")
+    has_agent_icons = isinstance(icon_payload, list) and bool(icon_payload)
+    if has_profile_capture:
+        anchors["profile"] = True
+    if has_agent_icons or has_roster_capture or has_agent_detail_capture:
+        anchors["agents"] = True
+    if has_equipment_capture:
+        anchors["equipment"] = True
+    normalized["anchors"] = anchors
     normalized["runtimeResolution"] = normalized_resolution
     normalized["screenCaptures"] = [
         {

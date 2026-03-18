@@ -38,9 +38,9 @@ class ScreenRuntimeTests(unittest.TestCase):
 
             derived_icons = normalized["agentIconPaths"]
             self.assertEqual(len(derived_icons), 6)
-            self.assertEqual([entry["agentSlotIndex"] for entry in derived_icons], [1, 2, 3, 4, 5, 6])
+            self.assertEqual([entry["agentSlotIndex"] for entry in derived_icons], [1, 2, 3, 1, 2, 3])
             self.assertEqual([entry["pageIndex"] for entry in derived_icons], [0, 0, 0, 1, 1, 1])
-            self.assertEqual(normalized["anchors"], {"profile": False, "agents": False, "equipment": False})
+            self.assertEqual(normalized["anchors"], {"profile": False, "agents": True, "equipment": False})
 
             resolution = screen_runtime.normalize_runtime_resolution(
                 {

@@ -86,7 +86,8 @@ python scripts/train_synthetic_models.py --output-dir models --metrics-file docs
 Benchmark runtime:
 
 ```powershell
-python scripts/benchmark_runtime.py --iterations 100
+python scripts/benchmark_runtime.py --demo --iterations 100
+python scripts/benchmark_runtime.py --iterations 100 --session-context D:\shots\strict_session_context.json --locale RU --resolution 1080p
 ```
 
 ## Dataset workflow (private raw data)

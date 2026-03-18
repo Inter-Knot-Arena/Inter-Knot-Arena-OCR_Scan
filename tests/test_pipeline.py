@@ -18,6 +18,8 @@ class PipelineTests(unittest.TestCase):
             pipeline._default_agent_payload("agent_nicole", 0.97),
             pipeline._default_agent_payload("agent_anby", 0.96),
         ]
+        pipeline._copy_visible_slot_metadata(icon_agents[0], {"pageIndex": 0, "agentSlotIndex": 1})
+        pipeline._copy_visible_slot_metadata(icon_agents[1], {"pageIndex": 1, "agentSlotIndex": 1})
 
         merged, reasons = pipeline._merge_agents(parsed_agents, icon_agents)
 
@@ -25,6 +27,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(reasons, [])
         self.assertEqual(merged[0]["fieldSources"]["agentId"], "onnx_agent_icon")
         self.assertEqual(merged[1]["fieldSources"]["agentId"], "onnx_agent_icon")
+        self.assertEqual(merged[0]["_pageIndex"], 0)
+        self.assertEqual(merged[0]["_agentSlotIndex"], 1)
+        self.assertEqual(merged[1]["_pageIndex"], 1)
+        self.assertEqual(merged[1]["_agentSlotIndex"], 1)
 
     def test_scan_roster_ignores_uid_candidates_in_strict_mode(self) -> None:
         with self.assertRaises(pipeline.ScanFailure) as exc_info:
@@ -48,37 +54,12 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(exc.partial_result["uid"], "")
         self.assertEqual(exc.partial_result["fieldSources"]["uid"], "missing")
 
-    def test_infer_full_roster_coverage_requires_terminal_partial_page(self) -> None:
-        terminal_context = {
-            "screenCaptures": [
-                {"role": "roster", "path": "page0.png", "pageIndex": 0},
-                {"role": "roster", "path": "page1.png", "pageIndex": 1},
-            ],
-            "agentIconPaths": [
-                {"path": "icon_1.png", "pageIndex": 0, "agentSlotIndex": 1, "rosterPageSlotIndex": 1},
-                {"path": "icon_2.png", "pageIndex": 0, "agentSlotIndex": 2, "rosterPageSlotIndex": 2},
-                {"path": "icon_3.png", "pageIndex": 0, "agentSlotIndex": 3, "rosterPageSlotIndex": 3},
-                {"path": "icon_4.png", "pageIndex": 1, "agentSlotIndex": 4, "rosterPageSlotIndex": 1},
-                {"path": "icon_5.png", "pageIndex": 1, "agentSlotIndex": 5, "rosterPageSlotIndex": 2},
-            ],
-        }
-        non_terminal_context = {
-            "screenCaptures": [
-                {"role": "roster", "path": "page0.png", "pageIndex": 0},
-                {"role": "roster", "path": "page1.png", "pageIndex": 1},
-            ],
-            "agentIconPaths": [
-                {"path": "icon_1.png", "pageIndex": 0, "agentSlotIndex": 1, "rosterPageSlotIndex": 1},
-                {"path": "icon_2.png", "pageIndex": 0, "agentSlotIndex": 2, "rosterPageSlotIndex": 2},
-                {"path": "icon_3.png", "pageIndex": 0, "agentSlotIndex": 3, "rosterPageSlotIndex": 3},
-                {"path": "icon_4.png", "pageIndex": 1, "agentSlotIndex": 4, "rosterPageSlotIndex": 1},
-                {"path": "icon_5.png", "pageIndex": 1, "agentSlotIndex": 5, "rosterPageSlotIndex": 2},
-                {"path": "icon_6.png", "pageIndex": 1, "agentSlotIndex": 6, "rosterPageSlotIndex": 3},
-            ],
-        }
-
-        self.assertTrue(pipeline._infer_full_roster_coverage(terminal_context))
-        self.assertFalse(pipeline._infer_full_roster_coverage(non_terminal_context))
+    def test_infer_full_roster_coverage_only_respects_explicit_terminal_signal(self) -> None:
+        self.assertTrue(pipeline._infer_full_roster_coverage({"fullRosterCoverage": True}))
+        self.assertTrue(pipeline._infer_full_roster_coverage({"fullRosterTerminalSliceReached": True}))
+        self.assertTrue(pipeline._infer_full_roster_coverage({"terminalSliceReached": True}))
+        self.assertFalse(pipeline._infer_full_roster_coverage({}))
+        self.assertFalse(pipeline._infer_full_roster_coverage({"fullRosterCoverage": False}))
 
     def test_visible_slot_key_preserves_first_page_index(self) -> None:
         self.assertEqual(pipeline._visible_slot_key(0, 1), (0, 1))
@@ -86,6 +67,16 @@ class PipelineTests(unittest.TestCase):
         pipeline._copy_visible_slot_metadata(payload, {"pageIndex": 0, "agentSlotIndex": 2})
         self.assertEqual(payload["_pageIndex"], 0)
         self.assertEqual(payload["_agentSlotIndex"], 2)
+
+    def test_lookup_agent_id_by_slot_is_page_aware(self) -> None:
+        slot_to_agent = {
+            (0, 1): "agent_anby",
+            (1, 1): "agent_nicole",
+        }
+
+        self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, 0, 1), "agent_anby")
+        self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, 1, 1), "agent_nicole")
+        self.assertEqual(pipeline._lookup_agent_id_by_slot(slot_to_agent, None, 1), "")
 
 
 if __name__ == "__main__":

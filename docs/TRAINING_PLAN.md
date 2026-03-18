@@ -43,7 +43,7 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
 ## Runtime targets
 
 - Single pass per screen <= 500 ms on GTX 970 class hardware.
-- CPU fallback must remain functional.
+- Runtime and training stay CUDA-only. CPU fallback is out of contract for the current import path.
 
 ## Training scripts in repo
 
@@ -53,7 +53,7 @@ Only `dataset_manifest.json`, scripts, configs, metrics, and release artifacts a
   - `--uid-background-dir`
   - `--icon-background-dir`
   - plus sample-size and background-probability controls per head for faster iteration.
-- `scripts/benchmark_runtime.py`: latency benchmark of `run_scan`.
+- `scripts/benchmark_runtime.py`: latency benchmark of strict `scan_roster` when `--session-context` is provided. `--demo` is only for the seeded smoke path.
 - Dataset ingestion pipeline scripts:
   - `scripts/ingest_public_sources.py`
   - `scripts/extract_frames.py`
