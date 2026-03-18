@@ -29,6 +29,9 @@ See `contracts/ocr-output.schema.json`.
 - `amplifier_detail` is resolved in runtime via title-crop OCR plus the reviewed alias contract in `contracts/amplifier-title-aliases.json`.
 - `agent_detail` runtime uses `uid_digit` for level/mindscape digits and `contracts/agent-detail-digit-templates.json` for full stat-row parsing.
 - No synthetic UID fallback in strict mode: if UID cannot be extracted with confidence, output is `LOW_CONFIDENCE`.
+- Strict mode does not inject demo agents or `uidCandidates`: only explicit runtime captures/crops are trusted.
+- Multi-page roster captures are normalized into page-aware `agentSlotIndex` values, so downstream detail/equipment captures can bind to a stable roster identity.
+- Anchor flags are now treated as explicit contract input and are not auto-promoted from incidental captures.
 
 ## Quick run
 
@@ -47,6 +50,12 @@ Strict mode with richer runtime captures:
 
 ```powershell
 python scripts/run_scan.py --input-lock --anchor-profile --anchor-agents --anchor-equipment --locale RU --resolution 1080p --screen-capture "agent_detail|D:\shots\agent_detail.png|||1|detail_slot_1" --screen-capture "amplifier_detail|D:\shots\weapon.png|||1|weapon_slot1" --screen-capture "disk_detail|D:\shots\disk_1.png||1|1|disk1_slot1"
+```
+
+Run the OCR regression tests:
+
+```powershell
+python -m unittest discover -s tests -v
 ```
 
 Train synthetic baseline models:
