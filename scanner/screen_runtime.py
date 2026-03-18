@@ -129,7 +129,9 @@ def _effective_page_index(page_index: int | None, fallback: int = 0) -> int:
 def _effective_agent_slot_index(agent_slot_index: int | None, page_index: int | None) -> int | None:
     if agent_slot_index is None or agent_slot_index <= 0:
         return None
-    return agent_slot_index
+    if agent_slot_index > _ROSTER_PAGE_CAPACITY:
+        return agent_slot_index
+    return (_effective_page_index(page_index) * _ROSTER_PAGE_CAPACITY) + agent_slot_index
 
 
 def _load_image(path: Path) -> np.ndarray | None:
@@ -481,7 +483,7 @@ def normalize_runtime_captures(session_context: Dict[str, Any], resolution: str 
                     _effective_page_index(item[1].page_index, item[0]),
                     item[0],
                 ),
-            )
+            ),
         ):
             effective_page_index = _effective_page_index(capture.page_index, derived_page_index)
             derived_icons.extend(
