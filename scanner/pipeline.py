@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import tempfile
 import time
@@ -70,6 +71,14 @@ def _digits_only(value: str) -> str:
     return "".join(ch for ch in value if ch.isdigit())
 
 
+def _runtime_temp_root(*segments: str) -> Path:
+    override_root = str(os.environ.get("IKA_RUNTIME_TEMP_ROOT") or "").strip()
+    base_root = Path(override_root) if override_root else Path(tempfile.gettempdir())
+    root = base_root.joinpath(*segments)
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 def _as_text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
 
@@ -116,7 +125,7 @@ def _classify_capture_agent_id(entry: dict[str, Any]) -> tuple[str, str, float |
 
     role = _as_text(entry.get("role"))
     path_value = _as_text(entry.get("path"))
-    if role not in {"agent_detail", "equipment"} or not path_value:
+    if role not in {"agent_detail", "equipment", "amplifier_detail", "disk_detail"} or not path_value:
         return "", "", None, ""
 
     image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
@@ -151,6 +160,7 @@ def _resolve_capture_agent_id(
     agent_ids_by_slot: dict[int, str],
     *,
     reasons: list[str] | None = None,
+    reject_slot_mismatch: bool = False,
 ) -> tuple[str, str, float | None]:
     direct_agent_id = _as_text(entry.get("agentId") or entry.get("focusAgentId"))
     if direct_agent_id:
@@ -165,8 +175,14 @@ def _resolve_capture_agent_id(
             if float(classified_confidence or 0.0) >= 0.88:
                 if reasons is not None:
                     reasons.append(
-                        f"capture_agent_slot_override:{agent_slot_index}:{slot_agent_id}->{classified_agent_id}"
+                        (
+                            f"capture_agent_slot_mismatch_rejected:{agent_slot_index}:{slot_agent_id}->{classified_agent_id}"
+                            if reject_slot_mismatch
+                            else f"capture_agent_slot_override:{agent_slot_index}:{slot_agent_id}->{classified_agent_id}"
+                        )
                     )
+                if reject_slot_mismatch:
+                    return "", "", None
                 return classified_agent_id, classified_source, classified_confidence
             return slot_agent_id, "visible_roster_slot_mapping", 0.97
         if slot_agent_id:
@@ -199,8 +215,7 @@ def _select_uid_from_image(session_context: Dict[str, Any]) -> tuple[str | None,
         return None, None, None, reasons
 
     def try_uid_widget_ocr() -> tuple[str | None, float | None]:
-        temp_root = Path(tempfile.gettempdir()) / "ika_uid_widget_runtime" / uid_path.stem
-        temp_root.mkdir(parents=True, exist_ok=True)
+        temp_root = _runtime_temp_root("ika_uid_widget_runtime", uid_path.stem)
 
         def run_ocr(candidate_path: Path) -> tuple[str | None, float | None]:
             ocr_text = _as_text(
@@ -366,6 +381,7 @@ def _pixel_discs_from_captures(
             entry,
             agent_ids_by_slot,
             reasons=reasons,
+            reject_slot_mismatch=True,
         )
         slot_index = _as_slot_index(entry.get("slotIndex"))
         if not path_value:
@@ -440,6 +456,7 @@ def _pixel_agent_details_from_captures(
             entry,
             agent_ids_by_slot,
             reasons=reasons,
+            reject_slot_mismatch=True,
         )
         if not path_value:
             reasons.append(f"agent_detail_missing_path:{index}")
@@ -538,7 +555,8 @@ def _pixel_weapons_from_captures(
     ocr_results: dict[str, str] = {}
     language_tag = language_tag_for_locale(locale)
 
-    with tempfile.TemporaryDirectory(prefix="amp_runtime_") as raw_tmp:
+    temp_base = _runtime_temp_root("amp_runtime")
+    with tempfile.TemporaryDirectory(prefix="amp_runtime_", dir=str(temp_base)) as raw_tmp:
         temp_root = Path(raw_tmp)
         crop_dir = temp_root / "crops"
         crop_dir.mkdir(parents=True, exist_ok=True)

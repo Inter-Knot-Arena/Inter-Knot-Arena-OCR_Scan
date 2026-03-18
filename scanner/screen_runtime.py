@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import statistics
 from dataclasses import dataclass
@@ -53,6 +54,14 @@ _AGENT_IDENTITY_BOXES = {
         ("portrait_tight", (0.10, 0.10, 0.32, 0.62)),
     ),
     EQUIPMENT_ROLE: (
+        ("portrait_wide", (0.02, 0.06, 0.48, 0.88)),
+        ("portrait_tight", (0.08, 0.08, 0.34, 0.66)),
+    ),
+    AMPLIFIER_DETAIL_ROLE: (
+        ("portrait_wide", (0.02, 0.06, 0.48, 0.88)),
+        ("portrait_tight", (0.08, 0.08, 0.34, 0.66)),
+    ),
+    DISK_DETAIL_ROLE: (
         ("portrait_wide", (0.02, 0.06, 0.48, 0.88)),
         ("portrait_tight", (0.08, 0.08, 0.34, 0.66)),
     ),
@@ -294,7 +303,11 @@ def crop_uid_region(image: np.ndarray, role: str) -> np.ndarray | None:
 
 
 def _ensure_temp_root(session_id: str) -> Path:
-    root = Path(tempfile.gettempdir()) / "ika_ocr_runtime" / session_id
+    override_root = str(os.environ.get("IKA_RUNTIME_TEMP_ROOT") or "").strip()
+    if override_root:
+        root = Path(override_root) / "ika_ocr_runtime" / session_id
+    else:
+        root = Path(tempfile.gettempdir()) / "ika_ocr_runtime" / session_id
     root.mkdir(parents=True, exist_ok=True)
     return root
 
