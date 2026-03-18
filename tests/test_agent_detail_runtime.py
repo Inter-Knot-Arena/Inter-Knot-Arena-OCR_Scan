@@ -54,6 +54,38 @@ class AgentDetailRuntimeTests(unittest.TestCase):
         self.assertEqual(reading.level_cap, 20)
 
     @unittest.skipUnless(
+        _sample_path("batch_001_ru_agent_detail_63314ce0a9cb.png").exists(),
+        "local OCR dataset sample is unavailable",
+    )
+    def test_read_agent_detail_parses_level_01_of_10_with_upgrade_button(self) -> None:
+        image = cv2.imread(
+            str(_sample_path("batch_001_ru_agent_detail_63314ce0a9cb.png")),
+            cv2.IMREAD_COLOR,
+        )
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.level, 1)
+        self.assertEqual(reading.level_cap, 10)
+
+    @unittest.skipUnless(
+        _sample_path("batch_001_ru_agent_detail_6b392fdf5121.png").exists(),
+        "local OCR dataset sample is unavailable",
+    )
+    def test_read_agent_detail_parses_level_11_of_20_with_upgrade_button(self) -> None:
+        image = cv2.imread(
+            str(_sample_path("batch_001_ru_agent_detail_6b392fdf5121.png")),
+            cv2.IMREAD_COLOR,
+        )
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.level, 11)
+        self.assertEqual(reading.level_cap, 20)
+
+    @unittest.skipUnless(
         _sample_path("batch_001_ru_agent_detail_1976aa0d5ead.png").exists(),
         "local OCR dataset sample is unavailable",
     )

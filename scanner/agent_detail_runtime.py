@@ -263,10 +263,13 @@ def _parse_level_part(
     min_digits: int,
     max_digits: int,
     min_component_x_fraction: float,
+    select_from: str = "right",
 ) -> tuple[int | None, float]:
     best_value: int | None = None
     best_confidence = 0.0
     best_score = float("-inf")
+    if select_from not in {"left", "right"}:
+        raise ValueError(f"unsupported level component selection: {select_from}")
     for threshold in thresholds:
         binary = _threshold_binary(crop, threshold, invert=invert)
         components = _connected_components(binary, area_min=10, height_min=6, width_min=1)
@@ -280,7 +283,7 @@ def _parse_level_part(
         for digit_count in range(max_digits, min_digits - 1, -1):
             if len(components) < digit_count:
                 continue
-            candidate = components[-digit_count:]
+            candidate = components[:digit_count] if select_from == "left" else components[-digit_count:]
             text, confidence = _classify_level_components(binary, candidate)
             if not text.isdigit():
                 continue
@@ -290,6 +293,40 @@ def _parse_level_part(
                 best_value = value
                 best_confidence = confidence
                 best_score = score
+    return best_value, best_confidence
+
+
+def _parse_level_cap_from_tens_digit(crop: np.ndarray) -> tuple[int | None, float]:
+    height, width = crop.shape[:2]
+    if height <= 0 or width <= 0:
+        return None, 0.0
+
+    best_value: int | None = None
+    best_confidence = 0.0
+    for threshold in _CAP_THRESHOLDS:
+        binary = _threshold_binary(crop, threshold, invert=True)
+        components = _connected_components(binary, area_min=10, height_min=6, width_min=1)
+        components = [
+            component
+            for component in components
+            if component[1] >= int(height * 0.18)
+            and component[2] <= int(width * 0.55)
+            and component[3] >= int(height * 0.45)
+        ]
+        if not components:
+            continue
+        components.sort(key=lambda component: component[0])
+        for x, y, box_width, box_height in components:
+            glyph = binary[y : y + box_height, x : x + box_width]
+            label, confidence = _classify_level_digit_component(glyph)
+            if label not in {"1", "2", "3", "4", "5", "6"}:
+                continue
+            cap = int(label) * 10
+            boosted_confidence = min(0.995, max(float(confidence), 0.86))
+            if boosted_confidence > best_confidence:
+                best_value = cap
+                best_confidence = boosted_confidence
+            break
     return best_value, best_confidence
 
 
@@ -319,6 +356,7 @@ def _extract_level(image: np.ndarray) -> tuple[int | None, int | None, float, li
         min_digits=1,
         max_digits=2,
         min_component_x_fraction=0.25,
+        select_from="right",
     )
     cap, cap_confidence = _parse_level_part(
         cap_crop,
@@ -327,7 +365,13 @@ def _extract_level(image: np.ndarray) -> tuple[int | None, int | None, float, li
         min_digits=2,
         max_digits=2,
         min_component_x_fraction=0.0,
+        select_from="right",
     )
+    if cap is None or cap not in _VALID_LEVEL_CAPS:
+        fallback_cap, fallback_cap_confidence = _parse_level_cap_from_tens_digit(cap_crop)
+        if fallback_cap is not None:
+            cap = fallback_cap
+            cap_confidence = max(float(cap_confidence), float(fallback_cap_confidence))
 
     if current is None:
         reasons.append("agent_detail_level_current_missing")

@@ -168,6 +168,37 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(merged_agents[0]["fieldSources"]["weaponPresent"], "derived_from_amplifier_detail_ocr")
         self.assertEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.995)
 
+    def test_enrich_agents_with_agent_detail_pixels_accepts_near_threshold_level_confidence(self) -> None:
+        agent = pipeline._default_agent_payload("agent_anby", 0.97)
+        agent["level"] = None
+        agent["levelCap"] = None
+
+        merged_agents, used = pipeline._enrich_agents_with_agent_detail_pixels(
+            [agent],
+            {
+                "agent_anby": {
+                    "agentId": "agent_anby",
+                    "agentSource": "screen_capture_agent_id",
+                    "agentConfidence": 0.99,
+                    "level": 11,
+                    "levelCap": 20,
+                    "levelConfidence": 0.7871,
+                    "mindscape": None,
+                    "mindscapeCap": None,
+                    "mindscapeConfidence": 0.0,
+                    "stats": {},
+                    "statsConfidence": 0.0,
+                }
+            },
+            {},
+        )
+
+        self.assertTrue(used)
+        self.assertEqual(merged_agents[0]["level"], 11)
+        self.assertEqual(merged_agents[0]["levelCap"], 20)
+        self.assertEqual(merged_agents[0]["fieldSources"]["level"], "agent_detail_digit_ocr")
+        self.assertEqual(merged_agents[0]["confidenceByField"]["level"], 0.7871)
+
     def test_pixel_equipment_occupancy_preserves_page_index_without_name_error(self) -> None:
         occupancy = {
             "weaponPresent": True,

@@ -52,6 +52,7 @@ _EQUIPMENT_DISC_SLOT_CENTERS = {
 _EQUIPMENT_DISC_PATCH = (0.084, 0.138)
 _EQUIPMENT_OCCUPIED_SCORE_THRESHOLD = 0.58
 _EQUIPMENT_EMPTY_SCORE_THRESHOLD = 0.34
+_AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD = 0.78
 
 
 class ScanFailureCode(StrEnum):
@@ -603,7 +604,11 @@ def _pixel_agent_details_from_captures(
             "statsConfidence": float(reading.stats_confidence),
             "lowConfReasons": list(reading.low_conf_reasons),
         }
-        if reading.level is None or reading.level_cap is None or reading.level_confidence < 0.80:
+        if (
+            reading.level is None
+            or reading.level_cap is None
+            or reading.level_confidence < _AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD
+        ):
             reasons.append(f"agent_detail_level_low_conf:{agent_id}")
         if reading.mindscape is None or reading.mindscape_cap is None or reading.mindscape_confidence < 0.50:
             reasons.append(f"agent_detail_mindscape_low_conf:{agent_id}")
@@ -1404,7 +1409,7 @@ def _enrich_agents_with_agent_detail_pixels(
             payload.get("level") is None
             and detail.get("level") is not None
             and detail.get("levelCap") is not None
-            and float(detail.get("levelConfidence") or 0.0) >= 0.80
+            and float(detail.get("levelConfidence") or 0.0) >= _AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD
         ):
             payload["level"] = detail.get("level")
             payload["levelCap"] = detail.get("levelCap")
@@ -1453,7 +1458,7 @@ def _enrich_agents_with_agent_detail_pixels(
         if (
             detail.get("level") is not None
             and detail.get("levelCap") is not None
-            and float(detail.get("levelConfidence") or 0.0) >= 0.80
+            and float(detail.get("levelConfidence") or 0.0) >= _AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD
         ):
             payload["level"] = detail.get("level")
             payload["levelCap"] = detail.get("levelCap")
