@@ -126,6 +126,47 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, [])
 
+    def test_enrich_agents_with_pixel_weapons_merges_detail_fields_into_existing_weapon(self) -> None:
+        agent = pipeline._default_agent_payload("agent_anby", 0.97)
+        agent["weapon"] = {"weaponId": "amp_deep_sea_visitor"}
+        agent["weaponPresent"] = True
+        agent["fieldSources"]["weapon"] = "session_payload"
+        agent["fieldSources"]["weaponPresent"] = "derived_from_weapon_payload"
+        agent["confidenceByField"]["weapon"] = 0.41
+
+        merged_agents, used = pipeline._enrich_agents_with_pixel_weapons(
+            [agent],
+            {
+                "agent_anby": {
+                    "weaponId": "amp_deep_sea_visitor",
+                    "displayName": "Deep Sea Visitor",
+                    "level": 60,
+                    "levelCap": 60,
+                    "baseStatKey": "attack_flat",
+                    "baseStatValue": 713,
+                    "advancedStatKey": "crit_rate_pct",
+                    "advancedStatValue": 24.0,
+                    "_confidence": 0.995,
+                }
+            },
+        )
+
+        self.assertTrue(used)
+        weapon = merged_agents[0]["weapon"]
+        self.assertEqual(weapon["weaponId"], "amp_deep_sea_visitor")
+        self.assertEqual(weapon["displayName"], "Deep Sea Visitor")
+        self.assertEqual(weapon["level"], 60)
+        self.assertEqual(weapon["levelCap"], 60)
+        self.assertEqual(weapon["baseStatKey"], "attack_flat")
+        self.assertEqual(weapon["baseStatValue"], 713)
+        self.assertEqual(weapon["advancedStatKey"], "crit_rate_pct")
+        self.assertEqual(weapon["advancedStatValue"], 24.0)
+        self.assertEqual(weapon["agentId"], "agent_anby")
+        self.assertTrue(merged_agents[0]["weaponPresent"])
+        self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "amplifier_detail_ocr")
+        self.assertEqual(merged_agents[0]["fieldSources"]["weaponPresent"], "derived_from_amplifier_detail_ocr")
+        self.assertEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.995)
+
 
 if __name__ == "__main__":
     unittest.main()
