@@ -15,11 +15,12 @@ from .model_runtime import ModelRegistry, classify_uid_digit
 _PANEL_BOX = (0.52, 0.32, 0.96, 0.78)
 _MINDSCAPE_REGION = (0.58, 1.0, 0.0, 0.28)
 _LEVEL_CURRENT_SLICE = (0.18, 0.50)
-_LEVEL_CAP_SLICE = (0.44, 0.78)
+_LEVEL_CAP_SLICE = (0.44, 0.70)
 _CURRENT_THRESHOLDS = (170, 180, 190, 200)
 _CAP_THRESHOLDS = (15, 20, 25)
 _NUMERIC_THRESHOLDS = (50, 55, 60)
 _VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
+_LEVEL_DIGIT_COUNT_BONUS = 0.24
 _DIGIT_TEMPLATE_CONTRACT_PATH = Path(__file__).resolve().parents[1] / "contracts" / "agent-detail-digit-templates.json"
 _TEMPLATE_GLYPH_SIZE = (20, 30)
 _STAT_FIELDS: list[tuple[str, str]] = [
@@ -224,6 +225,36 @@ def _classify_components(
     return "".join(labels), float(sum(confidences) / len(confidences))
 
 
+def _classify_level_digit_component(image: np.ndarray) -> tuple[str, float]:
+    label, confidence = _classify_digit_component(image)
+    if label == "7" and confidence <= 0.75:
+        height, width = image.shape[:2]
+        fill_ratio = float(np.count_nonzero(image)) / float(image.size or 1)
+        if (width <= 14 and height >= 28) or (
+            width <= max(16, int(round(height * 0.5))) and fill_ratio <= 0.55
+        ):
+            return "1", max(float(confidence), 0.55)
+    return label, float(confidence)
+
+
+def _classify_level_components(
+    binary: np.ndarray,
+    components: Sequence[tuple[int, int, int, int]],
+) -> tuple[str, float]:
+    labels: list[str] = []
+    confidences: list[float] = []
+    for x, y, width, height in components:
+        glyph = binary[y : y + height, x : x + width]
+        label, confidence = _classify_level_digit_component(glyph)
+        if not label.isdigit():
+            return "", 0.0
+        labels.append(label)
+        confidences.append(confidence)
+    if not labels:
+        return "", 0.0
+    return "".join(labels), float(sum(confidences) / len(confidences))
+
+
 def _parse_level_part(
     crop: np.ndarray,
     *,
@@ -235,6 +266,7 @@ def _parse_level_part(
 ) -> tuple[int | None, float]:
     best_value: int | None = None
     best_confidence = 0.0
+    best_score = float("-inf")
     for threshold in thresholds:
         binary = _threshold_binary(crop, threshold, invert=invert)
         components = _connected_components(binary, area_min=10, height_min=6, width_min=1)
@@ -249,13 +281,15 @@ def _parse_level_part(
             if len(components) < digit_count:
                 continue
             candidate = components[-digit_count:]
-            text, confidence = _classify_components(binary, candidate)
+            text, confidence = _classify_level_components(binary, candidate)
             if not text.isdigit():
                 continue
             value = int(text)
-            if confidence > best_confidence:
+            score = float(confidence) + max(0, digit_count - min_digits) * _LEVEL_DIGIT_COUNT_BONUS
+            if score > best_score or (score == best_score and confidence > best_confidence):
                 best_value = value
                 best_confidence = confidence
+                best_score = score
     return best_value, best_confidence
 
 
@@ -311,6 +345,9 @@ def _extract_level(image: np.ndarray) -> tuple[int | None, int | None, float, li
         reasons.append(f"agent_detail_level_current_gt_cap:{current}/{cap}")
         current = None
         current_confidence = 0.0
+    if current is not None and cap is None and current in _VALID_LEVEL_CAPS:
+        cap = current
+        cap_confidence = max(float(cap_confidence), min(float(current_confidence), 0.82))
 
     confidence_values = [value for value in (current_confidence, cap_confidence) if value > 0.0]
     confidence = float(sum(confidence_values) / len(confidence_values)) if confidence_values else 0.0
@@ -634,11 +671,20 @@ def _extract_stats(image: np.ndarray) -> tuple[Dict[str, int | float], float, li
         parsed[str(spec["canonical"])] = value
         confidences.append(confidence)
 
-    if len(parsed) < 8:
+    parsed_count = len(parsed)
+    if parsed_count < 4:
         reasons.append("agent_detail_stats_insufficient_fields")
         return {}, 0.0, reasons
 
-    confidence = float(sum(confidences) / len(confidences)) if confidences else 0.0
+    if parsed_count < len(_STAT_SPECS):
+        reasons.append("agent_detail_stats_insufficient_fields")
+
+    coverage_ratio = parsed_count / max(len(_STAT_SPECS), 1)
+    confidence = (
+        float(sum(confidences) / len(confidences)) * max(0.45, coverage_ratio)
+        if confidences
+        else 0.0
+    )
     return parsed, confidence, reasons
 
 
