@@ -21,6 +21,7 @@ TITLE_ALIAS_CONTRACT_PATH = ROOT / "contracts" / "amplifier-title-aliases.json"
 TITLE_CROP_BOX = (0.28, 0.10, 0.66, 0.36)
 INFO_CROP_BOX = (0.27, 0.07, 0.54, 0.53)
 EFFECT_CROP_BOX = (0.30, 0.42, 0.63, 0.72)
+_VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
 
 EN_LANGUAGE_TAG = "en-US"
 RU_LANGUAGE_TAG = "ru"
@@ -139,15 +140,15 @@ def _crop_fractional_image(
 
 
 def crop_title_image(source_path: Path, output_path: Path) -> None:
-    _crop_fractional_image(source_path, output_path, TITLE_CROP_BOX, grayscale=True, scale=2)
+    _crop_fractional_image(source_path, output_path, TITLE_CROP_BOX, grayscale=True, scale=1)
 
 
 def crop_info_image(source_path: Path, output_path: Path) -> None:
-    _crop_fractional_image(source_path, output_path, INFO_CROP_BOX, grayscale=False, scale=2)
+    _crop_fractional_image(source_path, output_path, INFO_CROP_BOX, grayscale=False, scale=1)
 
 
 def crop_effect_image(source_path: Path, output_path: Path) -> None:
-    _crop_fractional_image(source_path, output_path, EFFECT_CROP_BOX, grayscale=True, scale=2)
+    _crop_fractional_image(source_path, output_path, EFFECT_CROP_BOX, grayscale=True, scale=1)
 
 
 def run_winrt_ocr_batch(crops: Sequence[Dict[str, str]], *, language_tag: str, temp_root: Path) -> Dict[str, str]:
@@ -393,6 +394,9 @@ def _normalize_numeric_token(value: str) -> str:
     token = token.replace("O", "0")
     token = token.replace("I", "1")
     token = token.replace("L", "1")
+    token = token.replace("О", "0")
+    token = token.replace("Л", "1")
+    token = token.replace("І", "1")
     token = token.replace("|", "/")
     token = token.replace("\\", "/")
     token = token.replace(",", ".")
@@ -473,6 +477,154 @@ def _match_stat_key(segment: str, aliases: Sequence[tuple[str, Sequence[str]]]) 
     return None
 
 
+def _normalize_level_token(value: str) -> str:
+    token = _normalize_numeric_token(value)
+    token = token.replace("\u041E", "0")
+    token = token.replace("\u043E", "0")
+    token = token.replace("\u041B", "1")
+    token = token.replace("\u043B", "1")
+    token = token.replace("\u0406", "1")
+    token = token.replace("\u0456", "1")
+    return token
+
+
+def _parse_level_token_robust(token: str) -> tuple[int | None, int | None]:
+    normalized = _normalize_level_token(token)
+    if not normalized:
+        return None, None
+
+    left_digits = ""
+    right_digits = ""
+    if "/" in normalized:
+        left_raw, right_raw = normalized.split("/", 1)
+        left_digits = "".join(ch for ch in left_raw if ch.isdigit())
+        right_digits = "".join(ch for ch in right_raw if ch.isdigit())
+    else:
+        digits = "".join(ch for ch in normalized if ch.isdigit())
+        if len(digits) == 3 and digits[1:] in {str(value) for value in _VALID_LEVEL_CAPS}:
+            left_digits = digits[0]
+            right_digits = digits[1:]
+            if left_digits == "0":
+                left_digits = digits[1]
+        elif len(digits) == 4:
+            left_digits, right_digits = digits[:2], digits[2:]
+        elif len(digits) == 5:
+            left_digits, right_digits = digits[:2], digits[-2:]
+        elif len(digits) == 6:
+            half = len(digits) // 2
+            left_digits, right_digits = digits[:half], digits[half:]
+
+    if not left_digits or not right_digits:
+        return None, None
+    current = int(left_digits)
+    level_cap = int(right_digits)
+    if current <= 0 or level_cap not in _VALID_LEVEL_CAPS or current > level_cap:
+        return None, None
+    return current, level_cap
+
+
+def _parse_level_pair_robust(texts: Sequence[str]) -> tuple[int | None, int | None]:
+    explicit_pattern = re.compile(
+        r"(?:\blv\.?|\b\u0443\u0440\.?)\s*([0-9oOilIl\u041E\u043E\u041B\u043B\u0406\u0456/]{3,8})",
+        flags=re.IGNORECASE,
+    )
+    fallback_pattern = re.compile(r"\b([0-9oOilIl\u041E\u043E\u041B\u043B\u0406\u0456/]{3,8})\b", flags=re.IGNORECASE)
+    for text in texts:
+        normalized = _normalize_detail_text(text)
+        if not normalized:
+            continue
+        for match in explicit_pattern.finditer(normalized):
+            current, level_cap = _parse_level_token_robust(match.group(1))
+            if current is not None and level_cap is not None:
+                return current, level_cap
+        for match in fallback_pattern.finditer(normalized[:64]):
+            current, level_cap = _parse_level_token_robust(match.group(1))
+            if current is not None and level_cap is not None:
+                return current, level_cap
+    return None, None
+
+
+def _aliases_for_stat_key(
+    stat_key: str | None,
+    aliases: Sequence[tuple[str, Sequence[str]]],
+) -> Sequence[str]:
+    if not stat_key:
+        return ()
+    for alias_key, alias_values in aliases:
+        if alias_key == stat_key:
+            return alias_values
+    return ()
+
+
+def _extract_numeric_values(text: str) -> list[tuple[str, int | float]]:
+    values: list[tuple[str, int | float]] = []
+    for token in _extract_value_tokens(text):
+        numeric = _coerce_numeric_value(token)
+        if numeric in _DETAIL_FIELD_EMPTY_VALUES:
+            continue
+        values.append((token, numeric))
+    return values
+
+
+def _segment_after_alias(text: str, aliases: Sequence[str]) -> str:
+    normalized = _normalize_detail_text(text)
+    if not normalized:
+        return ""
+
+    best_index = -1
+    matched_alias = ""
+    for alias in aliases:
+        alias_normalized = _normalize_detail_text(alias)
+        if not alias_normalized:
+            continue
+        idx = normalized.find(alias_normalized)
+        if idx >= 0 and (best_index < 0 or idx < best_index):
+            best_index = idx
+            matched_alias = alias_normalized
+    if best_index < 0:
+        return ""
+    return normalized[best_index + len(matched_alias) :].strip()
+
+
+def _segment_after_markers(text: str, start_markers: Sequence[str]) -> str:
+    normalized = _normalize_detail_text(text)
+    if not normalized:
+        return ""
+
+    start_index = -1
+    matched_marker = ""
+    for marker in start_markers:
+        idx = normalized.find(marker)
+        if idx >= 0 and (start_index < 0 or idx < start_index):
+            start_index = idx
+            matched_marker = marker
+    if start_index < 0:
+        return ""
+    return normalized[start_index + len(matched_marker) :].strip()
+
+
+def _numeric_equal(left: int | float | None, right: int | float | None) -> bool:
+    if not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
+        return False
+    return abs(float(left) - float(right)) < 0.05
+
+
+def _normalize_stat_value_for_key(stat_key: str | None, value: int | float | None) -> int | float | None:
+    if value in _DETAIL_FIELD_EMPTY_VALUES:
+        return value
+    if not stat_key or not isinstance(value, (int, float)):
+        return value
+
+    numeric = float(value)
+    if stat_key.endswith("_pct") or stat_key == "energy_regen":
+        while numeric > 100.0:
+            numeric /= 10.0
+        return round(numeric, 4)
+    if numeric.is_integer():
+        return int(numeric)
+    return round(numeric, 4)
+
+
 def parse_amplifier_detail(
     title_text: str,
     *,
@@ -483,7 +635,7 @@ def parse_amplifier_detail(
     if identity is None:
         return None
 
-    level, level_cap = _parse_level_pair((title_text, info_text, effect_text))
+    level, level_cap = _parse_level_pair_robust((title_text, info_text, effect_text))
     info_segment_text = info_text or title_text
     base_segment = _segment_between_markers(info_segment_text, _BASE_MARKERS, (*_ADVANCED_MARKERS, *_EFFECT_MARKERS))
     advanced_segment = _segment_between_markers(
@@ -492,21 +644,49 @@ def parse_amplifier_detail(
         _EFFECT_MARKERS,
     )
 
-    value_tokens = _extract_value_tokens(info_segment_text)
-    numeric_values = [_coerce_numeric_value(token) for token in value_tokens]
-    numeric_values = [value for value in numeric_values if value not in _DETAIL_FIELD_EMPTY_VALUES]
-
     base_stat_key = _match_stat_key(base_segment, _BASE_STAT_ALIASES)
-    base_stat_value = numeric_values[0] if len(numeric_values) >= 1 else None
+    base_stat_value = None
+
+    advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
+    title_base_values = [
+        value
+        for _, value in _extract_numeric_values(
+            _segment_after_alias(title_text, _aliases_for_stat_key(base_stat_key, _BASE_STAT_ALIASES))
+        )
+    ]
+    if title_base_values:
+        base_stat_value = title_base_values[0]
     if base_stat_key is None and base_stat_value is not None:
         # W-Engine base stat is ATK in every reviewed sample and runtime crop.
         base_stat_key = "attack_flat"
 
-    advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
-    advanced_stat_value = numeric_values[1] if len(numeric_values) >= 2 else None
-    if advanced_stat_key is not None and isinstance(advanced_stat_value, (int, float)):
-        if advanced_stat_key.endswith("_flat") and isinstance(advanced_stat_value, float) and advanced_stat_value.is_integer():
-            advanced_stat_value = int(advanced_stat_value)
+    effect_section_values = [
+        value
+        for _, value in _extract_numeric_values(_segment_after_markers(info_segment_text, _EFFECT_MARKERS))
+    ]
+    if base_stat_value is None and len(effect_section_values) >= 2:
+        base_stat_value = effect_section_values[0]
+
+    advanced_stat_value = None
+    remaining_effect_values = list(effect_section_values)
+    if isinstance(base_stat_value, (int, float)):
+        while remaining_effect_values and _numeric_equal(remaining_effect_values[0], base_stat_value):
+            remaining_effect_values.pop(0)
+        if not remaining_effect_values:
+            remaining_effect_values = [
+                value for value in effect_section_values if not _numeric_equal(value, base_stat_value)
+            ]
+    if remaining_effect_values:
+        advanced_stat_value = remaining_effect_values[0]
+    elif base_stat_value is None and len(effect_section_values) == 1:
+        single_value = effect_section_values[0]
+        if advanced_stat_key is not None:
+            advanced_stat_value = single_value
+        else:
+            base_stat_value = single_value
+
+    base_stat_value = _normalize_stat_value_for_key(base_stat_key, base_stat_value)
+    advanced_stat_value = _normalize_stat_value_for_key(advanced_stat_key, advanced_stat_value)
 
     return AmplifierDetailReadout(
         identity=identity,

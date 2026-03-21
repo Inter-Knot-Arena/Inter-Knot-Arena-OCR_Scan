@@ -77,6 +77,69 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertIsNone(readout.advanced_stat_key)
         self.assertEqual(readout.advanced_stat_value, 30.0)
 
+    def test_parse_amplifier_detail_prefers_title_base_and_post_effect_advanced_values(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u0420\u0435\u0432\u0443\u0449\u0430\u044f \u0442\u0430\u0447\u043a\u0430 \u0423\u0440. 60160 \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 624",
+            info_text=(
+                "\u0420\u0435\u0432\u0443\u0449\u0430\u044f \u0442\u0430\u0447\u043a\u0430 \u0423\u0440. 60160 "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0421\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 624 250/0"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_key, "attack_flat")
+        self.assertEqual(readout.base_stat_value, 624)
+        self.assertEqual(readout.advanced_stat_key, "attack_pct")
+        self.assertEqual(readout.advanced_stat_value, 25.0)
+
+    def test_parse_amplifier_detail_uses_single_post_effect_value_for_advanced_stat(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u0411\u0443\u043c-\u043f\u0443\u0448\u043a\u0430 \u0423\u0440. 30/30 \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438",
+            info_text=(
+                "\u0411\u0443\u043c-\u043f\u0443\u0448\u043a\u0430 \u0423\u0440. 30/30 "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u044d\u043d\u0435\u0440\u0433\u0438\u0438 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 320/0"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.level, 30)
+        self.assertEqual(readout.level_cap, 30)
+        self.assertIsNone(readout.base_stat_value)
+        self.assertEqual(readout.advanced_stat_key, "energy_regen")
+        self.assertEqual(readout.advanced_stat_value, 32.0)
+
+    def test_parse_amplifier_detail_parses_lookalike_level_token(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u0414\u043e\u043c\u0440\u0430\u0431\u043e\u0442\u043d\u0438\u0446\u0430 \u0423\u0440. \u041e\u041b\u041e \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 42",
+            info_text=(
+                "\u0414\u043e\u043c\u0440\u0430\u0431\u043e\u0442\u043d\u0438\u0446\u0430 \u0423\u0440. \u041e\u041b\u041e "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0421\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 42 100/0"
+            ),
+            effect_text="\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 \u0423\u0440. 15/15",
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.level, 1)
+        self.assertEqual(readout.level_cap, 10)
+        self.assertEqual(readout.base_stat_value, 42)
+        self.assertEqual(readout.advanced_stat_key, "attack_pct")
+        self.assertEqual(readout.advanced_stat_value, 10.0)
+
 
 if __name__ == "__main__":
     unittest.main()
