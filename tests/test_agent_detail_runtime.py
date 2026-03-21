@@ -15,6 +15,7 @@ _LIVE_PROBE_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_probe\step_base\after.png"
 )
 _BEN_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_ben\agent_detail.png")
+_BILLY_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_billy\agent_detail.png")
 _LUCY_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_lucy\agent_detail.png")
 
 
@@ -147,6 +148,17 @@ class AgentDetailRuntimeTests(unittest.TestCase):
         self.assertEqual(reading.mindscape, 0)
         self.assertEqual(reading.mindscape_cap, 6)
         self.assertGreaterEqual(reading.mindscape_confidence, 0.68)
+
+    @unittest.skipUnless(_BILLY_SAMPLE.exists(), "local Billy sample is unavailable")
+    def test_read_agent_detail_recovers_billy_mindscape_three(self) -> None:
+        image = cv2.imread(str(_BILLY_SAMPLE), cv2.IMREAD_COLOR)
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.mindscape, 3)
+        self.assertEqual(reading.mindscape_cap, 6)
+        self.assertGreaterEqual(reading.mindscape_confidence, 0.6)
 
     def test_extract_stats_returns_partial_fields_with_degraded_confidence(self) -> None:
         specs = [

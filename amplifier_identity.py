@@ -8,7 +8,7 @@ import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Mapping, Sequence, Tuple
+from typing import Dict, Iterable, Mapping, Sequence, Tuple
 
 import cv2
 
@@ -356,8 +356,6 @@ def _normalize_detail_text(value: str) -> str:
     token = token.replace("\u00a0", " ")
     token = token.replace("5tat", "stat")
     token = token.replace("baso", "base")
-    token = re.sub(r"([0-9]+(?:[.,][0-9]+)?)0/0\b", r"\1%", token)
-    token = re.sub(r"([0-9]+(?:[.,][0-9]+)?)/0\b", r"\1%", token)
     token = token.replace(",", ".")
     token = re.sub(r"(?<!\d)\.(?!\d)", " ", token)
     token = re.sub(r"[^0-9a-zA-Z\u0400-\u04FF.%/+ ]+", " ", token)
@@ -401,8 +399,6 @@ def _normalize_numeric_token(value: str) -> str:
     token = token.replace("\\", "/")
     token = token.replace(",", ".")
     token = token.replace(" ", "")
-    token = re.sub(r"([0-9]+(?:\.[0-9]+)?)0/0\b", r"\1%", token)
-    token = re.sub(r"([0-9]+(?:\.[0-9]+)?)/0\b", r"\1%", token)
     return token
 
 
@@ -444,13 +440,41 @@ def _extract_value_tokens(text: str) -> list[str]:
     if not normalized:
         return []
     normalized = re.sub(r"(?:\blv\.?|\bур\.?)\s*[0-9oOilIl/]{3,8}", " ", normalized, flags=re.IGNORECASE)
-    return re.findall(r"[+\-]?\d+(?:\.\d+)?%?", normalized)
+    return re.findall(r"[+\-]?\d+(?:\.\d+)?(?:/0)?%?", normalized)
+
+
+def _coerce_slash_percent_value(token: str) -> float | None:
+    normalized = _normalize_numeric_token(token)
+    if not normalized.endswith("/0"):
+        return None
+    raw = normalized[:-2]
+    if not raw:
+        return None
+    try:
+        base_value = float(raw)
+    except ValueError:
+        return None
+    percent_value = base_value if "." in raw else (base_value / 10.0)
+    return round(percent_value, 4)
+
+
+def _coerce_slash_base_value(token: str) -> int | None:
+    normalized = _normalize_numeric_token(token)
+    if not normalized.endswith("/0"):
+        return None
+    raw = normalized[:-2]
+    if not raw or "." in raw or not raw.isdigit():
+        return None
+    return int(raw)
 
 
 def _coerce_numeric_value(token: str) -> int | float | None:
     normalized = _normalize_numeric_token(token)
     if not normalized:
         return None
+    slash_percent_value = _coerce_slash_percent_value(normalized)
+    if slash_percent_value is not None:
+        return slash_percent_value
     is_percent = normalized.endswith("%")
     if is_percent:
         normalized = normalized[:-1]
@@ -472,7 +496,18 @@ def _match_stat_key(segment: str, aliases: Sequence[tuple[str, Sequence[str]]]) 
     for stat_key, keys in aliases:
         for alias in keys:
             alias_normalized = f" {_normalize_detail_text(alias)} "
-            if alias_normalized.strip() and alias_normalized in normalized:
+            if not alias_normalized.strip():
+                continue
+            if alias_normalized in normalized:
+                return stat_key
+            alias_tokens = _normalize_detail_text(alias).split()
+            if len(alias_tokens) < 2:
+                continue
+            pattern = r"\b" + re.escape(alias_tokens[0])
+            for token in alias_tokens[1:]:
+                pattern += r"(?:\s+(?:[0-9./%]+)\s+|\s+)" + re.escape(token)
+            pattern += r"\b"
+            if re.search(pattern, normalized):
                 return stat_key
     return None
 
@@ -616,6 +651,10 @@ def _normalize_stat_value_for_key(stat_key: str | None, value: int | float | Non
         return value
 
     numeric = float(value)
+    if stat_key == "impact":
+        while numeric > 30.0:
+            numeric /= 10.0
+        return round(numeric, 4)
     if stat_key.endswith("_pct") or stat_key == "energy_regen":
         while numeric > 100.0:
             numeric /= 10.0
@@ -636,17 +675,17 @@ def _is_compatible_stat_value(stat_key: str | None, value: int | float | None) -
         "attack_flat": (100.0, 5000.0),
         "hp_flat": (100.0, 50000.0),
         "defense_flat": (10.0, 5000.0),
-        "impact": (1.0, 400.0),
-        "crit_rate_pct": (0.0, 100.0),
-        "crit_damage_pct": (0.0, 400.0),
-        "hp_pct": (0.0, 100.0),
-        "attack_pct": (0.0, 100.0),
-        "defense_pct": (0.0, 100.0),
-        "energy_regen": (0.0, 100.0),
-        "pen_ratio_pct": (0.0, 100.0),
+        "impact": (1.0, 30.0),
+        "crit_rate_pct": (0.0, 35.0),
+        "crit_damage_pct": (0.0, 80.0),
+        "hp_pct": (0.0, 40.0),
+        "attack_pct": (0.0, 40.0),
+        "defense_pct": (0.0, 40.0),
+        "energy_regen": (0.0, 40.0),
+        "pen_ratio_pct": (0.0, 40.0),
         "pen_flat": (0.0, 1000.0),
-        "anomaly_mastery": (0.0, 600.0),
-        "anomaly_proficiency": (0.0, 600.0),
+        "anomaly_mastery": (0.0, 200.0),
+        "anomaly_proficiency": (0.0, 200.0),
     }
     lower, upper = ranges.get(stat_key, (0.0, 100000.0))
     return lower <= numeric <= upper
@@ -675,6 +714,18 @@ def _pick_best_base_value(
         index, value = max(candidates, key=lambda item: float(item[1]))
         return value, index
     return None, None
+
+
+def _pick_first_distinct_value(
+    values: Iterable[int | float],
+    *,
+    excluding: int | float | None,
+) -> int | float | None:
+    for value in values:
+        if _numeric_equal(value, excluding):
+            continue
+        return value
+    return None
 
 
 def parse_amplifier_detail(
@@ -717,16 +768,20 @@ def parse_amplifier_detail(
             _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
         )
     ]
-    ordered_values = [value for _, value in _extract_numeric_values(info_segment_text)]
+    ordered_token_values = _extract_numeric_values(info_segment_text)
+    ordered_values = [value for _, value in ordered_token_values]
+    ordered_slash_base_values = [
+        value
+        for token, _ in ordered_token_values
+        for value in [_coerce_slash_base_value(token)]
+        if value is not None
+    ]
 
     if title_base_values:
         base_stat_value, base_value_index = _pick_best_base_value(base_stat_key, title_base_values)
         if base_stat_value is None:
             base_stat_value = title_base_values[0]
             base_value_index = 0
-    if base_stat_key is None and base_stat_value is not None:
-        # W-Engine base stat is ATK in every reviewed sample and runtime crop.
-        base_stat_key = "attack_flat"
     if base_stat_value is None and len(effect_section_values) >= 2:
         base_stat_value = effect_section_values[0]
         base_value_index = next(
@@ -735,9 +790,23 @@ def parse_amplifier_detail(
         )
     if base_stat_value is None:
         base_stat_value, base_value_index = _pick_best_base_value(base_stat_key, ordered_values)
+    if base_stat_value is None and base_stat_key == "attack_flat" and ordered_slash_base_values:
+        base_stat_value, _ = _pick_best_base_value(base_stat_key, ordered_slash_base_values)
+        if base_stat_value is not None:
+            base_value_index = next(
+                (
+                    index
+                    for index, (token, _) in enumerate(ordered_token_values)
+                    if _numeric_equal(_coerce_slash_base_value(token), base_stat_value)
+                ),
+                None,
+            )
     if base_stat_value is None and len(ordered_values) >= 2:
         base_stat_value = ordered_values[0]
         base_value_index = 0
+    if base_stat_key is None and base_stat_value is not None:
+        # W-Engine base stat is ATK in every reviewed sample and runtime crop.
+        base_stat_key = "attack_flat"
 
     remaining_effect_values = [
         value for value in effect_values if not _numeric_equal(value, base_stat_value)
@@ -750,16 +819,21 @@ def parse_amplifier_detail(
         )
     if advanced_stat_value is None:
         advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, ordered_values)
-    if advanced_stat_value is None and advanced_stat_key is not None and ordered_values:
-        advanced_stat_value = ordered_values[-1]
     if advanced_stat_value is None and advanced_stat_key is None:
-        if base_value_index is not None and base_value_index + 1 < len(ordered_values):
-            advanced_stat_value = ordered_values[base_value_index + 1]
-        elif len(ordered_values) >= 2:
-            advanced_stat_value = ordered_values[-1]
+        fallback_values = (
+            ordered_values[base_value_index + 1 :]
+            if base_value_index is not None and base_value_index + 1 < len(ordered_values)
+            else ordered_values
+        )
+        advanced_stat_value = _pick_first_distinct_value(
+            fallback_values,
+            excluding=base_stat_value,
+        )
 
     base_stat_value = _normalize_stat_value_for_key(base_stat_key, base_stat_value)
     advanced_stat_value = _normalize_stat_value_for_key(advanced_stat_key, advanced_stat_value)
+    if advanced_stat_key is None and _numeric_equal(advanced_stat_value, base_stat_value):
+        advanced_stat_value = None
 
     return AmplifierDetailReadout(
         identity=identity,

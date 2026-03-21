@@ -503,6 +503,52 @@ def _looks_zero_mindscape_numerator(
     )
 
 
+def _looks_three_mindscape_numerator(
+    binary: np.ndarray,
+    component: tuple[int, int, int, int],
+    numerator_text: str,
+) -> bool:
+    if numerator_text not in {"8", "9"}:
+        return False
+
+    x, y, width, height = component
+    glyph = binary[y : y + height, x : x + width]
+    if glyph.size == 0 or width < 24 or height < 28:
+        return False
+
+    row_sums = np.count_nonzero(glyph, axis=1)
+    low_row_threshold = max(1, int(round(width * 0.45)))
+    low_rows = [index for index, value in enumerate(row_sums.tolist()) if value <= low_row_threshold]
+    if len(low_rows) < 4:
+        return False
+
+    bands: list[tuple[int, int]] = []
+    start = low_rows[0]
+    end = low_rows[0]
+    for index in low_rows[1:]:
+        if index == end + 1:
+            end = index
+            continue
+        bands.append((start, end))
+        start = index
+        end = index
+    bands.append((start, end))
+    if len(bands) < 2:
+        return False
+
+    upper_band = bands[0]
+    lower_band = bands[1]
+    left_fill = int(np.count_nonzero(glyph[:, : max(1, width // 3)]))
+    right_fill = int(np.count_nonzero(glyph[:, width - max(1, width // 3) :]))
+    return (
+        upper_band[0] <= int(round(height * 0.45))
+        and lower_band[0] >= int(round(height * 0.55))
+        and (upper_band[1] - upper_band[0]) <= 4
+        and (lower_band[1] - lower_band[0]) <= 4
+        and right_fill > int(round(left_fill * 1.1))
+    )
+
+
 def _parse_mindscape_numeric_crop(crop: np.ndarray) -> tuple[int | None, int | None, float, bool]:
     best_value: int | None = None
     best_confidence = 0.0
@@ -529,6 +575,9 @@ def _parse_mindscape_numeric_crop(crop: np.ndarray) -> tuple[int | None, int | N
             if _looks_zero_mindscape_numerator(binary, components, numerator_text):
                 numerator_value = 0
                 numerator_confidence = max(float(numerator_confidence), 0.68)
+            elif _looks_three_mindscape_numerator(binary, components[0], numerator_text):
+                numerator_value = 3
+                numerator_confidence = max(float(numerator_confidence), 0.64)
             else:
                 continue
         denominator_value = int(denominator_text) if denominator_text.isdigit() else None

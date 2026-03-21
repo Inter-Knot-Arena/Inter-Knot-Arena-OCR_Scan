@@ -114,9 +114,80 @@ class AmplifierIdentityTests(unittest.TestCase):
         assert readout is not None
         self.assertEqual(readout.level, 30)
         self.assertEqual(readout.level_cap, 30)
-        self.assertIsNone(readout.base_stat_value)
+        self.assertEqual(readout.base_stat_value, 320)
         self.assertEqual(readout.advanced_stat_key, "energy_regen")
         self.assertEqual(readout.advanced_stat_value, 32.0)
+
+    def test_parse_amplifier_detail_normalizes_shifted_impact_value(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 \u0434\u0435\u043c\u0430\u0440\u044b II \u0423\u0440. 60/60 \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 624",
+            info_text=(
+                "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 \u0434\u0435\u043c\u0430\u0440\u044b II \u0423\u0440. 60/60 "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0418\u043c\u043f\u0443\u043b\u044c\u0441 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 624 150,6"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_value, 624)
+        self.assertEqual(readout.advanced_stat_key, "impact")
+        self.assertEqual(readout.advanced_stat_value, 15.06)
+
+    def test_parse_amplifier_detail_does_not_reuse_base_value_as_advanced_stat(self) -> None:
+        readout = parse_amplifier_detail(
+            "Deep Sea Visitor Lv. 60/60 Base ATK 713",
+            info_text=(
+                "Deep Sea Visitor Lv. 60/60 "
+                "Base Stats Base ATK "
+                "Advanced Stats Crit Rate "
+                "W-Engine Effect 713"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_value, 713)
+        self.assertEqual(readout.advanced_stat_key, "crit_rate_pct")
+        self.assertIsNone(readout.advanced_stat_value)
+
+    def test_parse_amplifier_detail_does_not_invent_duplicate_base_value_without_advanced_label(self) -> None:
+        readout = parse_amplifier_detail(
+            "Drill Rig - Red Axis Lv. 50/50",
+            info_text=(
+                "Drill Rig - Red Axis Lv. 50/50 "
+                "Base Stats Base ATK "
+                "W-Engine Effect 521 521"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_value, 521)
+        self.assertIsNone(readout.advanced_stat_key)
+        self.assertIsNone(readout.advanced_stat_value)
+
+    def test_parse_amplifier_detail_recovers_split_advanced_label_around_numeric_noise(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u0411\u0443\u0440 \u2014 \u043a\u0440\u0430\u0441\u043d\u0430\u044f \u043e\u0441\u044c 60 \u041e \u0423\u0440. 50/50 \u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 521",
+            info_text=(
+                "\u0411\u0443\u0440 \u2014 \u043a\u0440\u0430\u0441\u043d\u0430\u044f \u043e\u0441\u044c \u0445 60 \u0423\u0440. 50/50 "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u043f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 521 \u044d\u043d\u0435\u0440\u0433\u0438\u0438 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_value, 521)
+        self.assertEqual(readout.advanced_stat_key, "energy_regen")
+        self.assertIsNone(readout.advanced_stat_value)
 
     def test_parse_amplifier_detail_parses_lookalike_level_token(self) -> None:
         readout = parse_amplifier_detail(
