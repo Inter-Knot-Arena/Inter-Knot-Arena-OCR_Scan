@@ -227,6 +227,75 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, [])
 
+    def test_filter_resolved_low_conf_reasons_drops_resolved_equipment_overview_noise(self) -> None:
+        filtered = pipeline._filter_resolved_low_conf_reasons(
+            [
+                {
+                    "agentId": "agent_anby",
+                    "weaponPresent": True,
+                    "weapon": {"weaponId": "amp_ii"},
+                    "discSlotOccupancy": {str(slot): True for slot in range(1, 7)},
+                    "discs": [
+                        {"slot": slot, "setId": "set_fanged_metal"}
+                        for slot in range(1, 7)
+                    ],
+                }
+            ],
+            [
+                "agents_empty_after_parse",
+                "agent_anby:equipment_overview_weapon_presence_ambiguous",
+                "agent_anby:equipment_overview_slot_ambiguous:3",
+            ],
+        )
+
+        self.assertEqual(filtered, [])
+
+    def test_filter_resolved_low_conf_reasons_drops_amplifier_unclassified_for_known_empty_weapon(self) -> None:
+        filtered = pipeline._filter_resolved_low_conf_reasons(
+            [
+                {
+                    "agentId": "agent_anby",
+                    "weaponPresent": False,
+                    "weapon": {},
+                }
+            ],
+            ["amplifier_detail_unclassified:agent_anby"],
+        )
+
+        self.assertEqual(filtered, [])
+
+    def test_pixel_weapons_from_captures_skips_known_empty_weapon_slots(self) -> None:
+        with patch.object(
+            pipeline,
+            "_resolve_capture_agent_id",
+            return_value=("agent_anby", "screen_capture_agent_id", 0.99),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": "ignored.png",
+                            "agentSlotIndex": 1,
+                        }
+                    ]
+                },
+                {},
+                {"agent_anby": {"weaponPresent": False}},
+                "RU",
+            )
+
+        self.assertEqual(weapons, {})
+        self.assertEqual(reasons, [])
+
+    def test_drop_stale_top_level_confidence_reasons_respects_current_confidence(self) -> None:
+        filtered = pipeline._drop_stale_top_level_confidence_reasons(
+            ["equipment_low_confidence", "uid_low_confidence"],
+            {"equipment": 0.9343, "uid": 0.88},
+        )
+
+        self.assertEqual(filtered, ["uid_low_confidence"])
+
     def test_enrich_agents_with_agent_detail_pixels_accepts_near_threshold_level_confidence(self) -> None:
         agent = pipeline._default_agent_payload("agent_anby", 0.97)
         agent["level"] = None

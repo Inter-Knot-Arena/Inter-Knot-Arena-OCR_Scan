@@ -892,6 +892,7 @@ def _pixel_equipment_occupancy_from_captures(
 def _pixel_weapons_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[tuple[int | None, int], str],
+    occupancy_by_agent: dict[str, dict[str, Any]],
     locale: str,
 ) -> tuple[dict[str, dict[str, Any]], list[str]]:
     reasons: list[str] = []
@@ -935,6 +936,9 @@ def _pixel_weapons_from_captures(
                     if agent_slot_index is None
                     else f"amplifier_detail_missing_agent_for_slot:{agent_slot_index}:{index}"
                 )
+                continue
+            occupancy = occupancy_by_agent.get(agent_id)
+            if isinstance(occupancy, dict) and occupancy.get("weaponPresent") is False:
                 continue
             source_path = Path(path_value)
             if not source_path.exists():
@@ -1770,6 +1774,8 @@ def _filter_resolved_low_conf_reasons(
         if not isinstance(reason, str):
             continue
         matched = False
+        if reason == "agents_empty_after_parse" and by_agent:
+            matched = True
         if reason.startswith("disk_detail_low_conf:"):
             parts = reason.split(":")
             agent = by_agent.get(parts[1] if len(parts) > 1 else "")
@@ -1780,6 +1786,39 @@ def _filter_resolved_low_conf_reasons(
                 else 0.0
             )
             if agent is not None and disc_confidence >= 0.80 and _disc_consensus_confidence(agent.get("discs")) >= 0.80:
+                matched = True
+        if not matched and ":equipment_overview_weapon_presence_ambiguous" in reason:
+            agent_id = reason.split(":", 1)[0]
+            agent = by_agent.get(agent_id)
+            if isinstance(agent, dict):
+                weapon = agent.get("weapon")
+                if (
+                    (isinstance(weapon, dict) and _as_text(weapon.get("weaponId")) != "")
+                    or agent.get("weaponPresent") is False
+                ):
+                    matched = True
+        if not matched and ":equipment_overview_slot_ambiguous:" in reason:
+            agent_id, slot_text = reason.split(":equipment_overview_slot_ambiguous:", 1)
+            slot_index = _as_slot_index(slot_text)
+            agent = by_agent.get(agent_id)
+            if slot_index is not None and isinstance(agent, dict):
+                discs = agent.get("discs")
+                slot_occupancy = agent.get("discSlotOccupancy")
+                if (
+                    isinstance(discs, list)
+                    and any(
+                        isinstance(disc, dict)
+                        and _as_slot_index(disc.get("slot")) == slot_index
+                        and _as_text(disc.get("setId")) != ""
+                        for disc in discs
+                    )
+                ):
+                    matched = True
+                elif isinstance(slot_occupancy, dict) and str(slot_index) in slot_occupancy:
+                    matched = True
+        if not matched and reason.startswith("amplifier_detail_unclassified:"):
+            agent = by_agent.get(reason.split(":", 1)[1])
+            if isinstance(agent, dict) and agent.get("weaponPresent") is False:
                 matched = True
         for suffix, predicate in (
             (".weapon_missing", lambda agent: isinstance(agent.get("weapon"), dict) and _as_text(agent.get("weapon", {}).get("weaponId")) != ""),
@@ -1804,6 +1843,30 @@ def _filter_resolved_low_conf_reasons(
             if isinstance(slot_occupancy, dict) and not any(bool(value) for value in slot_occupancy.values()):
                 matched = True
         if not matched:
+            filtered.append(reason)
+    return filtered
+
+
+def _drop_stale_top_level_confidence_reasons(
+    reasons: list[str],
+    top_confidence: dict[str, float],
+) -> list[str]:
+    if not reasons:
+        return []
+
+    thresholds = {
+        "uid_low_confidence": ("uid", 0.9),
+        "agents_low_confidence": ("agents", 0.9),
+        "equipment_low_confidence": ("equipment", 0.85),
+    }
+    filtered: list[str] = []
+    for reason in reasons:
+        metric = thresholds.get(reason)
+        if metric is None:
+            filtered.append(reason)
+            continue
+        field_name, threshold = metric
+        if float(top_confidence.get(field_name, 0.0) or 0.0) < threshold:
             filtered.append(reason)
     return filtered
 
@@ -1945,6 +2008,7 @@ def scan_roster(
     pixel_weapons_by_agent, pixel_weapon_reasons = _pixel_weapons_from_captures(
         session_context,
         agent_ids_by_slot,
+        pixel_equipment_occupancy_by_agent,
         normalized_locale,
     )
     low_conf_reasons.extend(pixel_weapon_reasons)
@@ -1988,6 +2052,7 @@ def scan_roster(
             4,
         ),
     }
+    low_conf_reasons = _drop_stale_top_level_confidence_reasons(low_conf_reasons, top_confidence)
     screen_captures = session_context.get("screenCaptures")
     has_roster_capture = isinstance(screen_captures, list) and any(
         isinstance(capture, dict) and str(capture.get("role", "")).strip() == "roster"
