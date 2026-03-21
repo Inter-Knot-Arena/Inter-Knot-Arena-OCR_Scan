@@ -625,6 +625,58 @@ def _normalize_stat_value_for_key(stat_key: str | None, value: int | float | Non
     return round(numeric, 4)
 
 
+def _is_compatible_stat_value(stat_key: str | None, value: int | float | None) -> bool:
+    if not stat_key or not isinstance(value, (int, float)):
+        return False
+    normalized = _normalize_stat_value_for_key(stat_key, value)
+    if not isinstance(normalized, (int, float)):
+        return False
+    numeric = float(normalized)
+    ranges: dict[str, tuple[float, float]] = {
+        "attack_flat": (100.0, 5000.0),
+        "hp_flat": (100.0, 50000.0),
+        "defense_flat": (10.0, 5000.0),
+        "impact": (1.0, 400.0),
+        "crit_rate_pct": (0.0, 100.0),
+        "crit_damage_pct": (0.0, 400.0),
+        "hp_pct": (0.0, 100.0),
+        "attack_pct": (0.0, 100.0),
+        "defense_pct": (0.0, 100.0),
+        "energy_regen": (0.0, 100.0),
+        "pen_ratio_pct": (0.0, 100.0),
+        "pen_flat": (0.0, 1000.0),
+        "anomaly_mastery": (0.0, 600.0),
+        "anomaly_proficiency": (0.0, 600.0),
+    }
+    lower, upper = ranges.get(stat_key, (0.0, 100000.0))
+    return lower <= numeric <= upper
+
+
+def _pick_first_compatible_value(
+    stat_key: str | None,
+    values: Sequence[int | float],
+) -> int | float | None:
+    for value in values:
+        if _is_compatible_stat_value(stat_key, value):
+            return value
+    return None
+
+
+def _pick_best_base_value(
+    stat_key: str | None,
+    values: Sequence[int | float],
+) -> tuple[int | float | None, int | None]:
+    candidates = [
+        (index, value)
+        for index, value in enumerate(values)
+        if _is_compatible_stat_value(stat_key, value)
+    ]
+    if candidates:
+        index, value = max(candidates, key=lambda item: float(item[1]))
+        return value, index
+    return None, None
+
+
 def parse_amplifier_detail(
     title_text: str,
     *,
@@ -646,6 +698,7 @@ def parse_amplifier_detail(
 
     base_stat_key = _match_stat_key(base_segment, _BASE_STAT_ALIASES)
     base_stat_value = None
+    base_value_index: int | None = None
 
     advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
     title_base_values = [
@@ -654,36 +707,56 @@ def parse_amplifier_detail(
             _segment_after_alias(title_text, _aliases_for_stat_key(base_stat_key, _BASE_STAT_ALIASES))
         )
     ]
-    if title_base_values:
-        base_stat_value = title_base_values[0]
-    if base_stat_key is None and base_stat_value is not None:
-        # W-Engine base stat is ATK in every reviewed sample and runtime crop.
-        base_stat_key = "attack_flat"
-
     effect_section_values = [
         value
         for _, value in _extract_numeric_values(_segment_after_markers(info_segment_text, _EFFECT_MARKERS))
     ]
+    effect_values = [
+        value
+        for _, value in _extract_numeric_values(
+            _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+        )
+    ]
+    ordered_values = [value for _, value in _extract_numeric_values(info_segment_text)]
+
+    if title_base_values:
+        base_stat_value, base_value_index = _pick_best_base_value(base_stat_key, title_base_values)
+        if base_stat_value is None:
+            base_stat_value = title_base_values[0]
+            base_value_index = 0
+    if base_stat_key is None and base_stat_value is not None:
+        # W-Engine base stat is ATK in every reviewed sample and runtime crop.
+        base_stat_key = "attack_flat"
     if base_stat_value is None and len(effect_section_values) >= 2:
         base_stat_value = effect_section_values[0]
+        base_value_index = next(
+            (index for index, value in enumerate(ordered_values) if _numeric_equal(value, base_stat_value)),
+            None,
+        )
+    if base_stat_value is None:
+        base_stat_value, base_value_index = _pick_best_base_value(base_stat_key, ordered_values)
+    if base_stat_value is None and len(ordered_values) >= 2:
+        base_stat_value = ordered_values[0]
+        base_value_index = 0
 
-    advanced_stat_value = None
-    remaining_effect_values = list(effect_section_values)
-    if isinstance(base_stat_value, (int, float)):
-        while remaining_effect_values and _numeric_equal(remaining_effect_values[0], base_stat_value):
-            remaining_effect_values.pop(0)
-        if not remaining_effect_values:
-            remaining_effect_values = [
-                value for value in effect_section_values if not _numeric_equal(value, base_stat_value)
-            ]
-    if remaining_effect_values:
-        advanced_stat_value = remaining_effect_values[0]
-    elif base_stat_value is None and len(effect_section_values) == 1:
-        single_value = effect_section_values[0]
-        if advanced_stat_key is not None:
-            advanced_stat_value = single_value
-        else:
-            base_stat_value = single_value
+    remaining_effect_values = [
+        value for value in effect_values if not _numeric_equal(value, base_stat_value)
+    ]
+    advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, remaining_effect_values)
+    if advanced_stat_value is None and base_value_index is not None:
+        advanced_stat_value = _pick_first_compatible_value(
+            advanced_stat_key,
+            ordered_values[base_value_index + 1 :],
+        )
+    if advanced_stat_value is None:
+        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, ordered_values)
+    if advanced_stat_value is None and advanced_stat_key is not None and ordered_values:
+        advanced_stat_value = ordered_values[-1]
+    if advanced_stat_value is None and advanced_stat_key is None:
+        if base_value_index is not None and base_value_index + 1 < len(ordered_values):
+            advanced_stat_value = ordered_values[base_value_index + 1]
+        elif len(ordered_values) >= 2:
+            advanced_stat_value = ordered_values[-1]
 
     base_stat_value = _normalize_stat_value_for_key(base_stat_key, base_stat_value)
     advanced_stat_value = _normalize_stat_value_for_key(advanced_stat_key, advanced_stat_value)

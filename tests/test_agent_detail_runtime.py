@@ -23,6 +23,19 @@ def _sample_path(name: str) -> Path:
 
 
 class AgentDetailRuntimeTests(unittest.TestCase):
+    def test_detect_mindscape_label_box_prefers_lower_left_candidate_over_top_noise(self) -> None:
+        region = np.zeros((605, 717), dtype=np.uint8)
+        region[0:158, 294:562] = 255
+        region[426:538, 71:268] = 255
+        region[375:466, 123:297] = 255
+
+        label = agent_detail_runtime._detect_mindscape_label_box(region)
+
+        self.assertIsNotNone(label)
+        assert label is not None
+        self.assertLess(label[0], 200)
+        self.assertGreater(label[1], 300)
+
     @unittest.skipUnless(
         _sample_path("batch_001_ru_agent_detail_0c9e38651d02.png").exists(),
         "local OCR dataset sample is unavailable",

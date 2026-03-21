@@ -424,9 +424,17 @@ def _detect_mindscape_label_box(region: np.ndarray) -> tuple[int, int, int, int]
         x, y, box_width, box_height, area = [int(value) for value in stats[index]]
         if area <= 300:
             continue
+        if box_width >= int(width * 0.7) or box_height >= int(height * 0.45):
+            continue
         if x >= int(width * 0.5):
             continue
-        score = area - abs(x - width * 0.12) * 40.0 - abs(y - height * 0.55) * 10.0
+        center_x = x + (box_width / 2.0)
+        center_y = y + (box_height / 2.0)
+        if center_x >= width * 0.42:
+            continue
+        if center_y <= height * 0.45:
+            continue
+        score = area - abs(center_x - width * 0.24) * 48.0 - abs(center_y - height * 0.72) * 18.0
         if best_box is None or score > float(best_score):
             best_box = (x, y, box_width, box_height)
             best_score = score
@@ -439,6 +447,16 @@ def _extract_mindscape_numeric_crop(region: np.ndarray, label_box: tuple[int, in
     x1 = min(region.shape[1], int(round(x + width * 0.78)))
     y0 = max(0, int(round(y + height * 0.55)))
     y1 = min(region.shape[0], int(round(y + height * 1.95)))
+    crop = region[y0:y1, x0:x1]
+    return crop if crop.size else None
+
+
+def _extract_mindscape_numeric_crop_expanded(region: np.ndarray, label_box: tuple[int, int, int, int]) -> np.ndarray | None:
+    x, y, width, height = label_box
+    x0 = max(0, int(round(x + width * 0.00)))
+    x1 = min(region.shape[1], int(round(x + width * 0.90)))
+    y0 = max(0, int(round(y + height * 0.30)))
+    y1 = min(region.shape[0], int(round(y + height * 2.50)))
     crop = region[y0:y1, x0:x1]
     return crop if crop.size else None
 
@@ -540,13 +558,24 @@ def _extract_mindscape(image: np.ndarray) -> tuple[int | None, int | None, float
     if region is None:
         return None, None, 0.0, ["agent_detail_mindscape_region_missing"]
     label_box = _detect_mindscape_label_box(region)
-    if label_box is None:
-        return None, None, 0.0, ["agent_detail_mindscape_label_missing"]
-    crop = _extract_mindscape_numeric_crop(region, label_box)
-    if crop is None:
-        return None, None, 0.0, ["agent_detail_mindscape_crop_missing"]
-
-    best_value, best_cap, best_confidence, denominator_ok = _parse_mindscape_numeric_crop(crop)
+    best_value: int | None = None
+    best_cap: int | None = None
+    best_confidence = 0.0
+    denominator_ok = False
+    if label_box is not None:
+        crop = _extract_mindscape_numeric_crop(region, label_box)
+        if crop is not None:
+            best_value, best_cap, best_confidence, denominator_ok = _parse_mindscape_numeric_crop(crop)
+        if best_value is None:
+            expanded_crop = _extract_mindscape_numeric_crop_expanded(region, label_box)
+            if expanded_crop is not None:
+                expanded_value, expanded_cap, expanded_confidence, expanded_denominator_ok = _parse_mindscape_numeric_crop(expanded_crop)
+                if expanded_denominator_ok:
+                    denominator_ok = True
+                if expanded_value is not None and expanded_confidence > best_confidence:
+                    best_value = expanded_value
+                    best_cap = expanded_cap
+                    best_confidence = expanded_confidence
     if best_value is None:
         fixed_crop = _extract_mindscape_numeric_crop_fixed(region)
         if fixed_crop is not None:
@@ -557,6 +586,8 @@ def _extract_mindscape(image: np.ndarray) -> tuple[int | None, int | None, float
                 best_value = fixed_value
                 best_cap = fixed_cap
                 best_confidence = fixed_confidence
+    if label_box is None and best_value is None:
+        reasons.append("agent_detail_mindscape_label_missing")
     if best_value is None:
         reasons.append("agent_detail_mindscape_value_missing")
     if not denominator_ok:
