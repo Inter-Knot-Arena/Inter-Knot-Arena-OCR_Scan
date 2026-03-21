@@ -453,6 +453,38 @@ def _extract_mindscape_numeric_crop_fixed(region: np.ndarray) -> np.ndarray | No
     return crop if crop.size else None
 
 
+def _mindscape_fill_ratio(binary: np.ndarray, component: tuple[int, int, int, int]) -> float:
+    x, y, width, height = component
+    glyph = binary[y : y + height, x : x + width]
+    return float(np.count_nonzero(glyph)) / float(glyph.size or 1)
+
+
+def _looks_zero_mindscape_numerator(
+    binary: np.ndarray,
+    components: Sequence[tuple[int, int, int, int]],
+    numerator_text: str,
+) -> bool:
+    if len(components) != 3 or numerator_text not in {"8", "9"}:
+        return False
+
+    numerator_box, separator_box, denominator_box = components
+    numerator_fill = _mindscape_fill_ratio(binary, numerator_box)
+    separator_fill = _mindscape_fill_ratio(binary, separator_box)
+    denominator_fill = _mindscape_fill_ratio(binary, denominator_box)
+
+    return (
+        separator_box[0] > numerator_box[0]
+        and denominator_box[0] > separator_box[0]
+        and numerator_box[2] >= 24
+        and numerator_box[3] >= 28
+        and separator_box[2] <= max(24, int(round(numerator_box[2] * 0.9)))
+        and separator_box[3] >= int(round(numerator_box[3] * 0.9))
+        and 0.55 <= numerator_fill <= 0.74
+        and separator_fill <= 0.52
+        and denominator_fill >= 0.45
+    )
+
+
 def _parse_mindscape_numeric_crop(crop: np.ndarray) -> tuple[int | None, int | None, float, bool]:
     best_value: int | None = None
     best_confidence = 0.0
@@ -476,7 +508,11 @@ def _parse_mindscape_numeric_crop(crop: np.ndarray) -> tuple[int | None, int | N
             continue
         numerator_value = int(numerator_text)
         if not 0 <= numerator_value <= 6:
-            continue
+            if _looks_zero_mindscape_numerator(binary, components, numerator_text):
+                numerator_value = 0
+                numerator_confidence = max(float(numerator_confidence), 0.68)
+            else:
+                continue
         denominator_value = int(denominator_text) if denominator_text.isdigit() else None
         structural_denominator_ok = (
             components[2][0] > components[1][0] > components[0][0]

@@ -14,6 +14,8 @@ _DATASET_ROOT = Path(r"D:\IKA_DATA\ocr\raw\manual_screens\batch_001_ru\agent_det
 _LIVE_PROBE_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_probe\step_base\after.png"
 )
+_BEN_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_ben\agent_detail.png")
+_LUCY_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_lucy\agent_detail.png")
 
 
 def _sample_path(name: str) -> Path:
@@ -110,6 +112,28 @@ class AgentDetailRuntimeTests(unittest.TestCase):
 
         self.assertEqual(reading.level, 60)
         self.assertEqual(reading.level_cap, 60)
+
+    @unittest.skipUnless(_BEN_SAMPLE.exists(), "local Ben sample is unavailable")
+    def test_read_agent_detail_recovers_zero_mindscape_for_ben(self) -> None:
+        image = cv2.imread(str(_BEN_SAMPLE), cv2.IMREAD_COLOR)
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.mindscape, 0)
+        self.assertEqual(reading.mindscape_cap, 6)
+        self.assertGreaterEqual(reading.mindscape_confidence, 0.68)
+
+    @unittest.skipUnless(_LUCY_SAMPLE.exists(), "local Lucy sample is unavailable")
+    def test_read_agent_detail_recovers_zero_mindscape_for_lucy(self) -> None:
+        image = cv2.imread(str(_LUCY_SAMPLE), cv2.IMREAD_COLOR)
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.mindscape, 0)
+        self.assertEqual(reading.mindscape_cap, 6)
+        self.assertGreaterEqual(reading.mindscape_confidence, 0.68)
 
     def test_extract_stats_returns_partial_fields_with_degraded_confidence(self) -> None:
         specs = [
