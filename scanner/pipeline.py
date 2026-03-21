@@ -430,6 +430,53 @@ def _default_agent_payload(agent_id: str, confidence: float) -> dict[str, Any]:
     }
 
 
+def _known_empty_equipment_confidence(occupancy_confidence: float) -> float:
+    return round(min(0.94, max(float(occupancy_confidence or 0.0), 0.90)), 4)
+
+
+def _all_disc_slots_empty(slot_occupancy: Any) -> bool:
+    return isinstance(slot_occupancy, dict) and bool(slot_occupancy) and not any(bool(value) for value in slot_occupancy.values())
+
+
+def _disc_consensus_confidence(discs: Any) -> float:
+    if not isinstance(discs, list):
+        return 0.0
+
+    slot_to_set: dict[int, str] = {}
+    for disc in discs:
+        if not isinstance(disc, dict):
+            continue
+        slot = _as_slot_index(disc.get("slot"))
+        set_id = _as_text(disc.get("setId"))
+        if slot is None or slot < 1 or slot > 6 or not set_id:
+            continue
+        slot_to_set[slot] = set_id
+
+    if len(slot_to_set) != 6:
+        return 0.0
+
+    counts: dict[str, int] = {}
+    for set_id in slot_to_set.values():
+        counts[set_id] = counts.get(set_id, 0) + 1
+    values = sorted(counts.values(), reverse=True)
+    dominant = values[0]
+    unique = len(values)
+
+    if dominant == 6:
+        return 0.92
+    if dominant >= 5:
+        return 0.88
+    if dominant == 4 and unique <= 2:
+        return 0.86
+    if dominant == 4 and unique == 3:
+        return 0.80
+    if unique == 3 and values == [2, 2, 2]:
+        return 0.80
+    if unique == 2 and values == [3, 3]:
+        return 0.80
+    return 0.0
+
+
 def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
     reasons: list[str] = []
     icon_payload = session_context.get("agentIconPaths")
@@ -1087,9 +1134,11 @@ def _enrich_agents_with_pixel_discs(
         confidence_by_field = dict(payload.get("confidenceByField") or {})
         field_sources = dict(payload.get("fieldSources") or {})
         avg_confidence = sum(float(disc.get("_confidence", 0.0)) for disc in pixel_discs) / max(len(pixel_discs), 1)
+        consensus_confidence = _disc_consensus_confidence(payload.get("discs"))
+        effective_confidence = max(float(avg_confidence), float(consensus_confidence))
         previous_disc_source = _as_text(field_sources.get("discs"))
-        confidence_by_field["discs"] = round(max(float(confidence_by_field.get("discs", 0.0)), avg_confidence), 4)
-        confidence_by_field["occupancy"] = round(max(float(confidence_by_field.get("occupancy", 0.0)), avg_confidence), 4)
+        confidence_by_field["discs"] = round(max(float(confidence_by_field.get("discs", 0.0)), effective_confidence), 4)
+        confidence_by_field["occupancy"] = round(max(float(confidence_by_field.get("occupancy", 0.0)), effective_confidence), 4)
         if previous_disc_source in {"", "missing"}:
             field_sources["discs"] = "onnx_disk_detail"
             field_sources["discSlotOccupancy"] = "derived_from_onnx_disk_detail"
@@ -1128,8 +1177,10 @@ def _enrich_agents_with_pixel_discs(
             {key: value for key, value in disc.items() if not str(key).startswith("_")}
             for disc in pixel_discs
         ]
-        payload["confidenceByField"]["discs"] = round(avg_confidence, 4)
-        payload["confidenceByField"]["occupancy"] = round(avg_confidence, 4)
+        consensus_confidence = _disc_consensus_confidence(payload.get("discs"))
+        effective_confidence = max(float(avg_confidence), float(consensus_confidence))
+        payload["confidenceByField"]["discs"] = round(effective_confidence, 4)
+        payload["confidenceByField"]["occupancy"] = round(effective_confidence, 4)
         payload["fieldSources"]["discs"] = "onnx_disk_detail"
         payload["fieldSources"]["discSlotOccupancy"] = "derived_from_onnx_disk_detail"
         occupancy = derive_equipment_occupancy(
@@ -1177,6 +1228,13 @@ def _enrich_agents_with_pixel_equipment_occupancy(
                 4,
             )
             field_sources["weaponPresent"] = "pixel_equipment_overview"
+            if not payload.get("weapon") and payload["weaponPresent"] is False:
+                known_empty_confidence = _known_empty_equipment_confidence(float(occupancy.get("_weaponConfidence", 0.0) or 0.0))
+                confidence_by_field["weapon"] = round(
+                    max(float(confidence_by_field.get("weapon", 0.0)), known_empty_confidence),
+                    4,
+                )
+                field_sources["weapon"] = "known_empty_from_equipment_occupancy"
             used = True
         if "discSlotOccupancy" in occupancy:
             payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
@@ -1185,6 +1243,13 @@ def _enrich_agents_with_pixel_equipment_occupancy(
                 4,
             )
             field_sources["discSlotOccupancy"] = "pixel_equipment_overview"
+            if not payload.get("discs") and _all_disc_slots_empty(payload["discSlotOccupancy"]):
+                known_empty_confidence = _known_empty_equipment_confidence(float(occupancy.get("_discConfidence", 0.0) or 0.0))
+                confidence_by_field["discs"] = round(
+                    max(float(confidence_by_field.get("discs", 0.0)), known_empty_confidence),
+                    4,
+                )
+                field_sources["discs"] = "known_empty_from_equipment_occupancy"
             used = True
 
         payload["confidenceByField"] = confidence_by_field
@@ -1206,9 +1271,15 @@ def _enrich_agents_with_pixel_equipment_occupancy(
         if "weaponPresent" in occupancy:
             payload["weaponPresent"] = bool(occupancy["weaponPresent"])
             payload["fieldSources"]["weaponPresent"] = "pixel_equipment_overview"
+            if payload["weaponPresent"] is False:
+                payload["confidenceByField"]["weapon"] = _known_empty_equipment_confidence(float(occupancy.get("_weaponConfidence", 0.0) or 0.0))
+                payload["fieldSources"]["weapon"] = "known_empty_from_equipment_occupancy"
         if "discSlotOccupancy" in occupancy:
             payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
             payload["fieldSources"]["discSlotOccupancy"] = "pixel_equipment_overview"
+            if _all_disc_slots_empty(payload["discSlotOccupancy"]):
+                payload["confidenceByField"]["discs"] = _known_empty_equipment_confidence(float(occupancy.get("_discConfidence", 0.0) or 0.0))
+                payload["fieldSources"]["discs"] = "known_empty_from_equipment_occupancy"
         payload["confidenceByField"]["occupancy"] = round(float(occupancy.get("_confidence", 0.0) or 0.0), 4)
         merged_agents.append(payload)
         used = True
@@ -1530,8 +1601,6 @@ def _extract_agents(
         discs = raw.get("discs")
         has_weapon = _has_meaningful_weapon_payload(weapon)
         has_discs = _has_meaningful_disc_payload(discs)
-        weapon_conf = 0.9 if has_weapon else 0.22
-        disc_conf = 0.9 if has_discs else 0.22
         if not has_weapon:
             low_conf_reasons.append(f"{agent_id}.weapon_missing")
             weapon = {}
@@ -1553,6 +1622,18 @@ def _extract_agents(
             explicit_slot_occupancy=raw.get("discSlotOccupancy", occupancy_override.get("discSlotOccupancy")),
         )
         occupancy_conf = 0.92 if occupancy_override else (0.76 if has_weapon or has_discs else 0.18)
+        known_empty_weapon = (
+            not has_weapon
+            and (raw_has_weapon_present or override_has_weapon_present)
+            and occupancy.get("weaponPresent") is False
+        )
+        known_empty_discs = (
+            not has_discs
+            and (raw_has_slot_occupancy or override_has_slot_occupancy)
+            and _all_disc_slots_empty(occupancy.get("discSlotOccupancy"))
+        )
+        weapon_conf = _known_empty_equipment_confidence(occupancy_conf) if known_empty_weapon else (0.9 if has_weapon else 0.22)
+        disc_conf = _known_empty_equipment_confidence(occupancy_conf) if known_empty_discs else (0.9 if has_discs else 0.22)
 
         confidence_by_field = {
             "agentId": float(raw.get("agentConfidence", 0.99)),
@@ -1569,8 +1650,16 @@ def _extract_agents(
             "mindscape": "session_payload" if mindscape is not None else "missing",
             "mindscapeCap": "session_payload" if mindscape_cap is not None else "missing",
             "stats": "session_payload" if stats else "missing",
-            "weapon": "session_payload" if weapon else "missing",
-            "discs": "session_payload" if discs else "missing",
+            "weapon": (
+                "known_empty_from_equipment_occupancy"
+                if known_empty_weapon
+                else ("session_payload" if weapon else "missing")
+            ),
+            "discs": (
+                "known_empty_from_equipment_occupancy"
+                if known_empty_discs
+                else ("session_payload" if discs else "missing")
+            ),
             "weaponPresent": (
                 "equipment_occupancy_payload"
                 if raw_has_weapon_present or override_has_weapon_present
@@ -1681,6 +1770,17 @@ def _filter_resolved_low_conf_reasons(
         if not isinstance(reason, str):
             continue
         matched = False
+        if reason.startswith("disk_detail_low_conf:"):
+            parts = reason.split(":")
+            agent = by_agent.get(parts[1] if len(parts) > 1 else "")
+            confidence_by_field = agent.get("confidenceByField") if isinstance(agent, dict) else None
+            disc_confidence = (
+                float(confidence_by_field.get("discs", 0.0) or 0.0)
+                if isinstance(confidence_by_field, dict)
+                else 0.0
+            )
+            if agent is not None and disc_confidence >= 0.80 and _disc_consensus_confidence(agent.get("discs")) >= 0.80:
+                matched = True
         for suffix, predicate in (
             (".weapon_missing", lambda agent: isinstance(agent.get("weapon"), dict) and _as_text(agent.get("weapon", {}).get("weaponId")) != ""),
             (".discs_missing", lambda agent: isinstance(agent.get("discs"), list) and len(agent.get("discs") or []) > 0),

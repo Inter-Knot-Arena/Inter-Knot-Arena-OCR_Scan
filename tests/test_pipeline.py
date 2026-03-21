@@ -127,6 +127,26 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, [])
 
+    def test_enrich_agents_with_pixel_equipment_occupancy_marks_known_empty_weapon_as_confident(self) -> None:
+        agent = pipeline._default_agent_payload("agent_anby", 0.97)
+
+        merged_agents, used = pipeline._enrich_agents_with_pixel_equipment_occupancy(
+            [agent],
+            {
+                "agent_anby": {
+                    "weaponPresent": False,
+                    "discSlotOccupancy": {str(slot): True for slot in range(1, 7)},
+                    "_weaponConfidence": 0.8459,
+                    "_discConfidence": 0.91,
+                }
+            },
+        )
+
+        self.assertTrue(used)
+        self.assertFalse(merged_agents[0]["weaponPresent"])
+        self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "known_empty_from_equipment_occupancy")
+        self.assertGreaterEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.9)
+
     def test_enrich_agents_with_pixel_weapons_merges_detail_fields_into_existing_weapon(self) -> None:
         agent = pipeline._default_agent_payload("agent_anby", 0.97)
         agent["weapon"] = {"weaponId": "amp_deep_sea_visitor"}
@@ -167,6 +187,45 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "amplifier_detail_ocr")
         self.assertEqual(merged_agents[0]["fieldSources"]["weaponPresent"], "derived_from_amplifier_detail_ocr")
         self.assertEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.995)
+
+    def test_enrich_agents_with_pixel_discs_boosts_consistent_full_set_confidence(self) -> None:
+        agent = pipeline._default_agent_payload("agent_anby", 0.97)
+        pixel_discs = {
+            "agent_anby": [
+                {
+                    "slot": slot,
+                    "setId": "set_fanged_metal",
+                    "_confidence": 0.31,
+                }
+                for slot in range(1, 7)
+            ]
+        }
+
+        merged_agents, used = pipeline._enrich_agents_with_pixel_discs([agent], pixel_discs)
+
+        self.assertTrue(used)
+        self.assertEqual(merged_agents[0]["confidenceByField"]["discs"], 0.92)
+        self.assertEqual(merged_agents[0]["confidenceByField"]["occupancy"], 0.92)
+
+    def test_filter_resolved_low_conf_reasons_drops_disk_low_conf_for_consistent_full_set(self) -> None:
+        filtered = pipeline._filter_resolved_low_conf_reasons(
+            [
+                {
+                    "agentId": "agent_anby",
+                    "confidenceByField": {"discs": 0.92},
+                    "discs": [
+                        {"slot": slot, "setId": "set_fanged_metal"}
+                        for slot in range(1, 7)
+                    ],
+                }
+            ],
+            [
+                "disk_detail_low_conf:agent_anby:1:set_fanged_metal",
+                "disk_detail_low_conf:agent_anby:2:set_fanged_metal",
+            ],
+        )
+
+        self.assertEqual(filtered, [])
 
     def test_enrich_agents_with_agent_detail_pixels_accepts_near_threshold_level_confidence(self) -> None:
         agent = pipeline._default_agent_payload("agent_anby", 0.97)
