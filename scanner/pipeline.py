@@ -436,7 +436,11 @@ def _known_empty_equipment_confidence(occupancy_confidence: float) -> float:
 
 
 def _all_disc_slots_empty(slot_occupancy: Any) -> bool:
-    return isinstance(slot_occupancy, dict) and bool(slot_occupancy) and not any(bool(value) for value in slot_occupancy.values())
+    return (
+        isinstance(slot_occupancy, dict)
+        and len(slot_occupancy) == 6
+        and not any(bool(value) for value in slot_occupancy.values())
+    )
 
 
 def _disc_consensus_confidence(discs: Any) -> float:
@@ -516,6 +520,7 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
 def _pixel_discs_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[tuple[int | None, int], str],
+    occupancy_by_agent: dict[str, dict[str, Any]],
     locale: str,
 ) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
     reasons: list[str] = []
@@ -559,6 +564,10 @@ def _pixel_discs_from_captures(
             continue
         if slot_index is None or slot_index < 1 or slot_index > 6:
             reasons.append(f"disk_detail_missing_slot:{agent_id}:{index}")
+            continue
+        occupancy = occupancy_by_agent.get(agent_id)
+        slot_occupancy = occupancy.get("discSlotOccupancy") if isinstance(occupancy, dict) else None
+        if isinstance(slot_occupancy, dict) and slot_occupancy.get(str(slot_index)) is False:
             continue
 
         image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
@@ -858,9 +867,7 @@ def _derive_equipment_overview_occupancy_from_image(
         )
         if present is None:
             reasons.append(f"equipment_overview_slot_ambiguous:{slot_index}")
-            disc_slot_occupancy = {}
-            disc_confidences = []
-            break
+            continue
         disc_slot_occupancy[str(slot_index)] = present
         disc_confidences.append(float(confidence))
     if disc_slot_occupancy:
@@ -941,6 +948,32 @@ def _pixel_equipment_occupancy_from_captures(
             by_agent[agent_id] = candidate
 
     return by_agent, reasons
+
+
+def inspect_equipment_capture(path: str | Path) -> dict[str, Any]:
+    capture_path = Path(path)
+    image = cv2.imread(str(capture_path), cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError(f"Failed to decode equipment overview image: {capture_path}")
+
+    occupancy, reasons = _derive_equipment_overview_occupancy_from_image(image)
+    result: dict[str, Any] = {
+        "lowConfReasons": list(reasons),
+    }
+    if "weaponPresent" in occupancy:
+        result["weaponPresent"] = bool(occupancy["weaponPresent"])
+    if "discSlotOccupancy" in occupancy:
+        result["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
+    if "_weaponConfidence" in occupancy:
+        result["weaponConfidence"] = float(occupancy["_weaponConfidence"])
+    if "_discConfidence" in occupancy:
+        result["discConfidence"] = float(occupancy["_discConfidence"])
+    if "weaponConfidence" in result or "discConfidence" in result:
+        result["confidence"] = round(
+            max(float(result.get("weaponConfidence", 0.0)), float(result.get("discConfidence", 0.0))),
+            4,
+        )
+    return result
 
 
 def _pixel_weapons_from_captures(
@@ -2069,6 +2102,7 @@ def scan_roster(
     pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(
         session_context,
         agent_ids_by_slot,
+        pixel_equipment_occupancy_by_agent,
         normalized_locale,
     )
     low_conf_reasons.extend(pixel_disc_reasons)

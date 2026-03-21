@@ -1,5 +1,5 @@
 from .model_runtime import ModelRegistry, classify_agent_icon, classify_disk_detail, classify_uid_digits
-from .pipeline import ScanFailure, ScanFailureCode, run_scan, scan_roster
+from .pipeline import ScanFailure, ScanFailureCode, inspect_equipment_capture, run_scan, scan_roster
 
 __all__ = [
     "ModelRegistry",
@@ -8,6 +8,7 @@ __all__ = [
     "classify_agent_icon",
     "classify_disk_detail",
     "classify_uid_digits",
+    "inspect_equipment_capture",
     "run_scan",
     "scan_roster",
 ]

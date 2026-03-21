@@ -127,6 +127,10 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, [])
 
+    def test_all_disc_slots_empty_requires_complete_contract(self) -> None:
+        self.assertFalse(pipeline._all_disc_slots_empty({"1": False, "2": False}))
+        self.assertTrue(pipeline._all_disc_slots_empty({str(slot): False for slot in range(1, 7)}))
+
     def test_enrich_agents_with_pixel_equipment_occupancy_marks_known_empty_weapon_as_confident(self) -> None:
         agent = pipeline._default_agent_payload("agent_anby", 0.97)
 
@@ -315,12 +319,87 @@ class PipelineTests(unittest.TestCase):
                     ]
                 },
                 {},
+                {},
                 "RU",
             )
 
         self.assertEqual(reasons, [])
         self.assertEqual(discs["agent_anby"][0]["setId"], "set_freedom_blues")
         self.assertGreaterEqual(discs["agent_anby"][0]["_confidence"], 0.9)
+
+    def test_pixel_discs_from_captures_skips_known_empty_slots(self) -> None:
+        with (
+            patch.object(pipeline.ModelRegistry, "has_disk_model", return_value=True),
+            patch.object(pipeline, "_resolve_capture_agent_id", return_value=("agent_anby", "screen_capture_agent_id", 0.99)),
+        ):
+            discs, reasons = pipeline._pixel_discs_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "disk_detail",
+                            "path": "ignored.png",
+                            "slotIndex": 2,
+                            "agentSlotIndex": 1,
+                        }
+                    ]
+                },
+                {},
+                {"agent_anby": {"discSlotOccupancy": {"2": False}}},
+                "RU",
+            )
+
+        self.assertEqual(discs, {})
+        self.assertEqual(reasons, [])
+
+    def test_inspect_equipment_capture_returns_occupancy_snapshot(self) -> None:
+        with (
+            patch.object(pipeline.cv2, "imread", return_value=np.zeros((32, 32, 3), dtype=np.uint8)),
+            patch.object(
+                pipeline,
+                "_derive_equipment_overview_occupancy_from_image",
+                return_value=(
+                    {
+                        "weaponPresent": False,
+                        "discSlotOccupancy": {"1": True, "2": False, "3": True, "4": False, "5": True, "6": False},
+                        "_weaponConfidence": 0.91,
+                        "_discConfidence": 0.87,
+                    },
+                    [],
+                ),
+            ),
+        ):
+            inspection = pipeline.inspect_equipment_capture("ignored.png")
+
+        self.assertFalse(inspection["weaponPresent"])
+        self.assertEqual(inspection["discSlotOccupancy"]["1"], True)
+        self.assertEqual(inspection["discSlotOccupancy"]["2"], False)
+        self.assertEqual(inspection["confidence"], 0.91)
+        self.assertEqual(inspection["lowConfReasons"], [])
+
+    def test_equipment_overview_occupancy_keeps_confident_slots_when_one_slot_is_ambiguous(self) -> None:
+        image = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        with patch.object(
+            pipeline,
+            "_presence_from_patch",
+            side_effect=[
+                (True, 0.83),
+                (True, 0.91),
+                (False, 0.92),
+                (None, 0.52),
+                (False, 0.94),
+                (True, 0.88),
+                (False, 0.9),
+            ],
+        ):
+            occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
+
+        self.assertEqual(reasons, ["equipment_overview_slot_ambiguous:3"])
+        self.assertTrue(occupancy["weaponPresent"])
+        self.assertEqual(
+            occupancy["discSlotOccupancy"],
+            {"1": True, "2": False, "4": False, "5": True, "6": False},
+        )
 
     def test_drop_stale_top_level_confidence_reasons_respects_current_confidence(self) -> None:
         filtered = pipeline._drop_stale_top_level_confidence_reasons(
