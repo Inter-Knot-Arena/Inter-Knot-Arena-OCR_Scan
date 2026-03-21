@@ -288,6 +288,40 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons, {})
         self.assertEqual(reasons, [])
 
+    def test_pixel_discs_from_captures_uses_title_ocr_fallback_for_low_conf_predictions(self) -> None:
+        prediction = type("Prediction", (), {"label": "set_astral_voice", "confidence": 0.61})()
+
+        with (
+            patch.object(pipeline.ModelRegistry, "has_disk_model", return_value=True),
+            patch.object(pipeline, "_resolve_capture_agent_id", return_value=("agent_anby", "screen_capture_agent_id", 0.99)),
+            patch.object(pipeline.cv2, "imread", return_value=np.zeros((32, 32, 3), dtype=np.uint8)),
+            patch.object(pipeline, "classify_disk_detail", return_value=prediction),
+            patch.object(pipeline, "crop_title_image", return_value=None),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={"disk_0_agent_anby_1:title": "Фридом-блюз [1] О Ур. 15/15 Базовый параметр"},
+            ),
+        ):
+            discs, reasons = pipeline._pixel_discs_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "disk_detail",
+                            "path": "ignored.png",
+                            "slotIndex": 1,
+                            "agentSlotIndex": 1,
+                        }
+                    ]
+                },
+                {},
+                "RU",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(discs["agent_anby"][0]["setId"], "set_freedom_blues")
+        self.assertGreaterEqual(discs["agent_anby"][0]["_confidence"], 0.9)
+
     def test_drop_stale_top_level_confidence_reasons_respects_current_confidence(self) -> None:
         filtered = pipeline._drop_stale_top_level_confidence_reasons(
             ["equipment_low_confidence", "uid_low_confidence"],

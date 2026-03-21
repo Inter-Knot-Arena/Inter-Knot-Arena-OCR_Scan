@@ -20,6 +20,7 @@ from amplifier_identity import (
     parse_amplifier_detail,
     run_winrt_ocr_batch,
 )
+from disc_identity import classify_disc_title
 from .agent_detail_runtime import read_agent_detail
 from .model_runtime import (
     ModelRegistry,
@@ -515,6 +516,7 @@ def _agents_from_icons(session_context: Dict[str, Any]) -> tuple[list[dict[str, 
 def _pixel_discs_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[tuple[int | None, int], str],
+    locale: str,
 ) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
     reasons: list[str] = []
     raw_captures = session_context.get("screenCaptures")
@@ -534,6 +536,7 @@ def _pixel_discs_from_captures(
         return {}, reasons
 
     by_agent_slot: dict[str, dict[int, dict[str, Any]]] = {}
+    low_conf_requests: list[dict[str, Any]] = []
     for index, entry in enumerate(disk_entries):
         path_value = _as_text(entry.get("path"))
         agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
@@ -564,8 +567,6 @@ def _pixel_discs_from_captures(
             continue
 
         prediction = classify_disk_detail(image)
-        if prediction.confidence < 0.72:
-            reasons.append(f"disk_detail_low_conf:{agent_id}:{slot_index}:{prediction.label}")
 
         agent_slots = by_agent_slot.setdefault(agent_id, {})
         candidate = {
@@ -575,10 +576,63 @@ def _pixel_discs_from_captures(
             "agentSource": agent_source,
             "agentConfidence": float(agent_confidence or 0.0),
             "_confidence": float(prediction.confidence),
+            "_source": "onnx_disk_detail",
         }
+        if float(prediction.confidence) < 0.72:
+            low_conf_requests.append(
+                {
+                    "captureId": f"disk_{index}_{agent_id}_{slot_index}",
+                    "agentId": agent_id,
+                    "slotIndex": slot_index,
+                    "path": path_value,
+                    "onnxLabel": prediction.label,
+                }
+            )
         existing = agent_slots.get(slot_index)
         if existing is None or float(candidate["_confidence"]) > float(existing["_confidence"]):
             agent_slots[slot_index] = candidate
+
+    if low_conf_requests:
+        language_tag = language_tag_for_locale(locale)
+        temp_base = _runtime_temp_root("disk_runtime")
+        with tempfile.TemporaryDirectory(prefix="disk_runtime_", dir=str(temp_base)) as raw_tmp:
+            temp_root = Path(raw_tmp)
+            crop_dir = temp_root / "crops"
+            crop_dir.mkdir(parents=True, exist_ok=True)
+            crops: list[dict[str, str]] = []
+            for request in low_conf_requests:
+                source_path = Path(_as_text(request.get("path")))
+                capture_id = _as_text(request.get("captureId"))
+                try:
+                    title_crop_path = crop_dir / f"{capture_id}_title.png"
+                    crop_title_image(source_path, title_crop_path)
+                except Exception:
+                    continue
+                crops.append({"id": f"{capture_id}:title", "path": str(title_crop_path)})
+
+            ocr_results = run_winrt_ocr_batch(crops, language_tag=language_tag, temp_root=temp_root) if crops else {}
+            for request in low_conf_requests:
+                agent_id = _as_text(request.get("agentId"))
+                slot_index = _as_slot_index(request.get("slotIndex"))
+                capture_id = _as_text(request.get("captureId"))
+                if not agent_id or slot_index is None:
+                    continue
+                slot_map = by_agent_slot.get(agent_id)
+                candidate = slot_map.get(slot_index) if isinstance(slot_map, dict) else None
+                if not isinstance(candidate, dict):
+                    continue
+                title_prediction = classify_disc_title(_as_text(ocr_results.get(f"{capture_id}:title")))
+                if title_prediction is None or float(title_prediction.confidence) <= float(candidate.get("_confidence", 0.0)):
+                    continue
+                candidate["setId"] = title_prediction.set_id
+                candidate["displayName"] = title_prediction.display_name
+                candidate["_confidence"] = float(title_prediction.confidence)
+                candidate["_source"] = str(title_prediction.source_mode)
+
+    for agent_id, slot_map in by_agent_slot.items():
+        for slot_index, candidate in slot_map.items():
+            if float(candidate.get("_confidence", 0.0) or 0.0) < 0.72:
+                reasons.append(f"disk_detail_low_conf:{agent_id}:{slot_index}:{_as_text(candidate.get('setId'))}")
 
     output: dict[str, list[dict[str, Any]]] = {}
     for agent_id, slot_map in by_agent_slot.items():
@@ -2015,6 +2069,7 @@ def scan_roster(
     pixel_discs_by_agent, pixel_disc_reasons = _pixel_discs_from_captures(
         session_context,
         agent_ids_by_slot,
+        normalized_locale,
     )
     low_conf_reasons.extend(pixel_disc_reasons)
     agents, used_pixel_agent_details = _enrich_agents_with_agent_detail_pixels(
