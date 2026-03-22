@@ -14,6 +14,7 @@ import numpy as np
 
 from amplifier_identity import (
     crop_advanced_stat_image,
+    crop_advanced_stat_fallback_image,
     crop_effect_image,
     crop_info_image,
     crop_title_image,
@@ -1092,6 +1093,12 @@ def _pixel_weapons_from_captures(
             except Exception:
                 reasons.append(f"amplifier_detail_advanced_crop_failed:{agent_id}:{index}")
             try:
+                advanced_fallback_crop_path = crop_dir / f"{capture_id}_advanced_fallback.png"
+                crop_advanced_stat_fallback_image(source_path, advanced_fallback_crop_path)
+                crops.append({"id": f"{capture_id}:advanced_fallback", "path": str(advanced_fallback_crop_path)})
+            except Exception:
+                reasons.append(f"amplifier_detail_advanced_fallback_crop_failed:{agent_id}:{index}")
+            try:
                 effect_crop_path = crop_dir / f"{capture_id}_effect.png"
                 crop_effect_image(source_path, effect_crop_path)
                 crops.append({"id": f"{capture_id}:effect", "path": str(effect_crop_path)})
@@ -1113,6 +1120,7 @@ def _pixel_weapons_from_captures(
         title_text = _as_text(ocr_results.get(f"{capture_id}:title"))
         info_text = _as_text(ocr_results.get(f"{capture_id}:info"))
         advanced_text = _as_text(ocr_results.get(f"{capture_id}:advanced"))
+        advanced_fallback_text = _as_text(ocr_results.get(f"{capture_id}:advanced_fallback"))
         effect_text = _as_text(ocr_results.get(f"{capture_id}:effect"))
         readout = parse_amplifier_detail(
             title_text,
@@ -1120,6 +1128,22 @@ def _pixel_weapons_from_captures(
             advanced_text=advanced_text,
             effect_text=effect_text,
         )
+        if (
+            readout is not None
+            and readout.advanced_stat_key is not None
+            and readout.advanced_stat_value in (None, "")
+            and advanced_fallback_text
+        ):
+            retry_readout = parse_amplifier_detail(
+                title_text,
+                info_text=info_text,
+                advanced_text="\n".join(
+                    part for part in (advanced_text, advanced_fallback_text) if part
+                ),
+                effect_text=effect_text,
+            )
+            if retry_readout is not None and retry_readout.advanced_stat_value not in (None, ""):
+                readout = retry_readout
         if readout is None:
             reasons.append(f"amplifier_detail_unclassified:{agent_id}")
             continue

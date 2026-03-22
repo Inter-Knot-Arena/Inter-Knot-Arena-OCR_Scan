@@ -15,6 +15,9 @@ _AMBIGUOUS_WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
 _AMBIGUOUS_WEAPON_ONLY_AMPLIFIER_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\03_amplifier_detail_agent_slot_1_page_06_agent_1_amplifier.png"
 )
+_HARUMASA_LIVE_AMP_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-03\39_amplifier_detail_agent_slot_3_page_03_agent_3_amplifier.png"
+)
 _WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-07\20_equipment_agent_slot_2_page_07_agent_2_equipment.png"
 )
@@ -441,6 +444,46 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(reasons, [])
         self.assertEqual(weapons["agent_anby"]["weaponId"], "amp_big_cylinder")
         self.assertTrue(weapons["agent_anby"]["weaponPresent"])
+
+    def test_pixel_weapons_from_captures_uses_fallback_advanced_crop_for_harumasa(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_harumasa", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_harumasa:title": "Бур — красная ось 60 О Ур. 50/50 Базовые параметры Базовая сила атаки 521",
+                    "amplifier_0_agent_harumasa:info": "Бур — красная ось х 60 Ур. 50/50 Базовые параметры Базовая сила атаки продвинутые параметры восстановление энергии Эффект амплификатора Следующие эффекты можно использовать для агентов со",
+                    "amplifier_0_agent_harumasa:advanced": "",
+                    "amplifier_0_agent_harumasa:advanced_fallback": "Ур. О Базовая сила атаки Продвинутые параметры Восстановление энергии Эффект амплификатора 521 440/0",
+                    "amplifier_0_agent_harumasa:effect": "Эффект амплификатора следующие эффекты можно использовать для агентов со специальностью Нападение",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 3,
+                            "pageIndex": 3,
+                        }
+                    ]
+                },
+                {(3, 3): "agent_harumasa"},
+                {},
+                "RU",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(weapons["agent_harumasa"]["weaponId"], "amp_drill_rig_red_axis")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatValue"], 4.4)
 
     def test_pixel_discs_from_captures_uses_title_ocr_fallback_for_low_conf_predictions(self) -> None:
         prediction = type("Prediction", (), {"label": "set_astral_voice", "confidence": 0.61})()

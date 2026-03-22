@@ -21,6 +21,7 @@ TITLE_ALIAS_CONTRACT_PATH = ROOT / "contracts" / "amplifier-title-aliases.json"
 TITLE_CROP_BOX = (0.28, 0.10, 0.66, 0.36)
 INFO_CROP_BOX = (0.27, 0.07, 0.54, 0.53)
 ADVANCED_STAT_CROP_BOX = (0.28, 0.32, 0.50, 0.43)
+ADVANCED_STAT_FALLBACK_CROP_BOX = (0.24, 0.28, 0.60, 0.47)
 EFFECT_CROP_BOX = (0.30, 0.42, 0.63, 0.72)
 _VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
 
@@ -150,6 +151,16 @@ def crop_info_image(source_path: Path, output_path: Path) -> None:
 
 def crop_advanced_stat_image(source_path: Path, output_path: Path) -> None:
     _crop_fractional_image(source_path, output_path, ADVANCED_STAT_CROP_BOX, grayscale=True, scale=3)
+
+
+def crop_advanced_stat_fallback_image(source_path: Path, output_path: Path) -> None:
+    _crop_fractional_image(
+        source_path,
+        output_path,
+        ADVANCED_STAT_FALLBACK_CROP_BOX,
+        grayscale=True,
+        scale=4,
+    )
 
 
 def crop_effect_image(source_path: Path, output_path: Path) -> None:
@@ -823,12 +834,13 @@ def parse_amplifier_detail(
         _ADVANCED_MARKERS,
         _EFFECT_MARKERS,
     )
+    advanced_text_segment = _segment_after_markers(advanced_text, _ADVANCED_MARKERS) or advanced_text
 
     base_stat_key = _match_stat_key(base_segment, _BASE_STAT_ALIASES)
     base_stat_value = None
     base_value_index: int | None = None
 
-    advanced_stat_key = _match_stat_key(advanced_text, _ADVANCED_STAT_ALIASES)
+    advanced_stat_key = _match_stat_key(advanced_text_segment, _ADVANCED_STAT_ALIASES)
     if advanced_stat_key is None:
         advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
     title_base_values = [
@@ -845,7 +857,7 @@ def parse_amplifier_detail(
         _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
     )
     advanced_line_token_values = _extract_numeric_values(
-        _segment_after_alias(advanced_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+        _segment_after_alias(advanced_text_segment, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
     )
     advanced_segment_token_values = _extract_numeric_values(
         _segment_after_alias(advanced_segment, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
