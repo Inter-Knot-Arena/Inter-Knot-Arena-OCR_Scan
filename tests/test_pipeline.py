@@ -167,6 +167,56 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(occupancy["weaponPresent"])
         self.assertTrue(occupancy["discSlotOccupancy"]["3"])
 
+    def test_equipment_overview_occupancy_keeps_borderline_empty_weapon_patch_ambiguous_when_all_discs_are_empty(self) -> None:
+        image = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        with patch.object(
+            pipeline,
+            "_presence_from_patch",
+            side_effect=[
+                (False, 0.71),
+                (False, 0.91),
+                (False, 0.92),
+                (False, 0.93),
+                (False, 0.94),
+                (False, 0.95),
+                (False, 0.96),
+            ],
+        ):
+            occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
+
+        self.assertEqual(reasons, ["equipment_overview_weapon_presence_ambiguous"])
+        self.assertNotIn("weaponPresent", occupancy)
+        self.assertEqual(
+            occupancy["discSlotOccupancy"],
+            {str(slot): False for slot in range(1, 7)},
+        )
+
+    def test_equipment_overview_occupancy_keeps_confident_empty_weapon_patch_when_all_discs_are_empty(self) -> None:
+        image = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        with patch.object(
+            pipeline,
+            "_presence_from_patch",
+            side_effect=[
+                (False, 0.88),
+                (False, 0.91),
+                (False, 0.92),
+                (False, 0.93),
+                (False, 0.94),
+                (False, 0.95),
+                (False, 0.96),
+            ],
+        ):
+            occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
+
+        self.assertEqual(reasons, [])
+        self.assertFalse(occupancy["weaponPresent"])
+        self.assertEqual(
+            occupancy["discSlotOccupancy"],
+            {str(slot): False for slot in range(1, 7)},
+        )
+
     def test_filter_resolved_low_conf_reasons_respects_known_empty_equipment(self) -> None:
         filtered = pipeline._filter_resolved_low_conf_reasons(
             [

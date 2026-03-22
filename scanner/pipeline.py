@@ -55,6 +55,7 @@ _EQUIPMENT_DISC_PATCH = (0.084, 0.138)
 _EQUIPMENT_OCCUPIED_SCORE_THRESHOLD = 0.58
 _EQUIPMENT_EMPTY_SCORE_THRESHOLD = 0.34
 _EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD = 0.63
+_EQUIPMENT_WEAPON_ONLY_EMPTY_SCORE_THRESHOLD = 0.82
 _AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD = 0.78
 
 
@@ -889,6 +890,18 @@ def _derive_equipment_overview_occupancy_from_image(
         weapon_present is True
         and all_disc_slots_known_empty
         and weapon_confidence < _EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD
+    ):
+        occupancy.pop("weaponPresent", None)
+        reasons.append("equipment_overview_weapon_presence_ambiguous")
+
+    # Some weapon-only layouts can still fall just under the empty threshold on
+    # the amplifier patch. When every disc slot is confidently empty, keep
+    # moderate "empty" readings ambiguous so live scans still inspect amplifier
+    # detail instead of hard-skipping a real weapon.
+    if (
+        weapon_present is False
+        and all_disc_slots_known_empty
+        and weapon_confidence < _EQUIPMENT_WEAPON_ONLY_EMPTY_SCORE_THRESHOLD
     ):
         occupancy.pop("weaponPresent", None)
         reasons.append("equipment_overview_weapon_presence_ambiguous")
