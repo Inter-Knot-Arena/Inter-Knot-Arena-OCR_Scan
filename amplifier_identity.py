@@ -23,12 +23,14 @@ INFO_CROP_BOX = (0.27, 0.07, 0.54, 0.53)
 ADVANCED_STAT_CROP_BOX = (0.28, 0.32, 0.50, 0.43)
 ADVANCED_STAT_FALLBACK_CROP_BOX = (0.24, 0.28, 0.60, 0.47)
 EFFECT_CROP_BOX = (0.30, 0.42, 0.63, 0.72)
+EMPTY_STATE_CROP_BOX = (0.66, 0.37, 0.80, 0.59)
 _VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
 
 EN_LANGUAGE_TAG = "en-US"
 RU_LANGUAGE_TAG = "ru"
 
 _DETAIL_FIELD_EMPTY_VALUES = (None, "", [], {})
+_EMPTY_AMPLIFIER_DETAIL_MARKERS = ("core available",)
 _BASE_MARKERS = ("base stat", "base stats", "базовые параметры")
 _ADVANCED_MARKERS = ("advanced stat", "advanced stats", "продвинутые параметры")
 _EFFECT_MARKERS = ("w engine effect", "wengine effect", "w-engine effect", "эффект амплификатора")
@@ -165,6 +167,10 @@ def crop_advanced_stat_fallback_image(source_path: Path, output_path: Path) -> N
 
 def crop_effect_image(source_path: Path, output_path: Path) -> None:
     _crop_fractional_image(source_path, output_path, EFFECT_CROP_BOX, grayscale=True, scale=1)
+
+
+def crop_empty_state_image(source_path: Path, output_path: Path) -> None:
+    _crop_fractional_image(source_path, output_path, EMPTY_STATE_CROP_BOX, grayscale=True, scale=5)
 
 
 def run_winrt_ocr_batch(crops: Sequence[Dict[str, str]], *, language_tag: str, temp_root: Path) -> Dict[str, str]:
@@ -416,6 +422,58 @@ def _normalize_detail_text(value: str) -> str:
     token = re.sub(r"[^0-9a-zA-Z\u0400-\u04FF.%/+ ]+", " ", token)
     token = " ".join(token.split())
     return token
+
+
+def looks_like_empty_amplifier_detail(
+    title_text: str,
+    *,
+    info_text: str = "",
+    advanced_text: str = "",
+    effect_text: str = "",
+    empty_state_text: str = "",
+) -> bool:
+    normalized_parts = [
+        _normalize_detail_text(part)
+        for part in (title_text, info_text, advanced_text, effect_text)
+        if _text(part)
+    ]
+    combined = " ".join(part for part in normalized_parts if part).strip()
+    compact = combined.replace(" ", "")
+    for marker in _EMPTY_AMPLIFIER_DETAIL_MARKERS:
+        normalized_marker = _normalize_detail_text(marker)
+        if not normalized_marker:
+            continue
+        if normalized_marker in combined or normalized_marker.replace(" ", "") in compact:
+            return True
+
+    normalized_empty_state = unicodedata.normalize("NFKC", _text(empty_state_text).lower())
+    if normalized_empty_state:
+        confusable_map = str.maketrans(
+            {
+                "0": "o",
+                "1": "l",
+                "с": "c",
+                "о": "o",
+                "е": "e",
+                "в": "b",
+                "к": "k",
+                "р": "p",
+                "а": "a",
+                "м": "m",
+                "п": "n",
+                "и": "u",
+                "ш": "w",
+                "ь": "b",
+                "л": "l",
+            }
+        )
+        normalized_empty_state = normalized_empty_state.translate(confusable_map)
+        normalized_empty_state = re.sub(r"[^0-9a-z ]+", " ", normalized_empty_state)
+        normalized_empty_state = " ".join(normalized_empty_state.split())
+        compact_empty_state = normalized_empty_state.replace(" ", "")
+        if re.search(r"co(?:re|be|bk)", compact_empty_state):
+            return True
+    return False
 
 
 def _segment_between_markers(text: str, start_markers: Sequence[str], end_markers: Sequence[str]) -> str:
@@ -804,6 +862,39 @@ def _pick_first_compatible_token_value(
     return None
 
 
+def recover_missing_advanced_stat_value(
+    stat_key: str | None,
+    *,
+    advanced_text: str = "",
+    fallback_advanced_text: str = "",
+    effect_text: str = "",
+    excluding: int | float | None = None,
+) -> int | float | None:
+    alias_values = _aliases_for_stat_key(stat_key, _ADVANCED_STAT_ALIASES)
+    if not stat_key or not alias_values:
+        return None
+
+    for candidate_text in (advanced_text, fallback_advanced_text):
+        if not candidate_text:
+            continue
+        candidate_segment = _segment_after_markers(candidate_text, _ADVANCED_MARKERS) or candidate_text
+        token_values = [
+            (token, value)
+            for token, value in _extract_numeric_values(_segment_after_alias(candidate_segment, alias_values))
+            if not _numeric_equal(value, excluding)
+        ]
+        recovered = _pick_first_compatible_token_value(stat_key, token_values)
+        if recovered is not None:
+            return recovered
+
+    effect_values = [
+        (token, value)
+        for token, value in _extract_numeric_values(_segment_after_alias(effect_text, alias_values))
+        if not _numeric_equal(value, excluding)
+    ]
+    return _pick_first_compatible_token_value(stat_key, effect_values)
+
+
 def _pick_best_base_value(
     stat_key: str | None,
     values: Sequence[int | float],
@@ -837,7 +928,17 @@ def parse_amplifier_detail(
     info_text: str = "",
     advanced_text: str = "",
     effect_text: str = "",
+    empty_state_text: str = "",
 ) -> AmplifierDetailReadout | None:
+    if looks_like_empty_amplifier_detail(
+        title_text,
+        info_text=info_text,
+        advanced_text=advanced_text,
+        effect_text=effect_text,
+        empty_state_text=empty_state_text,
+    ):
+        return None
+
     identity = classify_amplifier_detail_identity(
         title_text,
         info_text=info_text,

@@ -15,11 +15,14 @@ import numpy as np
 from amplifier_identity import (
     crop_advanced_stat_image,
     crop_advanced_stat_fallback_image,
+    crop_empty_state_image,
     crop_effect_image,
     crop_info_image,
     crop_title_image,
     language_tag_for_locale,
+    looks_like_empty_amplifier_detail,
     parse_amplifier_detail,
+    recover_missing_advanced_stat_value,
     run_winrt_ocr_batch,
 )
 from disc_identity import classify_disc_title
@@ -44,6 +47,7 @@ SUPPORTED_REGIONS = {"NA", "EU", "ASIA", "SEA", "OTHER"}
 DEFAULT_MODEL_VERSION = "ocr-hybrid-v1.2"
 _EQUIPMENT_WEAPON_CENTER = (0.694, 0.496)
 _EQUIPMENT_WEAPON_PATCH = (0.120, 0.205)
+_EQUIPMENT_EMPTY_STATE_BOX = (0.685, 0.435, 0.775, 0.545)
 _EQUIPMENT_DISC_SLOT_CENTERS = {
     1: (0.632, 0.284),
     2: (0.571, 0.487),
@@ -787,6 +791,22 @@ def _fractional_patch_from_center(
     return crop
 
 
+def _fractional_crop_from_box(
+    image: np.ndarray,
+    *,
+    box: tuple[float, float, float, float],
+) -> np.ndarray | None:
+    height, width = image.shape[:2]
+    x0 = max(0, min(width - 1, int(width * box[0])))
+    y0 = max(0, min(height - 1, int(height * box[1])))
+    x1 = max(x0 + 1, min(width, int(width * box[2])))
+    y1 = max(y0 + 1, min(height, int(height * box[3])))
+    crop = image[y0:y1, x0:x1]
+    if crop.size == 0:
+        return None
+    return crop
+
+
 def _texture_score_for_occupancy(patch: np.ndarray) -> float:
     if patch.ndim == 3:
         gray = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
@@ -918,6 +938,78 @@ def _derive_equipment_overview_occupancy_from_image(
     return occupancy, reasons
 
 
+def _read_equipment_empty_state_text_from_image(
+    image: np.ndarray,
+    *,
+    capture_id: str,
+    temp_root: Path,
+) -> str:
+    crop = _fractional_crop_from_box(image, box=_EQUIPMENT_EMPTY_STATE_BOX)
+    if crop is None:
+        return ""
+    try:
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+        normalized = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
+        scaled = cv2.resize(normalized, None, fx=5, fy=5, interpolation=cv2.INTER_CUBIC)
+        crop_path = temp_root / f"{capture_id}_empty_state.png"
+        if not cv2.imwrite(str(crop_path), scaled):
+            return ""
+        return _as_text(
+            run_winrt_ocr_batch(
+                [{"id": capture_id, "path": str(crop_path)}],
+                language_tag=language_tag_for_locale("EN"),
+                temp_root=temp_root,
+            ).get(capture_id)
+        )
+    except Exception:
+        return ""
+
+
+def _resolve_equipment_empty_state_marker(
+    occupancy: dict[str, Any],
+    reasons: list[str],
+    *,
+    empty_state_text: str,
+) -> tuple[dict[str, Any], list[str]]:
+    if (
+        not _all_disc_slots_empty(occupancy.get("discSlotOccupancy"))
+        or not looks_like_empty_amplifier_detail("", empty_state_text=empty_state_text)
+    ):
+        return occupancy, reasons
+    resolved = dict(occupancy)
+    resolved["weaponPresent"] = False
+    resolved["_weaponConfidence"] = round(max(float(resolved.get("_weaponConfidence", 0.0) or 0.0), 0.98), 4)
+    resolved["_weaponSource"] = "equipment_overview_core_available"
+    filtered_reasons = [
+        reason
+        for reason in reasons
+        if reason != "equipment_overview_weapon_presence_ambiguous"
+    ]
+    return resolved, filtered_reasons
+
+
+def _refine_equipment_overview_with_empty_state(
+    image: np.ndarray,
+    occupancy: dict[str, Any],
+    reasons: list[str],
+    *,
+    capture_id: str,
+    temp_root: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    if _all_disc_slots_empty(occupancy.get("discSlotOccupancy")) and occupancy.get("weaponPresent") is not False:
+        empty_state_text = _read_equipment_empty_state_text_from_image(
+            image,
+            capture_id=capture_id,
+            temp_root=temp_root,
+        )
+        return _resolve_equipment_empty_state_marker(
+            occupancy,
+            reasons,
+            empty_state_text=empty_state_text,
+        )
+    return occupancy, reasons
+
+
 def _pixel_equipment_occupancy_from_captures(
     session_context: Dict[str, Any],
     agent_ids_by_slot: dict[tuple[int | None, int], str],
@@ -936,57 +1028,69 @@ def _pixel_equipment_occupancy_from_captures(
         return {}, reasons
 
     by_agent: dict[str, dict[str, Any]] = {}
-    for index, entry in enumerate(equipment_entries):
-        path_value = _as_text(entry.get("path"))
-        agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
-            entry,
-            agent_ids_by_slot,
-            reasons=reasons,
-            reject_slot_mismatch=True,
-        )
-        if not path_value:
-            reasons.append(f"equipment_overview_missing_path:{index}")
-            continue
-        if not agent_id:
-            agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
-            reasons.append(
-                f"equipment_overview_missing_agent:{index}"
-                if agent_slot_index is None
-                else f"equipment_overview_missing_agent_for_slot:{agent_slot_index}:{index}"
+    temp_base = _runtime_temp_root("equipment_runtime")
+    with tempfile.TemporaryDirectory(prefix="equipment_runtime_", dir=str(temp_base)) as raw_tmp:
+        temp_root = Path(raw_tmp)
+        for index, entry in enumerate(equipment_entries):
+            path_value = _as_text(entry.get("path"))
+            agent_id, agent_source, agent_confidence = _resolve_capture_agent_id(
+                entry,
+                agent_ids_by_slot,
+                reasons=reasons,
+                reject_slot_mismatch=True,
             )
-            continue
+            if not path_value:
+                reasons.append(f"equipment_overview_missing_path:{index}")
+                continue
+            if not agent_id:
+                agent_slot_index = _as_slot_index(entry.get("agentSlotIndex"))
+                reasons.append(
+                    f"equipment_overview_missing_agent:{index}"
+                    if agent_slot_index is None
+                    else f"equipment_overview_missing_agent_for_slot:{agent_slot_index}:{index}"
+                )
+                continue
 
-        image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
-        if image is None:
-            reasons.append(f"equipment_overview_decode_failed:{agent_id}:{index}")
-            continue
+            image = cv2.imread(str(Path(path_value)), cv2.IMREAD_COLOR)
+            if image is None:
+                reasons.append(f"equipment_overview_decode_failed:{agent_id}:{index}")
+                continue
 
-        occupancy, occupancy_reasons = _derive_equipment_overview_occupancy_from_image(image)
-        reasons.extend(f"{agent_id}:{reason}" for reason in occupancy_reasons)
-        if "weaponPresent" not in occupancy and "discSlotOccupancy" not in occupancy:
-            continue
+            occupancy, occupancy_reasons = _derive_equipment_overview_occupancy_from_image(image)
+            occupancy, occupancy_reasons = _refine_equipment_overview_with_empty_state(
+                image,
+                occupancy,
+                occupancy_reasons,
+                capture_id=f"equipment_{index}_{agent_id}",
+                temp_root=temp_root,
+            )
+            reasons.extend(f"{agent_id}:{reason}" for reason in occupancy_reasons)
+            if "weaponPresent" not in occupancy and "discSlotOccupancy" not in occupancy:
+                continue
 
-        candidate = {
-            "agentId": agent_id,
-            "agentSource": agent_source,
-            "agentConfidence": float(agent_confidence or 0.0),
-            "pageIndex": _as_slot_index(entry.get("pageIndex")),
-            "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
-            "_confidence": max(
-                float(occupancy.get("_weaponConfidence", 0.0) or 0.0),
-                float(occupancy.get("_discConfidence", 0.0) or 0.0),
-            ),
-        }
-        if "weaponPresent" in occupancy:
-            candidate["weaponPresent"] = bool(occupancy["weaponPresent"])
-            candidate["_weaponConfidence"] = float(occupancy.get("_weaponConfidence", 0.0) or 0.0)
-        if "discSlotOccupancy" in occupancy:
-            candidate["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
-            candidate["_discConfidence"] = float(occupancy.get("_discConfidence", 0.0) or 0.0)
+            candidate = {
+                "agentId": agent_id,
+                "agentSource": agent_source,
+                "agentConfidence": float(agent_confidence or 0.0),
+                "pageIndex": _as_slot_index(entry.get("pageIndex")),
+                "agentSlotIndex": _as_slot_index(entry.get("agentSlotIndex")),
+                "_confidence": max(
+                    float(occupancy.get("_weaponConfidence", 0.0) or 0.0),
+                    float(occupancy.get("_discConfidence", 0.0) or 0.0),
+                ),
+            }
+            if "weaponPresent" in occupancy:
+                candidate["weaponPresent"] = bool(occupancy["weaponPresent"])
+                candidate["_weaponConfidence"] = float(occupancy.get("_weaponConfidence", 0.0) or 0.0)
+                if _as_text(occupancy.get("_weaponSource")):
+                    candidate["_weaponSource"] = _as_text(occupancy.get("_weaponSource"))
+            if "discSlotOccupancy" in occupancy:
+                candidate["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
+                candidate["_discConfidence"] = float(occupancy.get("_discConfidence", 0.0) or 0.0)
 
-        existing = by_agent.get(agent_id)
-        if existing is None or float(candidate["_confidence"]) > float(existing.get("_confidence", 0.0)):
-            by_agent[agent_id] = candidate
+            existing = by_agent.get(agent_id)
+            if existing is None or float(candidate["_confidence"]) > float(existing.get("_confidence", 0.0)):
+                by_agent[agent_id] = candidate
 
     return by_agent, reasons
 
@@ -998,6 +1102,15 @@ def inspect_equipment_capture(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"Failed to decode equipment overview image: {capture_path}")
 
     occupancy, reasons = _derive_equipment_overview_occupancy_from_image(image)
+    temp_base = _runtime_temp_root("equipment_runtime")
+    with tempfile.TemporaryDirectory(prefix="equipment_runtime_", dir=str(temp_base)) as raw_tmp:
+        occupancy, reasons = _refine_equipment_overview_with_empty_state(
+            image,
+            occupancy,
+            reasons,
+            capture_id="equipment_overview",
+            temp_root=Path(raw_tmp),
+        )
     result: dict[str, Any] = {
         "lowConfReasons": list(reasons),
     }
@@ -1045,7 +1158,8 @@ def _pixel_weapons_from_captures(
         temp_root = Path(raw_tmp)
         crop_dir = temp_root / "crops"
         crop_dir.mkdir(parents=True, exist_ok=True)
-        crops: list[dict[str, str]] = []
+        locale_crops: list[dict[str, str]] = []
+        empty_state_crops: list[dict[str, str]] = []
 
         for index, entry in enumerate(amplifier_entries):
             path_value = _as_text(entry.get("path"))
@@ -1079,31 +1193,37 @@ def _pixel_weapons_from_captures(
             except Exception:
                 reasons.append(f"amplifier_detail_crop_failed:{agent_id}:{index}")
                 continue
-            crops.append({"id": f"{capture_id}:title", "path": str(title_crop_path)})
+            locale_crops.append({"id": f"{capture_id}:title", "path": str(title_crop_path)})
             try:
                 info_crop_path = crop_dir / f"{capture_id}_info.png"
                 crop_info_image(source_path, info_crop_path)
-                crops.append({"id": f"{capture_id}:info", "path": str(info_crop_path)})
+                locale_crops.append({"id": f"{capture_id}:info", "path": str(info_crop_path)})
             except Exception:
                 reasons.append(f"amplifier_detail_info_crop_failed:{agent_id}:{index}")
             try:
                 advanced_crop_path = crop_dir / f"{capture_id}_advanced.png"
                 crop_advanced_stat_image(source_path, advanced_crop_path)
-                crops.append({"id": f"{capture_id}:advanced", "path": str(advanced_crop_path)})
+                locale_crops.append({"id": f"{capture_id}:advanced", "path": str(advanced_crop_path)})
             except Exception:
                 reasons.append(f"amplifier_detail_advanced_crop_failed:{agent_id}:{index}")
             try:
                 advanced_fallback_crop_path = crop_dir / f"{capture_id}_advanced_fallback.png"
                 crop_advanced_stat_fallback_image(source_path, advanced_fallback_crop_path)
-                crops.append({"id": f"{capture_id}:advanced_fallback", "path": str(advanced_fallback_crop_path)})
+                locale_crops.append({"id": f"{capture_id}:advanced_fallback", "path": str(advanced_fallback_crop_path)})
             except Exception:
                 pass
             try:
                 effect_crop_path = crop_dir / f"{capture_id}_effect.png"
                 crop_effect_image(source_path, effect_crop_path)
-                crops.append({"id": f"{capture_id}:effect", "path": str(effect_crop_path)})
+                locale_crops.append({"id": f"{capture_id}:effect", "path": str(effect_crop_path)})
             except Exception:
                 reasons.append(f"amplifier_detail_effect_crop_failed:{agent_id}:{index}")
+            try:
+                empty_state_crop_path = crop_dir / f"{capture_id}_empty_state.png"
+                crop_empty_state_image(source_path, empty_state_crop_path)
+                empty_state_crops.append({"id": f"{capture_id}:empty_state", "path": str(empty_state_crop_path)})
+            except Exception:
+                reasons.append(f"amplifier_detail_empty_state_crop_failed:{agent_id}:{index}")
             by_capture_id[capture_id] = {
                 "agentId": agent_id,
                 "agentSource": agent_source,
@@ -1111,8 +1231,16 @@ def _pixel_weapons_from_captures(
                 "index": index,
             }
 
-        if crops:
-            ocr_results.update(run_winrt_ocr_batch(crops, language_tag=language_tag, temp_root=temp_root))
+        if locale_crops:
+            ocr_results.update(run_winrt_ocr_batch(locale_crops, language_tag=language_tag, temp_root=temp_root))
+        if empty_state_crops:
+            ocr_results.update(
+                run_winrt_ocr_batch(
+                    empty_state_crops,
+                    language_tag=language_tag_for_locale("EN"),
+                    temp_root=temp_root,
+                )
+            )
 
     by_agent: dict[str, dict[str, Any]] = {}
     for capture_id, meta in by_capture_id.items():
@@ -1122,11 +1250,13 @@ def _pixel_weapons_from_captures(
         advanced_text = _as_text(ocr_results.get(f"{capture_id}:advanced"))
         advanced_fallback_text = _as_text(ocr_results.get(f"{capture_id}:advanced_fallback"))
         effect_text = _as_text(ocr_results.get(f"{capture_id}:effect"))
+        empty_state_text = _as_text(ocr_results.get(f"{capture_id}:empty_state"))
         readout = parse_amplifier_detail(
             title_text,
             info_text=info_text,
             advanced_text=advanced_text,
             effect_text=effect_text,
+            empty_state_text=empty_state_text,
         )
         if (
             readout is not None
@@ -1134,22 +1264,37 @@ def _pixel_weapons_from_captures(
             and readout.advanced_stat_value in (None, "")
             and advanced_fallback_text
         ):
-            retry_readout = parse_amplifier_detail(
+            recovered_advanced_value = recover_missing_advanced_stat_value(
+                readout.advanced_stat_key,
+                advanced_text=advanced_text,
+                fallback_advanced_text=advanced_fallback_text,
+                effect_text=effect_text,
+                excluding=readout.base_stat_value,
+            )
+            if recovered_advanced_value not in (None, ""):
+                readout.advanced_stat_value = recovered_advanced_value
+        if readout is None:
+            if looks_like_empty_amplifier_detail(
                 title_text,
                 info_text=info_text,
-                advanced_text="\n".join(
-                    part for part in (advanced_text, advanced_fallback_text) if part
-                ),
+                advanced_text=advanced_text,
                 effect_text=effect_text,
-            )
-            if (
-                retry_readout is not None
-                and retry_readout.identity.weapon_id == readout.identity.weapon_id
-                and retry_readout.advanced_stat_key == readout.advanced_stat_key
-                and retry_readout.advanced_stat_value not in (None, "")
+                empty_state_text=empty_state_text,
             ):
-                readout = retry_readout
-        if readout is None:
+                occupancy = occupancy_by_agent.get(agent_id)
+                if not isinstance(occupancy, dict):
+                    occupancy = {
+                        "agentId": agent_id,
+                        "agentSource": _as_text(meta.get("agentSource")),
+                        "agentConfidence": float(meta.get("agentConfidence", 0.0) or 0.0),
+                    }
+                    occupancy_by_agent[agent_id] = occupancy
+                weapon_confidence = max(float(occupancy.get("_weaponConfidence", 0.0) or 0.0), 0.98)
+                occupancy["weaponPresent"] = False
+                occupancy["_weaponConfidence"] = round(weapon_confidence, 4)
+                occupancy["_confidence"] = round(max(float(occupancy.get("_confidence", 0.0) or 0.0), weapon_confidence), 4)
+                occupancy["_weaponSource"] = "amplifier_detail_empty_state"
+                continue
             reasons.append(f"amplifier_detail_unclassified:{agent_id}")
             continue
         prediction = readout.identity
@@ -1395,18 +1540,23 @@ def _enrich_agents_with_pixel_equipment_occupancy(
 
         if "weaponPresent" in occupancy:
             payload["weaponPresent"] = bool(occupancy["weaponPresent"])
+            weapon_present_source = _as_text(occupancy.get("_weaponSource")) or "pixel_equipment_overview"
             confidence_by_field["occupancy"] = round(
                 max(float(confidence_by_field.get("occupancy", 0.0)), float(occupancy.get("_weaponConfidence", 0.0) or 0.0)),
                 4,
             )
-            field_sources["weaponPresent"] = "pixel_equipment_overview"
+            field_sources["weaponPresent"] = weapon_present_source
             if not payload.get("weapon") and payload["weaponPresent"] is False:
                 known_empty_confidence = _known_empty_equipment_confidence(float(occupancy.get("_weaponConfidence", 0.0) or 0.0))
                 confidence_by_field["weapon"] = round(
                     max(float(confidence_by_field.get("weapon", 0.0)), known_empty_confidence),
                     4,
                 )
-                field_sources["weapon"] = "known_empty_from_equipment_occupancy"
+                field_sources["weapon"] = (
+                    "known_empty_from_amplifier_detail"
+                    if weapon_present_source == "amplifier_detail_empty_state"
+                    else "known_empty_from_equipment_occupancy"
+                )
             used = True
         if "discSlotOccupancy" in occupancy:
             payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
@@ -1442,10 +1592,15 @@ def _enrich_agents_with_pixel_equipment_occupancy(
         _copy_visible_slot_metadata(payload, occupancy)
         if "weaponPresent" in occupancy:
             payload["weaponPresent"] = bool(occupancy["weaponPresent"])
-            payload["fieldSources"]["weaponPresent"] = "pixel_equipment_overview"
+            weapon_present_source = _as_text(occupancy.get("_weaponSource")) or "pixel_equipment_overview"
+            payload["fieldSources"]["weaponPresent"] = weapon_present_source
             if payload["weaponPresent"] is False:
                 payload["confidenceByField"]["weapon"] = _known_empty_equipment_confidence(float(occupancy.get("_weaponConfidence", 0.0) or 0.0))
-                payload["fieldSources"]["weapon"] = "known_empty_from_equipment_occupancy"
+                payload["fieldSources"]["weapon"] = (
+                    "known_empty_from_amplifier_detail"
+                    if weapon_present_source == "amplifier_detail_empty_state"
+                    else "known_empty_from_equipment_occupancy"
+                )
         if "discSlotOccupancy" in occupancy:
             payload["discSlotOccupancy"] = dict(occupancy["discSlotOccupancy"])
             payload["fieldSources"]["discSlotOccupancy"] = "pixel_equipment_overview"

@@ -223,6 +223,24 @@ class PipelineTests(unittest.TestCase):
             {str(slot): False for slot in range(1, 7)},
         )
 
+    def test_resolve_equipment_empty_state_marker_turns_ambiguous_weapon_only_overview_into_empty(self) -> None:
+        occupancy = {
+            "discSlotOccupancy": {str(slot): False for slot in range(1, 7)},
+            "_weaponConfidence": 0.6733,
+            "_discConfidence": 0.8536,
+        }
+
+        resolved, reasons = pipeline._resolve_equipment_empty_state_marker(
+            occupancy,
+            ["equipment_overview_weapon_presence_ambiguous"],
+            empty_state_text="COREIAUAIL BLE",
+        )
+
+        self.assertFalse(resolved["weaponPresent"])
+        self.assertEqual(resolved["_weaponSource"], "equipment_overview_core_available")
+        self.assertGreaterEqual(resolved["_weaponConfidence"], 0.98)
+        self.assertEqual(reasons, [])
+
     def test_filter_resolved_low_conf_reasons_respects_known_empty_equipment(self) -> None:
         filtered = pipeline._filter_resolved_low_conf_reasons(
             [
@@ -261,6 +279,26 @@ class PipelineTests(unittest.TestCase):
         self.assertTrue(used)
         self.assertFalse(merged_agents[0]["weaponPresent"])
         self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "known_empty_from_equipment_occupancy")
+        self.assertGreaterEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.9)
+
+    def test_enrich_agents_with_pixel_equipment_occupancy_marks_amplifier_detail_empty_weapon_as_confident(self) -> None:
+        agent = pipeline._default_agent_payload("agent_pulchra", 0.97)
+
+        merged_agents, used = pipeline._enrich_agents_with_pixel_equipment_occupancy(
+            [agent],
+            {
+                "agent_pulchra": {
+                    "weaponPresent": False,
+                    "_weaponConfidence": 0.98,
+                    "_weaponSource": "amplifier_detail_empty_state",
+                }
+            },
+        )
+
+        self.assertTrue(used)
+        self.assertFalse(merged_agents[0]["weaponPresent"])
+        self.assertEqual(merged_agents[0]["fieldSources"]["weaponPresent"], "amplifier_detail_empty_state")
+        self.assertEqual(merged_agents[0]["fieldSources"]["weapon"], "known_empty_from_amplifier_detail")
         self.assertGreaterEqual(merged_agents[0]["confidenceByField"]["weapon"], 0.9)
 
     def test_enrich_agents_with_pixel_weapons_merges_detail_fields_into_existing_weapon(self) -> None:
@@ -445,6 +483,49 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons["agent_anby"]["weaponId"], "amp_big_cylinder")
         self.assertTrue(weapons["agent_anby"]["weaponPresent"])
 
+    def test_pixel_weapons_from_captures_marks_core_available_detail_as_known_empty_weapon(self) -> None:
+        occupancy_by_agent: dict[str, dict[str, object]] = {}
+
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_pulchra", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_pulchra:title": "Сдержанность Ур. 60/60 Базовые параметры Базовая сила атаки 684",
+                    "amplifier_0_agent_pulchra:info": "Сдержанность Ур. 60/60 Базовые параметры Базовая сила атаки 684 Продвинутые параметры Импульс 18%",
+                    "amplifier_0_agent_pulchra:advanced": "",
+                    "amplifier_0_agent_pulchra:advanced_fallback": "",
+                    "amplifier_0_agent_pulchra:effect": "Следующие эффекты можно использовать для агентов со специальностью «Устрашение»",
+                    "amplifier_0_agent_pulchra:empty_state": "совк,пипи пв1Е",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 3,
+                            "pageIndex": 6,
+                        }
+                    ]
+                },
+                {(6, 3): "agent_pulchra"},
+                occupancy_by_agent,
+                "RU",
+            )
+
+        self.assertEqual(weapons, {})
+        self.assertEqual(reasons, [])
+        self.assertFalse(occupancy_by_agent["agent_pulchra"]["weaponPresent"])
+        self.assertEqual(occupancy_by_agent["agent_pulchra"]["_weaponSource"], "amplifier_detail_empty_state")
+
     def test_pixel_weapons_from_captures_uses_fallback_advanced_crop_for_harumasa(self) -> None:
         with (
             patch.object(
@@ -461,6 +542,46 @@ class PipelineTests(unittest.TestCase):
                     "amplifier_0_agent_harumasa:advanced": "",
                     "amplifier_0_agent_harumasa:advanced_fallback": "Ур. О Базовая сила атаки Продвинутые параметры Восстановление энергии Эффект амплификатора 521 440/0",
                     "amplifier_0_agent_harumasa:effect": "Эффект амплификатора следующие эффекты можно использовать для агентов со специальностью Нападение",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 3,
+                            "pageIndex": 3,
+                        }
+                    ]
+                },
+                {(3, 3): "agent_harumasa"},
+                {},
+                "RU",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(weapons["agent_harumasa"]["weaponId"], "amp_drill_rig_red_axis")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatValue"], 4.4)
+
+    def test_pixel_weapons_from_captures_recovers_live_harumasa_value_when_primary_advanced_crop_only_has_label(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_harumasa", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_harumasa:title": "Бур — красная ось 60 О Ур. 50/50 Базовые параметры Базовая сила атаки 521",
+                    "amplifier_0_agent_harumasa:info": "Бур — красная ось х 60 Ур. 50/50 Базовые параметры Базовая сила атаки продвинутые параметры восстановление 521 энергии Эффект амплификатора Следующие эффекты можно использовать для агентов со",
+                    "amplifier_0_agent_harumasa:advanced": "Продвинутые параметры Восстановление „энергии",
+                    "amplifier_0_agent_harumasa:advanced_fallback": "Ур. О Базовая сила атаки Продвинутые параметры Восстановление энергии Эффект амплификатора 521 440/0",
+                    "amplifier_0_agent_harumasa:effect": "Ур. 15115 П Эффект амплификатора следующие эффекты можно использовать для агентов со специальностью «Нападение» Адский генератор При запуске усиленной особой атаки или цепочки атак базовые атаки и атаки в О",
                 },
             ),
         ):
@@ -650,6 +771,33 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(inspection["discSlotOccupancy"]["1"], True)
         self.assertEqual(inspection["discSlotOccupancy"]["2"], False)
         self.assertEqual(inspection["confidence"], 0.91)
+        self.assertEqual(inspection["lowConfReasons"], [])
+
+    def test_inspect_equipment_capture_uses_core_available_marker_to_skip_empty_weapon_slot(self) -> None:
+        with (
+            patch.object(pipeline.cv2, "imread", return_value=np.zeros((32, 32, 3), dtype=np.uint8)),
+            patch.object(
+                pipeline,
+                "_derive_equipment_overview_occupancy_from_image",
+                return_value=(
+                    {
+                        "discSlotOccupancy": {str(slot): False for slot in range(1, 7)},
+                        "_weaponConfidence": 0.6733,
+                        "_discConfidence": 0.8536,
+                    },
+                    ["equipment_overview_weapon_presence_ambiguous"],
+                ),
+            ),
+            patch.object(
+                pipeline,
+                "_read_equipment_empty_state_text_from_image",
+                return_value="CORETAVAI ABLE",
+            ),
+        ):
+            inspection = pipeline.inspect_equipment_capture("ignored.png")
+
+        self.assertFalse(inspection["weaponPresent"])
+        self.assertEqual(inspection["discSlotOccupancy"], {str(slot): False for slot in range(1, 7)})
         self.assertEqual(inspection["lowConfReasons"], [])
 
     def test_equipment_overview_occupancy_keeps_confident_slots_when_one_slot_is_ambiguous(self) -> None:

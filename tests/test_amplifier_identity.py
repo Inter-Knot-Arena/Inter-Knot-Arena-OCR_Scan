@@ -10,8 +10,10 @@ from amplifier_identity import (
     crop_info_image,
     crop_title_image,
     language_tag_for_locale,
+    looks_like_empty_amplifier_detail,
     normalize_alias_key,
     parse_amplifier_detail,
+    recover_missing_advanced_stat_value,
     run_winrt_ocr_batch,
 )
 
@@ -364,6 +366,52 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertEqual(readout.base_stat_value, 713)
         self.assertEqual(readout.advanced_stat_key, "crit_rate_pct")
         self.assertEqual(readout.advanced_stat_value, 24.0)
+
+    def test_recover_missing_advanced_stat_value_uses_fallback_crop_without_reclassifying_key(self) -> None:
+        recovered = recover_missing_advanced_stat_value(
+            "energy_regen",
+            advanced_text="Продвинутые параметры Восстановление „энергии",
+            fallback_advanced_text=(
+                "Ур. О Базовая сила атаки "
+                "Продвинутые параметры Восстановление энергии "
+                "Эффект амплификатора 521 440/0"
+            ),
+            excluding=521,
+        )
+
+        self.assertEqual(recovered, 4.4)
+
+    def test_parse_amplifier_detail_treats_core_available_as_empty_slot(self) -> None:
+        self.assertTrue(
+            looks_like_empty_amplifier_detail(
+                "Core Available",
+                info_text="Core Available",
+            )
+        )
+        self.assertIsNone(
+            parse_amplifier_detail(
+                "Core Available",
+                info_text="Core Available",
+            )
+        )
+
+    def test_parse_amplifier_detail_treats_center_empty_state_marker_as_empty_slot(self) -> None:
+        self.assertTrue(looks_like_empty_amplifier_detail("", empty_state_text="CORE,AUAILA LE"))
+        self.assertTrue(looks_like_empty_amplifier_detail("", empty_state_text="COREtAUA LABLE"))
+        self.assertTrue(
+            looks_like_empty_amplifier_detail(
+                "Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107",
+                empty_state_text="СОВЕ,ПИПИШ BLE",
+            )
+        )
+        self.assertIsNone(
+            parse_amplifier_detail(
+                "Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107",
+                info_text="Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107 Продвинутые параметры Защита 16%",
+                effect_text="Следующие эффекты можно использовать для агентов со специальностью «Оборона»",
+                empty_state_text="СОВЕ,ПИПИШ BLE",
+            )
+        )
 
     @unittest.skipUnless(_ELLEN_LIVE_AMP_SAMPLE.exists(), "local Ellen live amplifier sample is unavailable")
     def test_parse_amplifier_detail_recovers_ellen_advanced_value_from_live_sample(self) -> None:
