@@ -9,8 +9,11 @@ import numpy as np
 from scanner import pipeline
 
 
-_EMPTY_WEAPON_OVERVIEW_SAMPLE = Path(
+_AMBIGUOUS_WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\02_equipment_agent_slot_1_page_06_agent_1_equipment.png"
+)
+_AMBIGUOUS_WEAPON_ONLY_AMPLIFIER_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\03_amplifier_detail_agent_slot_1_page_06_agent_1_amplifier.png"
 )
 _WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-07\20_equipment_agent_slot_2_page_07_agent_2_equipment.png"
@@ -398,6 +401,47 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons, {})
         self.assertEqual(reasons, [])
 
+    def test_pixel_weapons_from_captures_keeps_ambiguous_weapon_only_overview(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_anby", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_anby:title": "о Большой цилиндр О Ур. ТОЛО Базовые параметры Базовая сила атаки 107",
+                    "amplifier_0_agent_anby:info": "Большой цилиндр О Ур. 10/10 Базовые параметры Базовая сила атаки продвинутые параметры защита Эффект амплификатора 107 160/0 Следующие эффекты можно использовать для агентов со",
+                    "amplifier_0_agent_anby:advanced": "Продвинутые параметры Защита 160/0",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_AMBIGUOUS_WEAPON_ONLY_AMPLIFIER_SAMPLE),
+                            "agentSlotIndex": 1,
+                            "pageIndex": 6,
+                        }
+                    ]
+                },
+                {(6, 1): "agent_anby"},
+                {
+                    "agent_anby": {
+                        "discSlotOccupancy": {str(slot): False for slot in range(1, 7)},
+                    }
+                },
+                "RU",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(weapons["agent_anby"]["weaponId"], "amp_big_cylinder")
+        self.assertTrue(weapons["agent_anby"]["weaponPresent"])
+
     def test_pixel_discs_from_captures_uses_title_ocr_fallback_for_low_conf_predictions(self) -> None:
         prediction = type("Prediction", (), {"label": "set_astral_voice", "confidence": 0.61})()
 
@@ -507,12 +551,12 @@ class PipelineTests(unittest.TestCase):
             {"1": True, "2": False, "4": False, "5": True, "6": False},
         )
 
-    def test_inspect_equipment_capture_infers_empty_weapon_when_all_slots_are_empty(self) -> None:
-        inspection = pipeline.inspect_equipment_capture(_EMPTY_WEAPON_OVERVIEW_SAMPLE)
+    def test_inspect_equipment_capture_keeps_ambiguous_weapon_only_overview_open(self) -> None:
+        inspection = pipeline.inspect_equipment_capture(_AMBIGUOUS_WEAPON_ONLY_OVERVIEW_SAMPLE)
 
-        self.assertFalse(inspection["weaponPresent"])
+        self.assertNotIn("weaponPresent", inspection)
         self.assertEqual(inspection["discSlotOccupancy"], {str(slot): False for slot in range(1, 7)})
-        self.assertNotIn("equipment_overview_weapon_presence_ambiguous", inspection["lowConfReasons"])
+        self.assertIn("equipment_overview_weapon_presence_ambiguous", inspection["lowConfReasons"])
 
     def test_inspect_equipment_capture_keeps_weapon_only_agent_equipped(self) -> None:
         inspection = pipeline.inspect_equipment_capture(_WEAPON_ONLY_OVERVIEW_SAMPLE)

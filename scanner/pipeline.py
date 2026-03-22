@@ -906,18 +906,12 @@ def _derive_equipment_overview_occupancy_from_image(
         occupancy.pop("weaponPresent", None)
         reasons.append("equipment_overview_weapon_presence_ambiguous")
 
-    # Empty equipment screens can still produce a mid-texture score in the
-    # amplifier slot because the placeholder ring and recommendation affordance
-    # add structure. If every disc slot is confidently empty and the weapon
-    # patch never crossed the occupied threshold, treat the amplifier as empty.
-    if (
-        weapon_present is None
-        and weapon_confidence <= 0.5
-        and all_disc_slots_known_empty
-    ):
-        occupancy["weaponPresent"] = False
-        occupancy["_weaponConfidence"] = round(1.0 - float(weapon_confidence), 4)
-    elif weapon_present is None:
+    # Some weapon-only layouts still land in the ambiguous band when every disc
+    # slot is empty, so do not coerce that path to `weaponPresent=False`.
+    # Leaving the overview ambiguous keeps live scans on the amplifier-detail
+    # path instead of producing a hard false negative and skipping the weapon
+    # entirely.
+    if weapon_present is None:
         reasons.append("equipment_overview_weapon_presence_ambiguous")
 
     return occupancy, reasons
