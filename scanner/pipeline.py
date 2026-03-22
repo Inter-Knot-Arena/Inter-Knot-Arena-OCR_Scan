@@ -881,15 +881,17 @@ def _derive_equipment_overview_occupancy_from_image(
 
     # Empty equipment screens can still light up the amplifier patch because the
     # placeholder ring and recommendation affordance add texture. When every
-    # disc slot is confidently empty, require a stronger occupied score before
-    # treating the weapon slot as equipped.
+    # disc slot is confidently empty, a borderline occupied score is not strong
+    # enough to confirm the weapon slot, but it is also not evidence that the
+    # slot is empty. Keep that path ambiguous so live scans still inspect
+    # amplifier detail for weapon-only agents.
     if (
         weapon_present is True
         and all_disc_slots_known_empty
         and weapon_confidence < _EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD
     ):
-        occupancy["weaponPresent"] = False
-        occupancy["_weaponConfidence"] = round(1.0 - float(weapon_confidence), 4)
+        occupancy.pop("weaponPresent", None)
+        reasons.append("equipment_overview_weapon_presence_ambiguous")
 
     # Empty equipment screens can still produce a mid-texture score in the
     # amplifier slot because the placeholder ring and recommendation affordance

@@ -120,7 +120,7 @@ class PipelineTests(unittest.TestCase):
             {"1": True, "2": False, "3": True, "4": False, "5": True, "6": False},
         )
 
-    def test_equipment_overview_occupancy_treats_borderline_weapon_patch_as_empty_when_all_discs_are_empty(self) -> None:
+    def test_equipment_overview_occupancy_keeps_borderline_weapon_patch_ambiguous_when_all_discs_are_empty(self) -> None:
         image = np.zeros((1080, 1920, 3), dtype=np.uint8)
 
         with patch.object(
@@ -138,8 +138,8 @@ class PipelineTests(unittest.TestCase):
         ):
             occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
 
-        self.assertEqual(reasons, [])
-        self.assertFalse(occupancy["weaponPresent"])
+        self.assertEqual(reasons, ["equipment_overview_weapon_presence_ambiguous"])
+        self.assertNotIn("weaponPresent", occupancy)
         self.assertEqual(
             occupancy["discSlotOccupancy"],
             {str(slot): False for slot in range(1, 7)},
