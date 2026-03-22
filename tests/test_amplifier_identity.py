@@ -102,6 +102,46 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertEqual(readout.advanced_stat_key, "crit_rate_pct")
         self.assertEqual(readout.advanced_stat_value, 24.0)
 
+    def test_parse_amplifier_detail_falls_back_to_info_text_identity_when_title_is_empty(self) -> None:
+        readout = parse_amplifier_detail(
+            "",
+            info_text=(
+                "Hellfire Gears O Lv. 50/50 "
+                "Base Stats Base ATK "
+                "Advanced Stats Impact "
+                "W-Engine Effect 570 15.8%"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_hellfire_gears")
+        self.assertEqual(readout.level, 50)
+        self.assertEqual(readout.level_cap, 50)
+        self.assertEqual(readout.base_stat_value, 570)
+        self.assertEqual(readout.advanced_stat_key, "impact")
+        self.assertEqual(readout.advanced_stat_value, 15.8)
+
+    def test_parse_amplifier_detail_combines_partial_title_and_info_for_identity(self) -> None:
+        readout = parse_amplifier_detail(
+            "Hellfire",
+            info_text=(
+                "Gears O Lv. 50/50 "
+                "Base Stats Base ATK "
+                "Advanced Stats Impact "
+                "W-Engine Effect 570 15.8%"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_hellfire_gears")
+        self.assertEqual(readout.level, 50)
+        self.assertEqual(readout.level_cap, 50)
+        self.assertEqual(readout.base_stat_value, 570)
+        self.assertEqual(readout.advanced_stat_key, "impact")
+        self.assertEqual(readout.advanced_stat_value, 15.8)
+
     def test_parse_amplifier_detail_keeps_advanced_value_without_inventing_label(self) -> None:
         readout = parse_amplifier_detail(
             "\u041a\u043b\u0435\u0442\u043a\u0430 \u041d\u0435\u0431\u0435\u0441\u043d\u043e\u0439 \u043f\u0442\u0438\u0446\u044b \u0423\u0440. 60160",

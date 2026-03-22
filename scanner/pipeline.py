@@ -54,6 +54,7 @@ _EQUIPMENT_DISC_SLOT_CENTERS = {
 _EQUIPMENT_DISC_PATCH = (0.084, 0.138)
 _EQUIPMENT_OCCUPIED_SCORE_THRESHOLD = 0.58
 _EQUIPMENT_EMPTY_SCORE_THRESHOLD = 0.34
+_EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD = 0.63
 _AGENT_DETAIL_LEVEL_CONFIDENCE_THRESHOLD = 0.78
 
 
@@ -873,6 +874,23 @@ def _derive_equipment_overview_occupancy_from_image(
         occupancy["discSlotOccupancy"] = disc_slot_occupancy
         occupancy["_discConfidence"] = round(sum(disc_confidences) / len(disc_confidences), 4)
 
+    all_disc_slots_known_empty = (
+        len(disc_slot_occupancy) == len(_EQUIPMENT_DISC_SLOT_CENTERS)
+        and not any(disc_slot_occupancy.values())
+    )
+
+    # Empty equipment screens can still light up the amplifier patch because the
+    # placeholder ring and recommendation affordance add texture. When every
+    # disc slot is confidently empty, require a stronger occupied score before
+    # treating the weapon slot as equipped.
+    if (
+        weapon_present is True
+        and all_disc_slots_known_empty
+        and weapon_confidence < _EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD
+    ):
+        occupancy["weaponPresent"] = False
+        occupancy["_weaponConfidence"] = round(1.0 - float(weapon_confidence), 4)
+
     # Empty equipment screens can still produce a mid-texture score in the
     # amplifier slot because the placeholder ring and recommendation affordance
     # add structure. If every disc slot is confidently empty and the weapon
@@ -880,8 +898,7 @@ def _derive_equipment_overview_occupancy_from_image(
     if (
         weapon_present is None
         and weapon_confidence <= 0.5
-        and len(disc_slot_occupancy) == len(_EQUIPMENT_DISC_SLOT_CENTERS)
-        and not any(disc_slot_occupancy.values())
+        and all_disc_slots_known_empty
     ):
         occupancy["weaponPresent"] = False
         occupancy["_weaponConfidence"] = round(1.0 - float(weapon_confidence), 4)

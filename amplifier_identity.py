@@ -353,6 +353,45 @@ def classify_amplifier_text(text: str) -> AmplifierIdentityPrediction | None:
     )
 
 
+def classify_amplifier_detail_identity(
+    title_text: str,
+    *,
+    info_text: str = "",
+) -> AmplifierIdentityPrediction | None:
+    candidates = (
+        (0, title_text),
+        (1, info_text),
+        (2, " ".join(part for part in (_text(title_text), _text(info_text)) if part)),
+    )
+    seen: set[str] = set()
+    best_identity: AmplifierIdentityPrediction | None = None
+    best_score: tuple[int, float, int, int] | None = None
+    source_mode_priority = {
+        "alias_contract": 3,
+        "alias_contract_fuzzy": 2,
+        "taxonomy_direct": 1,
+        "generated_slug": 0,
+    }
+    for source_rank, candidate in candidates:
+        normalized = _text(candidate)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        identity = classify_amplifier_text(normalized)
+        if identity is None:
+            continue
+        score = (
+            source_mode_priority.get(identity.source_mode, -1),
+            float(identity.confidence),
+            -int(source_rank),
+            len(identity.title_candidate),
+        )
+        if best_score is None or score > best_score:
+            best_identity = identity
+            best_score = score
+    return best_identity
+
+
 def _normalize_detail_text(value: str) -> str:
     token = unicodedata.normalize("NFKC", _text(value).lower())
     token = token.replace("\u2013", "-")
@@ -740,7 +779,10 @@ def parse_amplifier_detail(
     advanced_text: str = "",
     effect_text: str = "",
 ) -> AmplifierDetailReadout | None:
-    identity = classify_amplifier_text(title_text)
+    identity = classify_amplifier_detail_identity(
+        title_text,
+        info_text=info_text,
+    )
     if identity is None:
         return None
 
