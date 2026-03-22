@@ -745,6 +745,35 @@ def _pick_first_compatible_value(
     return None
 
 
+def _normalize_token_value_for_stat_key(
+    stat_key: str | None,
+    token: str,
+    value: int | float,
+) -> int | float:
+    normalized = _normalize_stat_value_for_key(stat_key, value)
+    if (
+        stat_key == "energy_regen"
+        and isinstance(normalized, (int, float))
+        and _normalize_numeric_token(token).endswith("/0")
+    ):
+        numeric = float(normalized)
+        while numeric > 40.0:
+            numeric /= 10.0
+        normalized = round(numeric, 4)
+    return normalized
+
+
+def _pick_first_compatible_token_value(
+    stat_key: str | None,
+    values: Sequence[tuple[str, int | float]],
+) -> int | float | None:
+    for token, value in values:
+        normalized = _normalize_token_value_for_stat_key(stat_key, token, value)
+        if _is_compatible_stat_value(stat_key, normalized):
+            return normalized
+    return None
+
+
 def _pick_best_base_value(
     stat_key: str | None,
     values: Sequence[int | float],
@@ -812,24 +841,15 @@ def parse_amplifier_detail(
         value
         for _, value in _extract_numeric_values(_segment_after_markers(info_segment_text, _EFFECT_MARKERS))
     ]
-    effect_values = [
-        value
-        for _, value in _extract_numeric_values(
-            _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
-        )
-    ]
-    advanced_line_values = [
-        value
-        for _, value in _extract_numeric_values(
-            _segment_after_alias(advanced_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
-        )
-    ]
-    advanced_segment_values = [
-        value
-        for _, value in _extract_numeric_values(
-            _segment_after_alias(advanced_segment, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
-        )
-    ]
+    effect_token_values = _extract_numeric_values(
+        _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+    )
+    advanced_line_token_values = _extract_numeric_values(
+        _segment_after_alias(advanced_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+    )
+    advanced_segment_token_values = _extract_numeric_values(
+        _segment_after_alias(advanced_segment, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+    )
     ordered_token_values = _extract_numeric_values(info_segment_text)
     ordered_values = [value for _, value in ordered_token_values]
     ordered_slash_base_values = [
@@ -870,21 +890,23 @@ def parse_amplifier_detail(
         # W-Engine base stat is ATK in every reviewed sample and runtime crop.
         base_stat_key = "attack_flat"
 
-    remaining_effect_values = [
-        value for value in effect_values if not _numeric_equal(value, base_stat_value)
+    remaining_effect_token_values = [
+        (token, value)
+        for token, value in effect_token_values
+        if not _numeric_equal(value, base_stat_value)
     ]
-    advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, advanced_line_values)
+    advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, advanced_line_token_values)
     if advanced_stat_value is None:
-        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, advanced_segment_values)
+        advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, advanced_segment_token_values)
     if advanced_stat_value is None:
-        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, remaining_effect_values)
+        advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, remaining_effect_token_values)
     if advanced_stat_value is None and base_value_index is not None:
-        advanced_stat_value = _pick_first_compatible_value(
+        advanced_stat_value = _pick_first_compatible_token_value(
             advanced_stat_key,
-            ordered_values[base_value_index + 1 :],
+            ordered_token_values[base_value_index + 1 :],
         )
     if advanced_stat_value is None:
-        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, ordered_values)
+        advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, ordered_token_values)
     if advanced_stat_value is None and advanced_stat_key is None:
         fallback_values = (
             ordered_values[base_value_index + 1 :]
