@@ -234,6 +234,32 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertEqual(readout.advanced_stat_key, "energy_regen")
         self.assertEqual(readout.advanced_stat_value, 32.0)
 
+    def test_parse_amplifier_detail_ignores_new_badge_noise_before_kaboom_title(self) -> None:
+        readout = parse_amplifier_detail(
+            "\u042d NEW! \u0411\u0443\u043c-\u043f\u0443\u0448\u043a\u0430 \u0423\u0440. 30/30 \u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438",
+            info_text=(
+                "\u042d NEW! \u0411\u0443\u043c-\u043f\u0443\u0448\u043a\u0430 \u041e \u0423\u0440. 30/30 "
+                "\u0411\u0430\u0437\u043e\u0432\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 "
+                "\u043f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u044d\u043d\u0435\u0440\u0433\u0438\u0438 "
+                "\u042d\u0444\u0444\u0435\u043a\u0442 \u0430\u043c\u043f\u043b\u0438\u0444\u0438\u043a\u0430\u0442\u043e\u0440\u0430 320/0"
+            ),
+            advanced_text=(
+                "\u041f\u0440\u043e\u0434\u0432\u0438\u043d\u0443\u0442\u044b\u0435 \u043f\u0430\u0440\u0430\u043c\u0435\u0442\u0440\u044b "
+                "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u044d\u043d\u0435\u0440\u0433\u0438\u0438 320/0"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_kaboom_the_cannon")
+        self.assertEqual(readout.level, 30)
+        self.assertEqual(readout.level_cap, 30)
+        self.assertEqual(readout.base_stat_value, 320)
+        self.assertEqual(readout.advanced_stat_key, "energy_regen")
+        self.assertEqual(readout.advanced_stat_value, 32.0)
+
     def test_parse_amplifier_detail_normalizes_shifted_impact_value(self) -> None:
         readout = parse_amplifier_detail(
             "\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 \u0434\u0435\u043c\u0430\u0440\u044b II \u0423\u0440. 60/60 \u0411\u0430\u0437\u043e\u0432\u0430\u044f \u0441\u0438\u043b\u0430 \u0430\u0442\u0430\u043a\u0438 624",

@@ -225,6 +225,8 @@ def extract_amplifier_title_candidate(text: str) -> str:
             return True
         if re.fullmatch(r"[0-9]{1,3}", cleaned):
             return True
+        if len(cleaned) == 1 and cleaned not in {"i", "v", "x"}:
+            return True
         return cleaned in {"o", "о", "0", "new", "mew", "нем"}
 
     def _looks_noise_suffix(token: str) -> bool:
