@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
 
 from scanner import pipeline
+
+
+_EMPTY_WEAPON_OVERVIEW_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\02_equipment_agent_slot_1_page_06_agent_1_equipment.png"
+)
+_WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-07\20_equipment_agent_slot_2_page_07_agent_2_equipment.png"
+)
 
 
 class PipelineTests(unittest.TestCase):
@@ -400,6 +409,19 @@ class PipelineTests(unittest.TestCase):
             occupancy["discSlotOccupancy"],
             {"1": True, "2": False, "4": False, "5": True, "6": False},
         )
+
+    def test_inspect_equipment_capture_infers_empty_weapon_when_all_slots_are_empty(self) -> None:
+        inspection = pipeline.inspect_equipment_capture(_EMPTY_WEAPON_OVERVIEW_SAMPLE)
+
+        self.assertFalse(inspection["weaponPresent"])
+        self.assertEqual(inspection["discSlotOccupancy"], {str(slot): False for slot in range(1, 7)})
+        self.assertNotIn("equipment_overview_weapon_presence_ambiguous", inspection["lowConfReasons"])
+
+    def test_inspect_equipment_capture_keeps_weapon_only_agent_equipped(self) -> None:
+        inspection = pipeline.inspect_equipment_capture(_WEAPON_ONLY_OVERVIEW_SAMPLE)
+
+        self.assertTrue(inspection["weaponPresent"])
+        self.assertEqual(inspection["discSlotOccupancy"], {str(slot): False for slot in range(1, 7)})
 
     def test_drop_stale_top_level_confidence_reasons_respects_current_confidence(self) -> None:
         filtered = pipeline._drop_stale_top_level_confidence_reasons(

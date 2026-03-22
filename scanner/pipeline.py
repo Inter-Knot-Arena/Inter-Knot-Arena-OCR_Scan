@@ -852,9 +852,7 @@ def _derive_equipment_overview_occupancy_from_image(
         center=_EQUIPMENT_WEAPON_CENTER,
         patch_size=_EQUIPMENT_WEAPON_PATCH,
     )
-    if weapon_present is None:
-        reasons.append("equipment_overview_weapon_presence_ambiguous")
-    else:
+    if weapon_present is not None:
         occupancy["weaponPresent"] = weapon_present
         occupancy["_weaponConfidence"] = round(float(weapon_confidence), 4)
 
@@ -874,6 +872,21 @@ def _derive_equipment_overview_occupancy_from_image(
     if disc_slot_occupancy:
         occupancy["discSlotOccupancy"] = disc_slot_occupancy
         occupancy["_discConfidence"] = round(sum(disc_confidences) / len(disc_confidences), 4)
+
+    # Empty equipment screens can still produce a mid-texture score in the
+    # amplifier slot because the placeholder ring and recommendation affordance
+    # add structure. If every disc slot is confidently empty and the weapon
+    # patch never crossed the occupied threshold, treat the amplifier as empty.
+    if (
+        weapon_present is None
+        and weapon_confidence <= 0.5
+        and len(disc_slot_occupancy) == len(_EQUIPMENT_DISC_SLOT_CENTERS)
+        and not any(disc_slot_occupancy.values())
+    ):
+        occupancy["weaponPresent"] = False
+        occupancy["_weaponConfidence"] = round(1.0 - float(weapon_confidence), 4)
+    elif weapon_present is None:
+        reasons.append("equipment_overview_weapon_presence_ambiguous")
 
     return occupancy, reasons
 
