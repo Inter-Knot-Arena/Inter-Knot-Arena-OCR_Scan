@@ -485,6 +485,89 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
         self.assertEqual(weapons["agent_harumasa"]["advancedStatValue"], 4.4)
 
+    def test_pixel_weapons_from_captures_rejects_fallback_value_when_stat_key_changes(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_harumasa", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_harumasa:title": "Бур — красная ось 60 О Ур. 50/50 Базовые параметры Базовая сила атаки 521",
+                    "amplifier_0_agent_harumasa:info": "Бур — красная ось х 60 Ур. 50/50 Базовые параметры Базовая сила атаки продвинутые параметры восстановление энергии Эффект амплификатора Следующие эффекты можно использовать для агентов со",
+                    "amplifier_0_agent_harumasa:advanced": "",
+                    "amplifier_0_agent_harumasa:advanced_fallback": "Ур. О Базовая сила атаки Продвинутые параметры Шанс крит попадания Эффект амплификатора 521 24.0%",
+                    "amplifier_0_agent_harumasa:effect": "Эффект амплификатора следующие эффекты можно использовать для агентов со специальностью Нападение",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 3,
+                            "pageIndex": 3,
+                        }
+                    ]
+                },
+                {(3, 3): "agent_harumasa"},
+                {},
+                "RU",
+            )
+
+        self.assertEqual(weapons["agent_harumasa"]["weaponId"], "amp_drill_rig_red_axis")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
+        self.assertNotIn("advancedStatValue", weapons["agent_harumasa"])
+        self.assertEqual(reasons, ["amplifier_detail_advanced_stat_missing:agent_harumasa"])
+
+    def test_pixel_weapons_from_captures_ignores_optional_fallback_crop_failure(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_harumasa", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "crop_advanced_stat_fallback_image",
+                side_effect=RuntimeError("fallback crop failed"),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_harumasa:title": "Бур — красная ось 60 О Ур. 50/50 Базовые параметры Базовая сила атаки 521",
+                    "amplifier_0_agent_harumasa:info": "Бур — красная ось х 60 Ур. 50/50 Базовые параметры Базовая сила атаки продвинутые параметры восстановление энергии Эффект амплификатора Следующие эффекты можно использовать для агентов со",
+                    "amplifier_0_agent_harumasa:advanced": "Ур. О Базовая сила атаки Продвинутые параметры Восстановление энергии Эффект амплификатора 521 440/0",
+                    "amplifier_0_agent_harumasa:effect": "Эффект амплификатора следующие эффекты можно использовать для агентов со специальностью Нападение",
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 3,
+                            "pageIndex": 3,
+                        }
+                    ]
+                },
+                {(3, 3): "agent_harumasa"},
+                {},
+                "RU",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
+        self.assertEqual(weapons["agent_harumasa"]["advancedStatValue"], 4.4)
+
     def test_pixel_discs_from_captures_uses_title_ocr_fallback_for_low_conf_predictions(self) -> None:
         prediction = type("Prediction", (), {"label": "set_astral_voice", "confidence": 0.61})()
 

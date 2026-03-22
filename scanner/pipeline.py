@@ -1097,7 +1097,7 @@ def _pixel_weapons_from_captures(
                 crop_advanced_stat_fallback_image(source_path, advanced_fallback_crop_path)
                 crops.append({"id": f"{capture_id}:advanced_fallback", "path": str(advanced_fallback_crop_path)})
             except Exception:
-                reasons.append(f"amplifier_detail_advanced_fallback_crop_failed:{agent_id}:{index}")
+                pass
             try:
                 effect_crop_path = crop_dir / f"{capture_id}_effect.png"
                 crop_effect_image(source_path, effect_crop_path)
@@ -1142,7 +1142,12 @@ def _pixel_weapons_from_captures(
                 ),
                 effect_text=effect_text,
             )
-            if retry_readout is not None and retry_readout.advanced_stat_value not in (None, ""):
+            if (
+                retry_readout is not None
+                and retry_readout.identity.weapon_id == readout.identity.weapon_id
+                and retry_readout.advanced_stat_key == readout.advanced_stat_key
+                and retry_readout.advanced_stat_value not in (None, "")
+            ):
                 readout = retry_readout
         if readout is None:
             reasons.append(f"amplifier_detail_unclassified:{agent_id}")

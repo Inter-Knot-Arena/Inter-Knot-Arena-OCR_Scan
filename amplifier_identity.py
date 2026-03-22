@@ -29,8 +29,8 @@ EN_LANGUAGE_TAG = "en-US"
 RU_LANGUAGE_TAG = "ru"
 
 _DETAIL_FIELD_EMPTY_VALUES = (None, "", [], {})
-_BASE_MARKERS = ("base stat", "базовые параметры")
-_ADVANCED_MARKERS = ("advanced stat", "продвинутые параметры")
+_BASE_MARKERS = ("base stat", "base stats", "базовые параметры")
+_ADVANCED_MARKERS = ("advanced stat", "advanced stats", "продвинутые параметры")
 _EFFECT_MARKERS = ("w engine effect", "wengine effect", "w-engine effect", "эффект амплификатора")
 _BASE_STAT_ALIASES = (
     ("attack_flat", ("base atk", "base attack", "базовая сила атаки", "сила атаки", "atk", "attack", "атк")),
@@ -423,22 +423,14 @@ def _segment_between_markers(text: str, start_markers: Sequence[str], end_marker
     if not normalized:
         return ""
 
-    start_index = -1
-    matched_start = ""
-    for marker in start_markers:
-        idx = normalized.find(marker)
-        if idx >= 0 and (start_index < 0 or idx < start_index):
-            start_index = idx
-            matched_start = marker
-    if start_index < 0:
+    start_span = _find_marker_span(normalized, start_markers)
+    if start_span is None:
         return ""
-
-    segment_start = start_index + len(matched_start)
+    segment_start = start_span[1]
     end_index = len(normalized)
-    for marker in end_markers:
-        idx = normalized.find(marker, segment_start)
-        if idx >= 0:
-            end_index = min(end_index, idx)
+    end_span = _find_marker_span(normalized, end_markers, start=segment_start)
+    if end_span is not None:
+        end_index = end_span[0]
     return normalized[segment_start:end_index].strip()
 
 
@@ -676,21 +668,48 @@ def _segment_after_alias(text: str, aliases: Sequence[str]) -> str:
     return normalized[best_index + len(matched_alias) :].strip()
 
 
+def _find_marker_span(
+    normalized_text: str,
+    markers: Sequence[str],
+    *,
+    start: int = 0,
+) -> tuple[int, int] | None:
+    best_span: tuple[int, int] | None = None
+    haystack = normalized_text[start:]
+    if not haystack:
+        return None
+
+    for marker in markers:
+        normalized_marker = _normalize_detail_text(marker)
+        if not normalized_marker:
+            continue
+        pattern = (
+            r"(?<![0-9a-zA-Z\u0400-\u04FF])"
+            + re.escape(normalized_marker)
+            + r"(?![0-9a-zA-Z\u0400-\u04FF])"
+        )
+        match = re.search(pattern, haystack)
+        if match is not None:
+            span = (start + match.start(), start + match.end())
+        else:
+            idx = haystack.find(normalized_marker)
+            if idx < 0:
+                continue
+            span = (start + idx, start + idx + len(normalized_marker))
+        if best_span is None or span[0] < best_span[0]:
+            best_span = span
+    return best_span
+
+
 def _segment_after_markers(text: str, start_markers: Sequence[str]) -> str:
     normalized = _normalize_detail_text(text)
     if not normalized:
         return ""
 
-    start_index = -1
-    matched_marker = ""
-    for marker in start_markers:
-        idx = normalized.find(marker)
-        if idx >= 0 and (start_index < 0 or idx < start_index):
-            start_index = idx
-            matched_marker = marker
-    if start_index < 0:
+    marker_span = _find_marker_span(normalized, start_markers)
+    if marker_span is None:
         return ""
-    return normalized[start_index + len(matched_marker) :].strip()
+    return normalized[marker_span[1] :].strip()
 
 
 def _numeric_equal(left: int | float | None, right: int | float | None) -> bool:

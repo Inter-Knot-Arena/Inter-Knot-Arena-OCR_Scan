@@ -347,6 +347,24 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertEqual(readout.advanced_stat_key, "energy_regen")
         self.assertEqual(readout.advanced_stat_value, 4.4)
 
+    def test_parse_amplifier_detail_keeps_full_advanced_text_when_plural_marker_trails_value(self) -> None:
+        readout = parse_amplifier_detail(
+            "Deep Sea Visitor Lv. 60/60 Base ATK 713",
+            info_text=(
+                "Deep Sea Visitor Lv. 60/60 "
+                "Base Stats Base ATK "
+                "Advanced Stats Crit Rate "
+                "W-Engine Effect 713 24.0%"
+            ),
+            advanced_text="24.0% Advanced Stats",
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.base_stat_value, 713)
+        self.assertEqual(readout.advanced_stat_key, "crit_rate_pct")
+        self.assertEqual(readout.advanced_stat_value, 24.0)
+
     @unittest.skipUnless(_ELLEN_LIVE_AMP_SAMPLE.exists(), "local Ellen live amplifier sample is unavailable")
     def test_parse_amplifier_detail_recovers_ellen_advanced_value_from_live_sample(self) -> None:
         readout = self._read_live_sample(_ELLEN_LIVE_AMP_SAMPLE)
