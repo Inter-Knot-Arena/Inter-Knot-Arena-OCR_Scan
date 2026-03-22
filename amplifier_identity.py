@@ -20,6 +20,7 @@ WIN_OCR_SCRIPT = ROOT / "scripts" / "win_ocr_batch.ps1"
 TITLE_ALIAS_CONTRACT_PATH = ROOT / "contracts" / "amplifier-title-aliases.json"
 TITLE_CROP_BOX = (0.28, 0.10, 0.66, 0.36)
 INFO_CROP_BOX = (0.27, 0.07, 0.54, 0.53)
+ADVANCED_STAT_CROP_BOX = (0.28, 0.32, 0.50, 0.43)
 EFFECT_CROP_BOX = (0.30, 0.42, 0.63, 0.72)
 _VALID_LEVEL_CAPS = {10, 20, 30, 40, 50, 60}
 
@@ -145,6 +146,10 @@ def crop_title_image(source_path: Path, output_path: Path) -> None:
 
 def crop_info_image(source_path: Path, output_path: Path) -> None:
     _crop_fractional_image(source_path, output_path, INFO_CROP_BOX, grayscale=False, scale=1)
+
+
+def crop_advanced_stat_image(source_path: Path, output_path: Path) -> None:
+    _crop_fractional_image(source_path, output_path, ADVANCED_STAT_CROP_BOX, grayscale=True, scale=3)
 
 
 def crop_effect_image(source_path: Path, output_path: Path) -> None:
@@ -732,6 +737,7 @@ def parse_amplifier_detail(
     title_text: str,
     *,
     info_text: str = "",
+    advanced_text: str = "",
     effect_text: str = "",
 ) -> AmplifierDetailReadout | None:
     identity = classify_amplifier_text(title_text)
@@ -751,7 +757,9 @@ def parse_amplifier_detail(
     base_stat_value = None
     base_value_index: int | None = None
 
-    advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
+    advanced_stat_key = _match_stat_key(advanced_text, _ADVANCED_STAT_ALIASES)
+    if advanced_stat_key is None:
+        advanced_stat_key = _match_stat_key(advanced_segment, _ADVANCED_STAT_ALIASES)
     title_base_values = [
         value
         for _, value in _extract_numeric_values(
@@ -766,6 +774,18 @@ def parse_amplifier_detail(
         value
         for _, value in _extract_numeric_values(
             _segment_after_alias(effect_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+        )
+    ]
+    advanced_line_values = [
+        value
+        for _, value in _extract_numeric_values(
+            _segment_after_alias(advanced_text, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
+        )
+    ]
+    advanced_segment_values = [
+        value
+        for _, value in _extract_numeric_values(
+            _segment_after_alias(advanced_segment, _aliases_for_stat_key(advanced_stat_key, _ADVANCED_STAT_ALIASES))
         )
     ]
     ordered_token_values = _extract_numeric_values(info_segment_text)
@@ -811,7 +831,11 @@ def parse_amplifier_detail(
     remaining_effect_values = [
         value for value in effect_values if not _numeric_equal(value, base_stat_value)
     ]
-    advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, remaining_effect_values)
+    advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, advanced_line_values)
+    if advanced_stat_value is None:
+        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, advanced_segment_values)
+    if advanced_stat_value is None:
+        advanced_stat_value = _pick_first_compatible_value(advanced_stat_key, remaining_effect_values)
     if advanced_stat_value is None and base_value_index is not None:
         advanced_stat_value = _pick_first_compatible_value(
             advanced_stat_key,

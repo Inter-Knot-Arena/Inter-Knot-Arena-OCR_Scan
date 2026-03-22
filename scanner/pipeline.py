@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 
 from amplifier_identity import (
+    crop_advanced_stat_image,
     crop_effect_image,
     crop_info_image,
     crop_title_image,
@@ -1046,6 +1047,12 @@ def _pixel_weapons_from_captures(
             except Exception:
                 reasons.append(f"amplifier_detail_info_crop_failed:{agent_id}:{index}")
             try:
+                advanced_crop_path = crop_dir / f"{capture_id}_advanced.png"
+                crop_advanced_stat_image(source_path, advanced_crop_path)
+                crops.append({"id": f"{capture_id}:advanced", "path": str(advanced_crop_path)})
+            except Exception:
+                reasons.append(f"amplifier_detail_advanced_crop_failed:{agent_id}:{index}")
+            try:
                 effect_crop_path = crop_dir / f"{capture_id}_effect.png"
                 crop_effect_image(source_path, effect_crop_path)
                 crops.append({"id": f"{capture_id}:effect", "path": str(effect_crop_path)})
@@ -1066,8 +1073,14 @@ def _pixel_weapons_from_captures(
         agent_id = _as_text(meta.get("agentId"))
         title_text = _as_text(ocr_results.get(f"{capture_id}:title"))
         info_text = _as_text(ocr_results.get(f"{capture_id}:info"))
+        advanced_text = _as_text(ocr_results.get(f"{capture_id}:advanced"))
         effect_text = _as_text(ocr_results.get(f"{capture_id}:effect"))
-        readout = parse_amplifier_detail(title_text, info_text=info_text, effect_text=effect_text)
+        readout = parse_amplifier_detail(
+            title_text,
+            info_text=info_text,
+            advanced_text=advanced_text,
+            effect_text=effect_text,
+        )
         if readout is None:
             reasons.append(f"amplifier_detail_unclassified:{agent_id}")
             continue
