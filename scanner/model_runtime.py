@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,13 +18,38 @@ MODEL_MANIFEST_PATH = MODEL_DIR / "model_manifest.json"
 _CUDA_DLLS_PRELOADED = False
 
 
+def _resolve_cuda_preload_directory() -> str | None:
+    candidates: list[Path] = []
+
+    bundle_root = os.getenv("IKA_BUNDLE_ROOT", "").strip()
+    if bundle_root:
+        candidates.append(Path(bundle_root).resolve() / "cuda")
+
+    executable_dir = Path(sys.executable).resolve().parent
+    candidates.append(executable_dir.parent / "cuda")
+    candidates.append(executable_dir / "cuda")
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = str(candidate).lower()
+        if normalized in seen or not candidate.is_dir():
+            continue
+        seen.add(normalized)
+        return str(candidate)
+    return None
+
+
 def _preload_cuda_runtime_dlls() -> None:
     global _CUDA_DLLS_PRELOADED
     if _CUDA_DLLS_PRELOADED:
         return
     preload = getattr(ort, "preload_dlls", None)
     if callable(preload):
-        preload()
+        directory = _resolve_cuda_preload_directory()
+        if directory:
+            preload(directory=directory)
+        else:
+            preload()
     _CUDA_DLLS_PRELOADED = True
 
 
