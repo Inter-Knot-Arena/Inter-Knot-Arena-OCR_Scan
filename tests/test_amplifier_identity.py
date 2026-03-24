@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from amplifier_identity import (
+    crop_advanced_stat_fallback_image,
     crop_advanced_stat_image,
     crop_effect_image,
     crop_info_image,
@@ -33,16 +34,19 @@ class AmplifierIdentityTests(unittest.TestCase):
             title_path = temp_root / "title.png"
             info_path = temp_root / "info.png"
             advanced_path = temp_root / "advanced.png"
+            advanced_fallback_path = temp_root / "advanced_fallback.png"
             effect_path = temp_root / "effect.png"
             crop_title_image(source_path, title_path)
             crop_info_image(source_path, info_path)
             crop_advanced_stat_image(source_path, advanced_path)
+            crop_advanced_stat_fallback_image(source_path, advanced_fallback_path)
             crop_effect_image(source_path, effect_path)
             ocr_results = run_winrt_ocr_batch(
                 [
                     {"id": "title", "path": str(title_path)},
                     {"id": "info", "path": str(info_path)},
                     {"id": "advanced", "path": str(advanced_path)},
+                    {"id": "advanced_fallback", "path": str(advanced_fallback_path)},
                     {"id": "effect", "path": str(effect_path)},
                 ],
                 language_tag=language_tag_for_locale("RU"),
@@ -52,6 +56,7 @@ class AmplifierIdentityTests(unittest.TestCase):
             str(ocr_results.get("title") or ""),
             info_text=str(ocr_results.get("info") or ""),
             advanced_text=str(ocr_results.get("advanced") or ""),
+            advanced_fallback_text=str(ocr_results.get("advanced_fallback") or ""),
             effect_text=str(ocr_results.get("effect") or ""),
         )
 
@@ -392,6 +397,71 @@ class AmplifierIdentityTests(unittest.TestCase):
         self.assertEqual(readout.base_stat_value, 713)
         self.assertEqual(readout.advanced_stat_key, "crit_rate_pct")
         self.assertEqual(readout.advanced_stat_value, 24.0)
+
+    def test_parse_amplifier_detail_recovers_missing_base_value_from_fallback_crop(self) -> None:
+        readout = parse_amplifier_detail(
+            "O O The Restrained O Lv. 60/60 Base Stat Base ATK",
+            info_text=(
+                "0 NEW! The Restrained Lv. 60/60 "
+                "Base Stat Base ATK "
+                "Advanced Stat Impact "
+                "W-Engine Effect For characters with the Stun specialty, the following"
+            ),
+            advanced_text="o •use-A Advanced Stat Impact 18",
+            advanced_fallback_text="Lv. O Base ATK Advanced Stat Impact W-Engine Effect 684 18",
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_the_restrained")
+        self.assertEqual(readout.base_stat_key, "attack_flat")
+        self.assertEqual(readout.base_stat_value, 684)
+        self.assertEqual(readout.advanced_stat_key, "impact")
+        self.assertEqual(readout.advanced_stat_value, 18.0)
+
+    def test_parse_amplifier_detail_prefers_fallback_advanced_crop_over_effect_passive_percent(self) -> None:
+        readout = parse_amplifier_detail(
+            "Gilded Blossom O Lv. 60/60 Base Stat Base ATK",
+            info_text=(
+                "Gilded Blossom O Lv. 60/60 "
+                "Base Stat Base ATK "
+                "Advanced Stat ATK "
+                "W-Engine Effect For characters with the Attack specialty, the"
+            ),
+            advanced_text="Advanced Stat ATK",
+            advanced_fallback_text="Lv. O Base ATK Advanced Stat ATK W-Engine Effect 594 25 %",
+            effect_text=(
+                "W-Engine Effect For characters with the Attack specialty, the following effects can be triggered: "
+                "Extraordinary Anti-Theft Measures ATK increases by 6.9%, and DMG dealt by EX Special 1 Lv. 15/15"
+            ),
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_gilded_blossom")
+        self.assertEqual(readout.base_stat_value, 594)
+        self.assertEqual(readout.advanced_stat_key, "attack_pct")
+        self.assertEqual(readout.advanced_stat_value, 25.0)
+
+    def test_parse_amplifier_detail_recovers_energy_regen_percent_from_primary_advanced_crop(self) -> None:
+        readout = parse_amplifier_detail(
+            "-e Drill Rig - Red Axis O Lv. 50/50 Base Stat Base ATK 521",
+            info_text=(
+                "Drill Rig - Red Axis Lv. 50/50 "
+                "Base Stat Base ATK "
+                "Advanced Stat Energy Regen "
+                "W-Engine Effect For characters with the Attack specialty, the 521 44%"
+            ),
+            advanced_text="o •use-A Advanced Stat Energy Regen 44%",
+            advanced_fallback_text="521 Lv. O Base ATK Advanced Stat Energy Regen W-Engine Effect",
+        )
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_drill_rig_red_axis")
+        self.assertEqual(readout.base_stat_value, 521)
+        self.assertEqual(readout.advanced_stat_key, "energy_regen")
+        self.assertEqual(readout.advanced_stat_value, 4.4)
 
     def test_recover_missing_advanced_stat_value_uses_fallback_crop_without_reclassifying_key(self) -> None:
         recovered = recover_missing_advanced_stat_value(

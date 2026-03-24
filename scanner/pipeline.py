@@ -57,6 +57,7 @@ _EQUIPMENT_DISC_SLOT_CENTERS = {
     6: (0.825, 0.284),
 }
 _EQUIPMENT_DISC_PATCH = (0.084, 0.138)
+_EQUIPMENT_DISC_PATCH_REFINED = (0.12, 0.20)
 _EQUIPMENT_OCCUPIED_SCORE_THRESHOLD = 0.58
 _EQUIPMENT_EMPTY_SCORE_THRESHOLD = 0.34
 _EQUIPMENT_WEAPON_ONLY_OCCUPIED_SCORE_THRESHOLD = 0.63
@@ -888,6 +889,12 @@ def _derive_equipment_overview_occupancy_from_image(
             patch_size=_EQUIPMENT_DISC_PATCH,
         )
         if present is None:
+            present, confidence = _presence_from_patch(
+                image,
+                center=center,
+                patch_size=_EQUIPMENT_DISC_PATCH_REFINED,
+            )
+        if present is None:
             reasons.append(f"equipment_overview_slot_ambiguous:{slot_index}")
             continue
         disc_slot_occupancy[str(slot_index)] = present
@@ -1255,6 +1262,7 @@ def _pixel_weapons_from_captures(
             title_text,
             info_text=info_text,
             advanced_text=advanced_text,
+            advanced_fallback_text=advanced_fallback_text,
             effect_text=effect_text,
             empty_state_text=empty_state_text,
         )

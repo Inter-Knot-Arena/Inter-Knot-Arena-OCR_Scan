@@ -841,10 +841,11 @@ def _normalize_token_value_for_stat_key(
     value: int | float,
 ) -> int | float:
     normalized = _normalize_stat_value_for_key(stat_key, value)
+    normalized_token = _normalize_numeric_token(token)
     if (
         stat_key == "energy_regen"
         and isinstance(normalized, (int, float))
-        and _normalize_numeric_token(token).endswith("/0")
+        and (normalized_token.endswith("/0") or "%" in normalized_token)
     ):
         numeric = float(normalized)
         while numeric > 40.0:
@@ -897,6 +898,22 @@ def recover_missing_advanced_stat_value(
     return _pick_first_compatible_token_value(stat_key, effect_values)
 
 
+def recover_missing_base_stat_value(
+    stat_key: str | None,
+    *,
+    fallback_text: str = "",
+) -> int | float | None:
+    alias_values = _aliases_for_stat_key(stat_key, _BASE_STAT_ALIASES)
+    if not stat_key or not fallback_text:
+        return None
+
+    candidate_text = _segment_after_alias(fallback_text, alias_values) if alias_values else fallback_text
+    candidate_text = candidate_text or fallback_text
+    candidate_values = [value for _, value in _extract_numeric_values(candidate_text)]
+    recovered, _ = _pick_best_base_value(stat_key, candidate_values)
+    return recovered
+
+
 def _pick_best_base_value(
     stat_key: str | None,
     values: Sequence[int | float],
@@ -929,6 +946,7 @@ def parse_amplifier_detail(
     *,
     info_text: str = "",
     advanced_text: str = "",
+    advanced_fallback_text: str = "",
     effect_text: str = "",
     empty_state_text: str = "",
 ) -> AmplifierDetailReadout | None:
@@ -1020,6 +1038,11 @@ def parse_amplifier_detail(
     if base_stat_value is None and len(ordered_values) >= 2:
         base_stat_value = ordered_values[0]
         base_value_index = 0
+    if base_stat_value is None and advanced_fallback_text:
+        base_stat_value = recover_missing_base_stat_value(
+            base_stat_key,
+            fallback_text=advanced_fallback_text,
+        )
     if base_stat_key is None and base_stat_value is not None:
         # W-Engine base stat is ATK in every reviewed sample and runtime crop.
         base_stat_key = "attack_flat"
@@ -1032,6 +1055,14 @@ def parse_amplifier_detail(
     advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, advanced_line_token_values)
     if advanced_stat_value is None:
         advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, advanced_segment_token_values)
+    if advanced_stat_value is None and advanced_fallback_text:
+        advanced_stat_value = recover_missing_advanced_stat_value(
+            advanced_stat_key,
+            advanced_text=advanced_text_segment,
+            fallback_advanced_text=advanced_fallback_text,
+            effect_text="",
+            excluding=base_stat_value,
+        )
     if advanced_stat_value is None:
         advanced_stat_value = _pick_first_compatible_token_value(advanced_stat_key, remaining_effect_token_values)
     if advanced_stat_value is None and base_value_index is not None:

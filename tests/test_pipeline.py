@@ -18,6 +18,9 @@ _AMBIGUOUS_WEAPON_ONLY_AMPLIFIER_SAMPLE = Path(
 _HARUMASA_LIVE_AMP_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-03\39_amplifier_detail_agent_slot_3_page_03_agent_3_amplifier.png"
 )
+_GRACE_EQUIPMENT_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\runtime_temp_fast2_20260325_013420\screen_captures\0f3c8f15a58641c49808c80ad02053a4-page-05\09_equipment_agent_slot_2_page_05_agent_2_equipment.png"
+)
 _WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-07\20_equipment_agent_slot_2_page_07_agent_2_equipment.png"
 )
@@ -689,6 +692,57 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons["agent_harumasa"]["advancedStatKey"], "energy_regen")
         self.assertEqual(weapons["agent_harumasa"]["advancedStatValue"], 4.4)
 
+    def test_pixel_weapons_from_captures_prefers_fallback_advanced_crop_over_effect_passive_percent(self) -> None:
+        with (
+            patch.object(
+                pipeline,
+                "_resolve_capture_agent_id",
+                return_value=("agent_soldier_11", "screen_capture_agent_id", 0.99),
+            ),
+            patch.object(
+                pipeline,
+                "run_winrt_ocr_batch",
+                return_value={
+                    "amplifier_0_agent_soldier_11:title": "Gilded Blossom O Lv. 60/60 Base Stat Base ATK",
+                    "amplifier_0_agent_soldier_11:info": (
+                        "Gilded Blossom O Lv. 60/60 "
+                        "Base Stat Base ATK "
+                        "Advanced Stat ATK "
+                        "W-Engine Effect For characters with the Attack specialty, the"
+                    ),
+                    "amplifier_0_agent_soldier_11:advanced": "Advanced Stat ATK",
+                    "amplifier_0_agent_soldier_11:advanced_fallback": (
+                        "Lv. O Base ATK Advanced Stat ATK W-Engine Effect 594 25 %"
+                    ),
+                    "amplifier_0_agent_soldier_11:effect": (
+                        "W-Engine Effect For characters with the Attack specialty, the following effects can be triggered: "
+                        "Extraordinary Anti-Theft Measures ATK increases by 6.9%, and DMG dealt by EX Special 1 Lv. 15/15"
+                    ),
+                },
+            ),
+        ):
+            weapons, reasons = pipeline._pixel_weapons_from_captures(
+                {
+                    "screenCaptures": [
+                        {
+                            "role": "amplifier_detail",
+                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "agentSlotIndex": 2,
+                            "pageIndex": 2,
+                        }
+                    ]
+                },
+                {(2, 2): "agent_soldier_11"},
+                {},
+                "EN",
+            )
+
+        self.assertEqual(reasons, [])
+        self.assertEqual(weapons["agent_soldier_11"]["weaponId"], "amp_gilded_blossom")
+        self.assertEqual(weapons["agent_soldier_11"]["baseStatValue"], 594)
+        self.assertEqual(weapons["agent_soldier_11"]["advancedStatKey"], "attack_pct")
+        self.assertEqual(weapons["agent_soldier_11"]["advancedStatValue"], 25.0)
+
     def test_pixel_discs_from_captures_uses_title_ocr_fallback_for_low_conf_predictions(self) -> None:
         prediction = type("Prediction", (), {"label": "set_astral_voice", "confidence": 0.61})()
 
@@ -811,6 +865,7 @@ class PipelineTests(unittest.TestCase):
                 (True, 0.91),
                 (False, 0.92),
                 (None, 0.52),
+                (None, 0.54),
                 (False, 0.94),
                 (True, 0.88),
                 (False, 0.9),
@@ -825,12 +880,53 @@ class PipelineTests(unittest.TestCase):
             {"1": True, "2": False, "4": False, "5": True, "6": False},
         )
 
+    def test_equipment_overview_occupancy_retries_ambiguous_slot_with_wider_patch(self) -> None:
+        image = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        calls: list[tuple[tuple[float, float], tuple[float, float]]] = []
+
+        def fake_presence_from_patch(_image: np.ndarray, *, center: tuple[float, float], patch_size: tuple[float, float]) -> tuple[bool | None, float]:
+            calls.append((center, patch_size))
+            if center == pipeline._EQUIPMENT_WEAPON_CENTER:
+                return True, 0.83
+            if center == pipeline._EQUIPMENT_DISC_SLOT_CENTERS[3] and patch_size == pipeline._EQUIPMENT_DISC_PATCH:
+                return None, 0.52
+            if center == pipeline._EQUIPMENT_DISC_SLOT_CENTERS[3] and patch_size == pipeline._EQUIPMENT_DISC_PATCH_REFINED:
+                return True, 0.61
+            if center in {pipeline._EQUIPMENT_DISC_SLOT_CENTERS[1], pipeline._EQUIPMENT_DISC_SLOT_CENTERS[5]}:
+                return True, 0.88
+            return False, 0.91
+
+        with patch.object(pipeline, "_presence_from_patch", side_effect=fake_presence_from_patch):
+            occupancy, reasons = pipeline._derive_equipment_overview_occupancy_from_image(image)
+
+        self.assertEqual(reasons, [])
+        self.assertTrue(occupancy["weaponPresent"])
+        self.assertEqual(
+            occupancy["discSlotOccupancy"],
+            {"1": True, "2": False, "3": True, "4": False, "5": True, "6": False},
+        )
+        self.assertIn(
+            (pipeline._EQUIPMENT_DISC_SLOT_CENTERS[3], pipeline._EQUIPMENT_DISC_PATCH_REFINED),
+            calls,
+        )
+
     def test_inspect_equipment_capture_keeps_ambiguous_weapon_only_overview_open(self) -> None:
         inspection = pipeline.inspect_equipment_capture(_AMBIGUOUS_WEAPON_ONLY_OVERVIEW_SAMPLE)
 
         self.assertNotIn("weaponPresent", inspection)
         self.assertEqual(inspection["discSlotOccupancy"], {str(slot): False for slot in range(1, 7)})
         self.assertIn("equipment_overview_weapon_presence_ambiguous", inspection["lowConfReasons"])
+
+    @unittest.skipUnless(_GRACE_EQUIPMENT_SAMPLE.exists(), "local Grace equipment sample is unavailable")
+    def test_inspect_equipment_capture_recovers_live_grace_disc_occupancy(self) -> None:
+        inspection = pipeline.inspect_equipment_capture(_GRACE_EQUIPMENT_SAMPLE)
+
+        self.assertFalse(inspection["weaponPresent"])
+        self.assertEqual(
+            inspection["discSlotOccupancy"],
+            {"1": True, "2": False, "3": True, "4": True, "5": True, "6": True},
+        )
+        self.assertEqual(inspection["lowConfReasons"], [])
 
     def test_inspect_equipment_capture_keeps_weapon_only_agent_equipped(self) -> None:
         inspection = pipeline.inspect_equipment_capture(_WEAPON_ONLY_OVERVIEW_SAMPLE)
