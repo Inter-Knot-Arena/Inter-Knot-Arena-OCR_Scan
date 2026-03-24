@@ -2078,6 +2078,37 @@ def _top_level_equipment_source(agents: list[dict[str, Any]]) -> str:
     return "missing"
 
 
+def _has_resolved_agent_detail_mindscape(agent: dict[str, Any] | None) -> bool:
+    if not isinstance(agent, dict):
+        return False
+    if agent.get("mindscape") is None or agent.get("mindscapeCap") is None:
+        return False
+    confidence_by_field = agent.get("confidenceByField")
+    if not isinstance(confidence_by_field, dict):
+        return False
+    return float(confidence_by_field.get("mindscape", 0.0) or 0.0) >= 0.50
+
+
+def _backfill_resolved_agent_detail_field_sources(
+    agents: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for agent in agents:
+        if not isinstance(agent, dict):
+            normalized.append(agent)
+            continue
+        payload = dict(agent)
+        field_sources = dict(payload.get("fieldSources") or {})
+        if _has_resolved_agent_detail_mindscape(payload):
+            if _as_text(field_sources.get("mindscape")) in {"", "missing"}:
+                field_sources["mindscape"] = "agent_detail_digit_ocr"
+            if _as_text(field_sources.get("mindscapeCap")) in {"", "missing"}:
+                field_sources["mindscapeCap"] = "agent_detail_digit_ocr"
+        payload["fieldSources"] = field_sources
+        normalized.append(payload)
+    return normalized
+
+
 def _filter_resolved_low_conf_reasons(
     agents: list[dict[str, Any]],
     reasons: list[str],
@@ -2142,6 +2173,14 @@ def _filter_resolved_low_conf_reasons(
         if not matched and reason.startswith("amplifier_detail_unclassified:"):
             agent = by_agent.get(reason.split(":", 1)[1])
             if isinstance(agent, dict) and agent.get("weaponPresent") is False:
+                matched = True
+        if not matched and reason.startswith("agent_detail_mindscape_low_conf:"):
+            agent = by_agent.get(reason.split(":", 1)[1])
+            if _has_resolved_agent_detail_mindscape(agent):
+                matched = True
+        if not matched and ":agent_detail_mindscape_" in reason:
+            agent = by_agent.get(reason.split(":", 1)[0])
+            if _has_resolved_agent_detail_mindscape(agent):
                 matched = True
         for suffix, predicate in (
             (".weapon_missing", lambda agent: isinstance(agent.get("weapon"), dict) and _as_text(agent.get("weapon", {}).get("weaponId")) != ""),
@@ -2353,6 +2392,7 @@ def scan_roster(
     )
     agents, used_pixel_weapons = _enrich_agents_with_pixel_weapons(agents, pixel_weapons_by_agent)
     agents, used_pixel_discs = _enrich_agents_with_pixel_discs(agents, pixel_discs_by_agent)
+    agents = _backfill_resolved_agent_detail_field_sources(agents)
     if not agents:
         low_conf_reasons.append("agents_missing")
     else:

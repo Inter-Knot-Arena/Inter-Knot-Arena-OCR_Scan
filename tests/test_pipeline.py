@@ -846,6 +846,37 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, ["uid_low_confidence"])
 
+    def test_backfill_resolved_agent_detail_field_sources_sets_mindscape_source(self) -> None:
+        agent = pipeline._default_agent_payload("agent_piper", 0.99)
+        agent["mindscape"] = 3
+        agent["mindscapeCap"] = 6
+        agent["confidenceByField"]["mindscape"] = 0.7582
+        agent["fieldSources"]["mindscape"] = "missing"
+        agent["fieldSources"]["mindscapeCap"] = "missing"
+
+        normalized = pipeline._backfill_resolved_agent_detail_field_sources([agent])
+
+        self.assertEqual(normalized[0]["fieldSources"]["mindscape"], "agent_detail_digit_ocr")
+        self.assertEqual(normalized[0]["fieldSources"]["mindscapeCap"], "agent_detail_digit_ocr")
+
+    def test_filter_resolved_low_conf_reasons_drops_resolved_agent_detail_mindscape_noise(self) -> None:
+        agent = pipeline._default_agent_payload("agent_piper", 0.99)
+        agent["mindscape"] = 3
+        agent["mindscapeCap"] = 6
+        agent["confidenceByField"]["mindscape"] = 0.7582
+
+        filtered = pipeline._filter_resolved_low_conf_reasons(
+            [agent],
+            [
+                "agent_detail_mindscape_low_conf:agent_piper",
+                "agent_piper:agent_detail_mindscape_value_missing",
+                "agent_piper:agent_detail_mindscape_denominator_invalid",
+                "uid_low_confidence",
+            ],
+        )
+
+        self.assertEqual(filtered, ["uid_low_confidence"])
+
     def test_enrich_agents_with_agent_detail_pixels_accepts_near_threshold_level_confidence(self) -> None:
         agent = pipeline._default_agent_payload("agent_anby", 0.97)
         agent["level"] = None
