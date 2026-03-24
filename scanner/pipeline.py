@@ -2241,6 +2241,17 @@ def _drop_stale_top_level_confidence_reasons(
     return filtered
 
 
+def _agent_equipment_confidence(agent: dict[str, Any]) -> float:
+    confidence_by_field = agent.get("confidenceByField")
+    if not isinstance(confidence_by_field, dict):
+        return 0.0
+
+    weapon_confidence = float(confidence_by_field.get("weapon", 0.0) or 0.0)
+    disc_confidence = float(confidence_by_field.get("discs", 0.0) or 0.0)
+    occupancy_confidence = float(confidence_by_field.get("occupancy", 0.0) or 0.0)
+    return round((weapon_confidence + max(disc_confidence, occupancy_confidence)) / 2.0, 4)
+
+
 def _infer_full_roster_coverage(session_context: Dict[str, Any]) -> bool:
     for key in ("fullRosterCoverage", "fullRosterTerminalSliceReached", "terminalSliceReached"):
         value = session_context.get(key)
@@ -2417,11 +2428,7 @@ def scan_roster(
             sum(agent["confidenceByField"]["agentId"] for agent in agents) / max(len(agents), 1), 4
         ),
         "equipment": round(
-            sum(
-                (agent["confidenceByField"]["weapon"] + agent["confidenceByField"]["discs"]) / 2.0
-                for agent in agents
-            )
-            / max(len(agents), 1),
+            sum(_agent_equipment_confidence(agent) for agent in agents) / max(len(agents), 1),
             4,
         ),
     }

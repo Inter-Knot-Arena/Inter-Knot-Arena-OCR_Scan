@@ -942,6 +942,16 @@ class PipelineTests(unittest.TestCase):
 
         self.assertEqual(filtered, ["uid_low_confidence"])
 
+    def test_agent_equipment_confidence_prefers_occupancy_when_disc_identities_are_missing(self) -> None:
+        agent = pipeline._default_agent_payload("agent_anby", 0.99)
+        agent["confidenceByField"]["weapon"] = 0.995
+        agent["confidenceByField"]["discs"] = 0.18
+        agent["confidenceByField"]["occupancy"] = 0.8503
+
+        confidence = pipeline._agent_equipment_confidence(agent)
+
+        self.assertEqual(confidence, 0.9226)
+
     def test_backfill_resolved_agent_detail_field_sources_sets_mindscape_source(self) -> None:
         agent = pipeline._default_agent_payload("agent_piper", 0.99)
         agent["mindscape"] = 3
