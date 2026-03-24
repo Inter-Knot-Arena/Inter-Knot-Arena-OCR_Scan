@@ -2307,7 +2307,7 @@ def scan_roster(
                 f"locale={locale}",
                 f"resolution={resolution}",
                 "supported_locales=RU|EN",
-                "layout_family=16:9_fractional_crops",
+                "layout_family=widescreen_fractional_crops",
             ],
         )
 

@@ -81,6 +81,39 @@ class ScreenRuntimeTests(unittest.TestCase):
             self.assertEqual(normalized["uidImagePath"], str(derived_uid))
             self.assertEqual(normalized["anchors"], {"profile": True, "agents": True, "equipment": True})
 
+    def test_normalize_runtime_resolution_accepts_16_10_widescreen_family(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            wuxga = temp_root / "wuxga.png"
+            wqxga = temp_root / "wqxga.png"
+            ultrawide = temp_root / "ultrawide.png"
+
+            self.assertTrue(cv2.imwrite(str(wuxga), np.zeros((1200, 1920, 3), dtype=np.uint8)))
+            self.assertTrue(cv2.imwrite(str(wqxga), np.zeros((1600, 2560, 3), dtype=np.uint8)))
+            self.assertTrue(cv2.imwrite(str(ultrawide), np.zeros((1080, 2560, 3), dtype=np.uint8)))
+
+            self.assertEqual(
+                screen_runtime.normalize_runtime_resolution(
+                    {"screenCaptures": [{"role": "roster", "path": str(wuxga)}]},
+                    "auto",
+                ),
+                "1080p",
+            )
+            self.assertEqual(
+                screen_runtime.normalize_runtime_resolution(
+                    {"screenCaptures": [{"role": "roster", "path": str(wqxga)}]},
+                    "auto",
+                ),
+                "1440p",
+            )
+            self.assertEqual(
+                screen_runtime.normalize_runtime_resolution(
+                    {"screenCaptures": [{"role": "roster", "path": str(ultrawide)}]},
+                    "auto",
+                ),
+                "",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
