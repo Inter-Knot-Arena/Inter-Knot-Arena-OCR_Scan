@@ -17,6 +17,9 @@ _LIVE_PROBE_SAMPLE = Path(
 _BEN_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_ben\agent_detail.png")
 _BILLY_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_billy\agent_detail.png")
 _LUCY_SAMPLE = Path(r"D:\IKA_DATA\ocr\drops\batch_20260309_agents_129_255\agent_lucy\agent_detail.png")
+_PIPER_LIVE_CAPTURE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-02\37_agent_detail_agent_slot_3_page_02_agent_3_detail.png"
+)
 
 
 def _sample_path(name: str) -> Path:
@@ -159,6 +162,18 @@ class AgentDetailRuntimeTests(unittest.TestCase):
         self.assertEqual(reading.mindscape, 3)
         self.assertEqual(reading.mindscape_cap, 6)
         self.assertGreaterEqual(reading.mindscape_confidence, 0.6)
+
+    @unittest.skipUnless(_PIPER_LIVE_CAPTURE.exists(), "live Piper capture is unavailable")
+    def test_read_agent_detail_recovers_piper_live_capture_mindscape_three(self) -> None:
+        image = cv2.imread(str(_PIPER_LIVE_CAPTURE), cv2.IMREAD_COLOR)
+        assert image is not None
+
+        reading = agent_detail_runtime.read_agent_detail(image)
+
+        self.assertEqual(reading.mindscape, 3)
+        self.assertEqual(reading.mindscape_cap, 6)
+        self.assertGreaterEqual(reading.mindscape_confidence, 0.65)
+        self.assertEqual(reading.low_conf_reasons, [])
 
     def test_extract_stats_returns_partial_fields_with_degraded_confidence(self) -> None:
         specs = [
