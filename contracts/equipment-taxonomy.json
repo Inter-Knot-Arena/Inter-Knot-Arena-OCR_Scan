@@ -592,12 +592,13 @@
       }
     },
     {
-      "amplifierId": "amp_haiistorm_shrine",
-      "displayName": "Haiistorm Shrine",
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine",
       "aliases": [
-        "amp_haiistorm_shrine",
+        "amp_hailstorm_shrine",
+        "HaiIstorm Shrine",
         "HaiIstorm Shrine о о О",
-        "weapon_haiistorm_shrine",
+        "weapon_hailstorm_shrine",
         "haiistorm_shrine",
         "Haiistorm Shrine"
       ],
@@ -672,15 +673,16 @@
       }
     },
     {
-      "amplifierId": "amp_ii",
-      "displayName": "Ii",
+      "amplifierId": "amp_demara_battery_mark_ii",
+      "displayName": "Demara Battery Mark II",
       "aliases": [
-        "amp_ii",
+        "amp_demara_battery_mark_ii",
         "Аккумулятор демары II О",
-        "weapon_ii",
+        "Demara Battery Mark II",
         "ii",
         "Аккумулятор демары II о",
-        "Ii"
+        "Ii",
+        "weapon_ii"
       ],
       "source": {
         "catalog": "dataset_preview"

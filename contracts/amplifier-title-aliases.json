@@ -121,8 +121,8 @@
     {
       "alias": "Deep Sea Visitor",
       "normalizedAlias": "deep sea visitor",
-      "amplifierId": "amp_deep_sea_visitor_o",
-      "displayName": "Deep Sea Visitor O"
+      "amplifierId": "amp_deep_sea_visitor",
+      "displayName": "Deep Sea Visitor"
     },
     {
       "alias": "Demara Battery Mark II",
@@ -229,8 +229,14 @@
     {
       "alias": "HaiIstorm Shrine О Lv.m/60 Вазе АТК",
       "normalizedAlias": "haiistorm shrine о lv.m 60 вазе атк",
-      "amplifierId": "amp_haiistorm_shrine",
-      "displayName": "Haiistorm Shrine"
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine"
+    },
+    {
+      "alias": "HaiIstorm Shrine",
+      "normalizedAlias": "haiistorm shrine",
+      "amplifierId": "amp_hailstorm_shrine",
+      "displayName": "Hailstorm Shrine"
     },
     {
       "alias": "Hailstorm Shrine",
@@ -319,14 +325,14 @@
     {
       "alias": "Аккумулятор демары II",
       "normalizedAlias": "аккумулятор демары ii",
-      "amplifierId": "amp_ii",
-      "displayName": "Ii"
+      "amplifierId": "amp_demara_battery_mark_ii",
+      "displayName": "Demara Battery Mark II"
     },
     {
       "alias": "МЕИ«! Аккумулятор демары II",
       "normalizedAlias": "меи«! аккумулятор демары ii",
-      "amplifierId": "amp_ii",
-      "displayName": "Ii"
+      "amplifierId": "amp_demara_battery_mark_ii",
+      "displayName": "Demara Battery Mark II"
     },
     {
       "alias": "Kaboom the Cannon",

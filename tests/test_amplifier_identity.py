@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from amplifier_identity import (
+    classify_amplifier_text,
     crop_advanced_stat_fallback_image,
     crop_advanced_stat_image,
     crop_empty_state_image,
@@ -109,6 +110,33 @@ class AmplifierIdentityTests(unittest.TestCase):
             normalize_alias_key("\u0413\u043e\u0441\u0442\u044c \u0438\u0437 \u0433\u043b\u0443\u0431\u0438\u043d \u0423\u0440. 60/60"),
             "\u0433\u043e\u0441\u0442\u044c \u0438\u0437 \u0433\u043b\u0443\u0431\u0438\u043d",
         )
+
+    def test_classify_amplifier_text_maps_russian_demara_alias_to_canonical_mark_ii(self) -> None:
+        prediction = classify_amplifier_text("\u0410\u043a\u043a\u0443\u043c\u0443\u043b\u044f\u0442\u043e\u0440 \u0434\u0435\u043c\u0430\u0440\u044b II \u0423\u0440. 50/50")
+
+        self.assertIsNotNone(prediction)
+        assert prediction is not None
+        self.assertEqual(prediction.weapon_id, "amp_demara_battery_mark_ii")
+        self.assertEqual(prediction.display_name, "Demara Battery Mark II")
+        self.assertEqual(prediction.source_mode, "alias_contract")
+
+    def test_classify_amplifier_text_maps_english_deep_sea_visitor_to_canonical_id(self) -> None:
+        prediction = classify_amplifier_text("Deep Sea Visitor Lv. 60/60")
+
+        self.assertIsNotNone(prediction)
+        assert prediction is not None
+        self.assertEqual(prediction.weapon_id, "amp_deep_sea_visitor")
+        self.assertEqual(prediction.display_name, "Deep Sea Visitor")
+        self.assertEqual(prediction.source_mode, "alias_contract")
+
+    def test_classify_amplifier_text_maps_haiistorm_typo_to_hailstorm_canonical_id(self) -> None:
+        prediction = classify_amplifier_text("HaiIstorm Shrine")
+
+        self.assertIsNotNone(prediction)
+        assert prediction is not None
+        self.assertEqual(prediction.weapon_id, "amp_hailstorm_shrine")
+        self.assertEqual(prediction.display_name, "Hailstorm Shrine")
+        self.assertEqual(prediction.source_mode, "alias_contract")
 
     def test_parse_amplifier_detail_reads_english_weapon_fields(self) -> None:
         readout = parse_amplifier_detail(
