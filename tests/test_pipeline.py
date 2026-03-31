@@ -24,6 +24,9 @@ _GRACE_EQUIPMENT_SAMPLE = Path(
 _WEAPON_ONLY_OVERVIEW_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-07\20_equipment_agent_slot_2_page_07_agent_2_equipment.png"
 )
+_THE_RESTRAINED_LIVE_AMP_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\39_amplifier_detail_agent_slot_3_page_06_agent_3_amplifier.png"
+)
 
 
 class PipelineTests(unittest.TestCase):
@@ -486,34 +489,21 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(weapons["agent_anby"]["weaponId"], "amp_big_cylinder")
         self.assertTrue(weapons["agent_anby"]["weaponPresent"])
 
-    def test_pixel_weapons_from_captures_marks_core_available_detail_as_known_empty_weapon(self) -> None:
+    @unittest.skipUnless(_THE_RESTRAINED_LIVE_AMP_SAMPLE.exists(), "local The Restrained live amplifier sample is unavailable")
+    def test_pixel_weapons_from_captures_keeps_live_the_restrained_when_empty_state_ocr_looks_like_sovet(self) -> None:
         occupancy_by_agent: dict[str, dict[str, object]] = {}
 
-        with (
-            patch.object(
-                pipeline,
-                "_resolve_capture_agent_id",
-                return_value=("agent_pulchra", "screen_capture_agent_id", 0.99),
-            ),
-            patch.object(
-                pipeline,
-                "run_winrt_ocr_batch",
-                return_value={
-                    "amplifier_0_agent_pulchra:title": "Сдержанность Ур. 60/60 Базовые параметры Базовая сила атаки 684",
-                    "amplifier_0_agent_pulchra:info": "Сдержанность Ур. 60/60 Базовые параметры Базовая сила атаки 684 Продвинутые параметры Импульс 18%",
-                    "amplifier_0_agent_pulchra:advanced": "",
-                    "amplifier_0_agent_pulchra:advanced_fallback": "",
-                    "amplifier_0_agent_pulchra:effect": "Следующие эффекты можно использовать для агентов со специальностью «Устрашение»",
-                    "amplifier_0_agent_pulchra:empty_state": "совк,пипи пв1Е",
-                },
-            ),
+        with patch.object(
+            pipeline,
+            "_resolve_capture_agent_id",
+            return_value=("agent_pulchra", "screen_capture_agent_id", 0.99),
         ):
             weapons, reasons = pipeline._pixel_weapons_from_captures(
                 {
                     "screenCaptures": [
                         {
                             "role": "amplifier_detail",
-                            "path": str(_HARUMASA_LIVE_AMP_SAMPLE),
+                            "path": str(_THE_RESTRAINED_LIVE_AMP_SAMPLE),
                             "agentSlotIndex": 3,
                             "pageIndex": 6,
                         }
@@ -524,10 +514,12 @@ class PipelineTests(unittest.TestCase):
                 "RU",
             )
 
-        self.assertEqual(weapons, {})
+        self.assertEqual(weapons["agent_pulchra"]["weaponId"], "amp_the_restrained")
         self.assertEqual(reasons, [])
-        self.assertFalse(occupancy_by_agent["agent_pulchra"]["weaponPresent"])
-        self.assertEqual(occupancy_by_agent["agent_pulchra"]["_weaponSource"], "amplifier_detail_empty_state")
+        self.assertTrue(weapons["agent_pulchra"]["weaponPresent"])
+        self.assertEqual(weapons["agent_pulchra"]["advancedStatKey"], "impact")
+        self.assertEqual(weapons["agent_pulchra"]["advancedStatValue"], 18.0)
+        self.assertEqual(occupancy_by_agent, {})
 
     def test_pixel_weapons_from_captures_uses_fallback_advanced_crop_for_harumasa(self) -> None:
         with (

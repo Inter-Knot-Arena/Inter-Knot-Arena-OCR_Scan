@@ -473,7 +473,10 @@ def looks_like_empty_amplifier_detail(
         normalized_empty_state = re.sub(r"[^0-9a-z ]+", " ", normalized_empty_state)
         normalized_empty_state = " ".join(normalized_empty_state.split())
         compact_empty_state = normalized_empty_state.replace(" ", "")
-        if re.search(r"co(?:re|be|bk)", compact_empty_state):
+        if re.search(
+            r"co(?:re|be|bk).{0,4}?(?:ava|aua|uai|vai).{0,8}(?:ble|le)?",
+            compact_empty_state,
+        ):
             return True
     return False
 

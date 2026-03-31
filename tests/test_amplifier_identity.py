@@ -7,6 +7,7 @@ from pathlib import Path
 from amplifier_identity import (
     crop_advanced_stat_fallback_image,
     crop_advanced_stat_image,
+    crop_empty_state_image,
     crop_effect_image,
     crop_info_image,
     crop_title_image,
@@ -24,6 +25,12 @@ _ELLEN_LIVE_AMP_SAMPLE = Path(
 )
 _HARUMASA_LIVE_AMP_SAMPLE = Path(
     r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-03\39_amplifier_detail_agent_slot_3_page_03_agent_3_amplifier.png"
+)
+_FUSION_COMPILER_LIVE_AMP_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-05\21_amplifier_detail_agent_slot_2_page_05_agent_2_amplifier.png"
+)
+_THE_RESTRAINED_LIVE_AMP_SAMPLE = Path(
+    r"d:\Inter-Knot Arena\Inter-Knot Arena VerifierApp\artifacts\live_capture_mirror\20260322_004059\screen_captures\1dad9ca6ffc24b1e894810feea660407-page-06\39_amplifier_detail_agent_slot_3_page_06_agent_3_amplifier.png"
 )
 
 
@@ -58,6 +65,42 @@ class AmplifierIdentityTests(unittest.TestCase):
             advanced_text=str(ocr_results.get("advanced") or ""),
             advanced_fallback_text=str(ocr_results.get("advanced_fallback") or ""),
             effect_text=str(ocr_results.get("effect") or ""),
+        )
+
+    def _read_live_sample_with_empty_state(self, source_path: Path) -> object:
+        with tempfile.TemporaryDirectory(prefix="amp_identity_test_") as raw_tmp:
+            temp_root = Path(raw_tmp)
+            title_path = temp_root / "title.png"
+            info_path = temp_root / "info.png"
+            advanced_path = temp_root / "advanced.png"
+            advanced_fallback_path = temp_root / "advanced_fallback.png"
+            effect_path = temp_root / "effect.png"
+            empty_state_path = temp_root / "empty_state.png"
+            crop_title_image(source_path, title_path)
+            crop_info_image(source_path, info_path)
+            crop_advanced_stat_image(source_path, advanced_path)
+            crop_advanced_stat_fallback_image(source_path, advanced_fallback_path)
+            crop_effect_image(source_path, effect_path)
+            crop_empty_state_image(source_path, empty_state_path)
+            ocr_results = run_winrt_ocr_batch(
+                [
+                    {"id": "title", "path": str(title_path)},
+                    {"id": "info", "path": str(info_path)},
+                    {"id": "advanced", "path": str(advanced_path)},
+                    {"id": "advanced_fallback", "path": str(advanced_fallback_path)},
+                    {"id": "effect", "path": str(effect_path)},
+                    {"id": "empty_state", "path": str(empty_state_path)},
+                ],
+                language_tag=language_tag_for_locale("RU"),
+                temp_root=temp_root,
+            )
+        return parse_amplifier_detail(
+            str(ocr_results.get("title") or ""),
+            info_text=str(ocr_results.get("info") or ""),
+            advanced_text=str(ocr_results.get("advanced") or ""),
+            advanced_fallback_text=str(ocr_results.get("advanced_fallback") or ""),
+            effect_text=str(ocr_results.get("effect") or ""),
+            empty_state_text=str(ocr_results.get("empty_state") or ""),
         )
 
     def test_normalize_alias_key_removes_level_suffix_before_slash_cleanup(self) -> None:
@@ -491,23 +534,42 @@ class AmplifierIdentityTests(unittest.TestCase):
             )
         )
 
-    def test_parse_amplifier_detail_treats_center_empty_state_marker_as_empty_slot(self) -> None:
+    def test_parse_amplifier_detail_only_treats_core_available_marker_as_empty_slot(self) -> None:
         self.assertTrue(looks_like_empty_amplifier_detail("", empty_state_text="CORE,AUAILA LE"))
         self.assertTrue(looks_like_empty_amplifier_detail("", empty_state_text="COREtAUA LABLE"))
-        self.assertTrue(
+        self.assertFalse(
             looks_like_empty_amplifier_detail(
                 "Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107",
                 empty_state_text="СОВЕ,ПИПИШ BLE",
             )
         )
-        self.assertIsNone(
-            parse_amplifier_detail(
-                "Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107",
-                info_text="Большой цилиндр Ур. 10/10 Базовые параметры Базовая сила атаки 107 Продвинутые параметры Защита 16%",
-                effect_text="Следующие эффекты можно использовать для агентов со специальностью «Оборона»",
-                empty_state_text="СОВЕ,ПИПИШ BLE",
-            )
-        )
+
+    @unittest.skipUnless(_FUSION_COMPILER_LIVE_AMP_SAMPLE.exists(), "local Fusion Compiler live amplifier sample is unavailable")
+    def test_parse_amplifier_detail_keeps_live_fusion_compiler_when_empty_state_ocr_looks_like_sovet(self) -> None:
+        readout = self._read_live_sample_with_empty_state(_FUSION_COMPILER_LIVE_AMP_SAMPLE)
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_fusion_compiler")
+        self.assertEqual(readout.level, 50)
+        self.assertEqual(readout.level_cap, 50)
+        self.assertEqual(readout.base_stat_key, "attack_flat")
+        self.assertGreater(readout.base_stat_value, 0)
+        self.assertEqual(readout.advanced_stat_key, "attack_pct")
+        self.assertGreater(readout.advanced_stat_value, 0.0)
+
+    @unittest.skipUnless(_THE_RESTRAINED_LIVE_AMP_SAMPLE.exists(), "local The Restrained live amplifier sample is unavailable")
+    def test_parse_amplifier_detail_keeps_live_the_restrained_when_empty_state_ocr_looks_like_sovet(self) -> None:
+        readout = self._read_live_sample_with_empty_state(_THE_RESTRAINED_LIVE_AMP_SAMPLE)
+
+        self.assertIsNotNone(readout)
+        assert readout is not None
+        self.assertEqual(readout.identity.weapon_id, "amp_the_restrained")
+        self.assertEqual(readout.level, 60)
+        self.assertEqual(readout.level_cap, 60)
+        self.assertEqual(readout.base_stat_value, 684)
+        self.assertEqual(readout.advanced_stat_key, "impact")
+        self.assertEqual(readout.advanced_stat_value, 18.0)
 
     @unittest.skipUnless(_ELLEN_LIVE_AMP_SAMPLE.exists(), "local Ellen live amplifier sample is unavailable")
     def test_parse_amplifier_detail_recovers_ellen_advanced_value_from_live_sample(self) -> None:
