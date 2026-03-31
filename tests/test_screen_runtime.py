@@ -81,6 +81,46 @@ class ScreenRuntimeTests(unittest.TestCase):
             self.assertEqual(normalized["uidImagePath"], str(derived_uid))
             self.assertEqual(normalized["anchors"], {"profile": True, "agents": True, "equipment": True})
 
+    def test_normalize_runtime_captures_preserves_page_local_agent_slot_indices(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            agent_detail = temp_root / "agent_detail.png"
+
+            image = np.zeros((1440, 2560, 3), dtype=np.uint8)
+            self.assertTrue(cv2.imwrite(str(agent_detail), image))
+
+            normalized = screen_runtime.normalize_runtime_captures(
+                {
+                    "sessionId": "page-local-agent-slot-normalization",
+                    "anchors": {"profile": False, "agents": False, "equipment": False},
+                    "screenCaptures": [
+                        {
+                            "role": "agent_detail",
+                            "path": str(agent_detail),
+                            "screenAlias": "detail_page_4_slot_2",
+                            "pageIndex": 4,
+                            "agentSlotIndex": 2,
+                        }
+                    ],
+                },
+                "1440p",
+            )
+
+            self.assertEqual(
+                normalized["screenCaptures"],
+                [
+                    {
+                        "role": "agent_detail",
+                        "path": str(agent_detail),
+                        "screenAlias": "detail_page_4_slot_2",
+                        "agentId": "",
+                        "slotIndex": None,
+                        "agentSlotIndex": 2,
+                        "pageIndex": 4,
+                    }
+                ],
+            )
+
     def test_normalize_runtime_resolution_accepts_16_10_widescreen_family(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_root = Path(temp_dir)

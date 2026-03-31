@@ -129,9 +129,10 @@ def _effective_page_index(page_index: int | None, fallback: int = 0) -> int:
 def _effective_agent_slot_index(agent_slot_index: int | None, page_index: int | None) -> int | None:
     if agent_slot_index is None or agent_slot_index <= 0:
         return None
-    if agent_slot_index > _ROSTER_PAGE_CAPACITY:
-        return agent_slot_index
-    return (_effective_page_index(page_index) * _ROSTER_PAGE_CAPACITY) + agent_slot_index
+    # Runtime captures already carry page-local slot indices. Keep them local so
+    # page-aware merge logic can use (pageIndex, agentSlotIndex) without
+    # accidentally re-globalizing slots across pages.
+    return agent_slot_index
 
 
 def _load_image(path: Path) -> np.ndarray | None:
